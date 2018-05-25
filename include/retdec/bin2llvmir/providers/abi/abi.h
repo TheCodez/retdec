@@ -28,6 +28,7 @@ class Abi
 	//
 	public:
 		static const uint32_t REG_INVALID;
+		static const unsigned DEFAULT_ADDR_SPACE;
 
 	// Ctors, dtors.
 	//
@@ -65,9 +66,12 @@ class Abi
 		std::size_t getTypeByteSize(llvm::Type* t) const;
 		std::size_t getTypeBitSize(llvm::Type* t) const;
 		llvm::IntegerType* getDefaultType() const;
+		llvm::PointerType* getDefaultPointerType() const;
+
 		static std::size_t getTypeByteSize(llvm::Module* m, llvm::Type* t);
 		static std::size_t getTypeBitSize(llvm::Module* m, llvm::Type* t);
 		static llvm::IntegerType* getDefaultType(llvm::Module* m);
+		static llvm::PointerType* getDefaultPointerType(llvm::Module* m);
 
 	// Private data - misc.
 	//

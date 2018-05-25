@@ -546,7 +546,7 @@ bool AsmInstruction::eraseInstructions()
 		Value* retVal = nullptr;
 		if (!genRet->getReturnType()->isVoidTy())
 		{
-			auto* ci = ConstantInt::get(getDefaultType(m), 0);
+			auto* ci = ConstantInt::get(Abi::getDefaultType(m), 0);
 			retVal = convertConstantToType(ci, genRet->getReturnType());
 		}
 

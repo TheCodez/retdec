@@ -944,7 +944,7 @@ void IdiomsLibgccImpl::double2float(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::cmpf(llvm::CallInst* inst, bool revert)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	if (revert)
@@ -1024,7 +1024,7 @@ void IdiomsLibgccImpl::lef(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::cmpdi2(llvm::CallInst* inst)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	auto* a = new ICmpInst(inst, CmpInst::ICMP_SGT, l0, l1);
@@ -1059,7 +1059,7 @@ void IdiomsLibgccImpl::cmpdi2(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::ucmpdi2(llvm::CallInst* inst)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	auto* a = new ICmpInst(inst, CmpInst::ICMP_UGT, l0, l1);
@@ -1098,7 +1098,7 @@ void IdiomsLibgccImpl::ucmpdi2(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::eqf(llvm::CallInst* inst)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	auto* a = new FCmpInst(inst, CmpInst::FCMP_OEQ, l0, l1);
@@ -1130,7 +1130,7 @@ void IdiomsLibgccImpl::eqf(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::gtf(llvm::CallInst* inst, bool reverse)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	auto* a = new FCmpInst(inst, CmpInst::FCMP_OGT, l0, l1);
@@ -1161,7 +1161,7 @@ void IdiomsLibgccImpl::ltf(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::nef(llvm::CallInst* inst)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	auto* a = new FCmpInst(inst, CmpInst::FCMP_ONE, l0, l1);
@@ -1191,7 +1191,7 @@ void IdiomsLibgccImpl::nef(llvm::CallInst* inst)
 template<typename N>
 void IdiomsLibgccImpl::cmpge(llvm::CallInst* inst, bool reverse)
 {
-	auto* t = getDefaultType(inst->getModule());
+	auto* t = Abi::getDefaultType(inst->getModule());
 	auto* l0 = getOp0<N>(inst);
 	auto* l1 = getOp1<N>(inst);
 	auto* a = reverse ?

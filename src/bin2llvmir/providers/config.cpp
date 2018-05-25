@@ -48,7 +48,7 @@ Config Config::fromFile(llvm::Module* m, const std::string& path)
 
 	for (auto& s : config.getConfig().structures)
 	{
-		stringToLlvmType(m->getContext(), s.getLlvmIr());
+		llvm_utils::stringToLlvmType(m->getContext(), s.getLlvmIr());
 	}
 
 	// TODO: needed?
@@ -68,7 +68,7 @@ Config Config::fromJsonString(llvm::Module* m, const std::string& json)
 
 	for (auto& s : config.getConfig().structures)
 	{
-		stringToLlvmType(m->getContext(), s.getLlvmIr());
+		llvm_utils::stringToLlvmType(m->getContext(), s.getLlvmIr());
 	}
 
 	// TODO: needed?

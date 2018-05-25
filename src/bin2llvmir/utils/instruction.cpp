@@ -243,13 +243,13 @@ FunctionPair modifyFunction(
 
 	if (!FunctionType::isValidReturnType(ret))
 	{
-		ret = getDefaultType(fnc->getParent());
+		ret = Abi::getDefaultType(fnc->getParent());
 	}
 	for (Type*& t : args)
 	{
 		if (!FunctionType::isValidArgumentType(t))
 		{
-			t = getDefaultType(fnc->getParent());
+			t = Abi::getDefaultType(fnc->getParent());
 		}
 	}
 

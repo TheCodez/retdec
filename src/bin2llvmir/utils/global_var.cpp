@@ -37,7 +37,7 @@ Constant* detectGlobalVariableInitializerCycle(
 	}
 	if (c == gv)
 	{
-		return objf->getConstant(getDefaultType(module), addr);
+		return objf->getConstant(Abi::getDefaultType(module), addr);
 	}
 
 	auto* cgv = dyn_cast<GlobalVariable>(c);
@@ -45,7 +45,7 @@ Constant* detectGlobalVariableInitializerCycle(
 	{
 		if (cgv == gv)
 		{
-			c = objf->getConstant(getDefaultType(module), addr);
+			c = objf->getConstant(Abi::getDefaultType(module), addr);
 			break;
 		}
 		if (cgv->hasInitializer())
@@ -95,14 +95,18 @@ bool globalVariableCanBeCreated(
 					return true;
 				}
 			}
-			if (objf->getImage()->getWord(addr+getDefaultTypeByteSize(module), val))
+			if (objf->getImage()->getWord(
+					addr + objf->getImage()->getBytesPerWord(),
+					val))
 			{
 				if (objf->getImage()->hasDataOnAddress(val))
 				{
 					return true;
 				}
 			}
-			if (objf->getImage()->getWord(addr-getDefaultTypeByteSize(module), val))
+			if (objf->getImage()->getWord(
+					addr - objf->getImage()->getBytesPerWord(),
+					val))
 			{
 				if (objf->getImage()->hasDataOnAddress(val))
 				{
@@ -169,7 +173,7 @@ GlobalVariable* getGlobalVariable(
 	}
 
 	Constant* c = nullptr;
-	Type* t = getDefaultType(module);
+	Type* t = Abi::getDefaultType(module);
 	bool isConstant = objf->getImage()->hasReadOnlyDataOnAddress(addr);
 	bool isFromDebug = false;
 	std::string realName;
@@ -177,7 +181,7 @@ GlobalVariable* getGlobalVariable(
 	auto* dgv = dbgf ? dbgf->getGlobalVar(addr) : nullptr;
 	if (dgv)
 	{
-		auto* dt = stringToLlvmType(module->getContext(), dgv->type.getLlvmIr());
+		auto* dt = llvm_utils::stringToLlvmType(module->getContext(), dgv->type.getLlvmIr());
 		t = dt ? dt : t;
 		c = objf->getConstant(t, addr);
 		name = dgv->getName();
@@ -188,7 +192,7 @@ GlobalVariable* getGlobalVariable(
 	auto* cgv = config->getConfigGlobalVariable(addr);
 	if (cgv)
 	{
-		auto* dt = stringToLlvmType(module->getContext(), cgv->type.getLlvmIr());
+		auto* dt = llvm_utils::stringToLlvmType(module->getContext(), cgv->type.getLlvmIr());
 		t = dt ? dt : t;
 		c = objf->getConstant(t, addr);
 		name = cgv->getName();

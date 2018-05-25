@@ -74,7 +74,7 @@ TEST_F(ToLlvmTypeVisitorTests, convertArrayTypeInvalid)
 	type->accept(&visitor);
 
 	auto* ref = ArrayType::get(
-			getDefaultType(module.get()),
+			Abi::getDefaultType(module.get()),
 			10);
 	EXPECT_EQ(ref, visitor.getLlvmType());
 }
@@ -222,7 +222,7 @@ TEST_F(ToLlvmTypeVisitorTests, convertPointerTypeInvalid)
 	auto type = retdec::ctypes::PointerType::create(ctx, v);
 	type->accept(&visitor);
 
-	auto* d = getDefaultType(module.get());
+	auto* d = Abi::getDefaultType(module.get());
 	auto* ref = PointerType::get(d, 0);
 	EXPECT_EQ(ref, visitor.getLlvmType());
 }
@@ -347,7 +347,7 @@ TEST_F(ToLlvmTypeVisitorTests, convertStructureTypeInvalid)
 	auto* res = dyn_cast<StructType>(visitor.getLlvmType());
 	EXPECT_EQ("TestStruct", res->getName());
 	EXPECT_EQ(1, res->getNumElements());
-	EXPECT_EQ(getDefaultType(module.get()), res->getElementType(0));
+	EXPECT_EQ(Abi::getDefaultType(module.get()), res->getElementType(0));
 }
 
 TEST_F(ToLlvmTypeVisitorTests, convertRecursiveStructPtrStruct)

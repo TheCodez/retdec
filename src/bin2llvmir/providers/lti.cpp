@@ -38,7 +38,7 @@ ToLlvmTypeVisitor::ToLlvmTypeVisitor(llvm::Module* m, Config* c) :
 {
 	assert(_module);
 	assert(_config);
-	_type = getDefaultType(_module);
+	_type = Abi::getDefaultType(_module);
 }
 
 ToLlvmTypeVisitor::~ToLlvmTypeVisitor() = default;
@@ -52,7 +52,7 @@ void ToLlvmTypeVisitor::visit(
 	for (auto it = dims.rbegin(); it != dims.rend(); ++it)
 	{
 		auto* t = ArrayType::isValidElementType(_type) ?
-				_type : getDefaultType(_module);
+				_type : Abi::getDefaultType(_module);
 		auto d = *it > 0 ? *it : 1;
 		_type = ArrayType::get(t, d);
 	}
@@ -61,7 +61,7 @@ void ToLlvmTypeVisitor::visit(
 void ToLlvmTypeVisitor::visit(
 		const std::shared_ptr<retdec::ctypes::EnumType>& type)
 {
-	_type = getDefaultType(_module);
+	_type = Abi::getDefaultType(_module);
 }
 
 void ToLlvmTypeVisitor::visit(
@@ -84,7 +84,7 @@ void ToLlvmTypeVisitor::visit(
 {
 	type->getReturnType()->accept(this);
 	auto* ret = FunctionType::isValidReturnType(_type) ?
-			_type : getDefaultType(_module);
+			_type : Abi::getDefaultType(_module);
 
 	std::vector<Type*> params;
 	params.reserve(type->getParameterCount());
@@ -99,7 +99,7 @@ void ToLlvmTypeVisitor::visit(
 		else
 		{
 			auto* t = FunctionType::isValidArgumentType(_type) ?
-					_type : getDefaultType(_module);
+					_type : Abi::getDefaultType(_module);
 			params.push_back(t);
 		}
 	}
@@ -115,7 +115,7 @@ void ToLlvmTypeVisitor::visit(
 {
 	auto tsz = type->getBitWidth();
 	assert(tsz);
-	auto sz = tsz ? tsz : getDefaultType(_module)->getBitWidth();
+	auto sz = tsz ? tsz : Abi::getDefaultType(_module)->getBitWidth();
 	_type = Type::getIntNTy(_module->getContext(), sz);
 }
 
@@ -125,7 +125,7 @@ void ToLlvmTypeVisitor::visit(
 	type->getPointedType()->accept(this);
 
 	auto* t = PointerType::isValidElementType(_type) ?
-			_type : getDefaultType(_module);
+			_type : Abi::getDefaultType(_module);
 	_type = PointerType::get(t, 0);
 }
 
@@ -161,13 +161,13 @@ void ToLlvmTypeVisitor::visit(
 void ToLlvmTypeVisitor::visit(
 		const std::shared_ptr<retdec::ctypes::UnionType>& type)
 {
-	_type = getDefaultType(_module);
+	_type = Abi::getDefaultType(_module);
 }
 
 void ToLlvmTypeVisitor::visit(
 		const std::shared_ptr<retdec::ctypes::UnknownType>& type)
 {
-	_type = getDefaultType(_module);
+	_type = Abi::getDefaultType(_module);
 }
 
 void ToLlvmTypeVisitor::visit(
@@ -201,7 +201,7 @@ void ToLlvmTypeVisitor::visit(
 		i->getType()->accept(this);
 
 		auto* t = StructType::isValidElementType(_type) ?
-				_type : getDefaultType(_module);
+				_type : Abi::getDefaultType(_module);
 		elems.push_back(t);
 	}
 	if (elems.empty())

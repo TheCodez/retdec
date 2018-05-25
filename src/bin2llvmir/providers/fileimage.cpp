@@ -181,7 +181,7 @@ llvm::Constant* FileImage::getConstantCharPointer(retdec::utils::Address addr)
 
 		return IrModifier::convertConstantToType(
 				gv,
-				getCharPointerType(_module->getContext()));
+				llvm_utils::getCharPointerType(_module->getContext()));
 	}
 	else
 	{
@@ -359,7 +359,7 @@ llvm::Constant* FileImage::getConstant(
 	{
 		c = getConstantLongDouble(addr);
 	}
-	else if (isCharPointerType(type))
+	else if (llvm_utils::isCharPointerType(type))
 	{
 		c = getConstantCharPointer(addr);
 	}
@@ -480,7 +480,8 @@ llvm::Constant* FileImage::getConstant(
 		{
 			c = refGvs.front();
 		}
-		else if (refGvs.size() > 1 && isStringArrayPointeType(refGvs.front()->getType()))
+		else if (refGvs.size() > 1
+				&& llvm_utils::isStringArrayPointeType(refGvs.front()->getType()))
 		{
 			auto* at = ArrayType::get(
 					PointerType::get(Type::getInt8Ty(ctx), 0),
@@ -495,9 +496,11 @@ llvm::Constant* FileImage::getConstant(
 			c = ConstantArray::get(at, ArrayRef<Constant*>(av2));
 		}
 	}
-	// for-simple.c -a x86 -f elf -c gcc -C -O0, 8049b7c -- in 2 sections -- .data + .bss
+	// for-simple.c -a x86 -f elf -c gcc -O0, 8049b7c -- in both .data & .bss
 	// the same for any array -- all data in single section
-	else if (!seg && _image->getNTWSNice(addr, wcharSize, wideStr) && wideStr.size() >= 3)
+	else if (!seg
+			&& _image->getNTWSNice(addr, wcharSize, wideStr)
+			&& wideStr.size() >= 3)
 	{
 		if (wcharSize == 2)
 		{
@@ -513,7 +516,10 @@ llvm::Constant* FileImage::getConstant(
 		// Simple Value::setName() does not work on Constant.
 		c->setValueName(ValueName::Create("wide-string"));
 	}
-	else if (!seg && _image->getNTBS(addr, str) && retdec::utils::isNiceString(str, 1.0) && str.size() >= 2)
+	else if (!seg
+			&& _image->getNTBS(addr, str)
+			&& retdec::utils::isNiceString(str, 1.0)
+			&& str.size() >= 2)
 	{
 		c = ConstantDataArray::getString(ctx, str);
 	}

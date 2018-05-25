@@ -159,7 +159,7 @@ bool SimpleTypesAnalysis::runOnModule(Module& M)
 								break;
 							}
 
-							if (!isStringArrayPointeType(glob->getType()) && isCharPointerType(ce->getType()))
+							if (!llvm_utils::isStringArrayPointeType(glob->getType()) && llvm_utils::isCharPointerType(ce->getType()))
 							{
 								auto* c = objf->getConstantCharArrayNice(cgv->getStorage().getAddress());
 								if (c)
@@ -664,7 +664,7 @@ void SimpleTypesAnalysis::processUse(llvm::Value* current, Value* u, std::queue<
 		{
 			for (auto& tmp : call->arg_operands())
 			{
-				if (tmp == current && tmp->getType() != getDefaultType(module))
+				if (tmp == current && tmp->getType() != Abi::getDefaultType(module))
 				{
 					eqSet.insert(tmp->getType(), eSourcePriority::PRIORITY_LTI);
 					break;
@@ -895,7 +895,7 @@ llvm::Type* EqSet::getHigherPriorityTypePrivate(
 	}
 	else if (t1->isPointerTy())
 	{
-		if (t1 == getDefaultPointerType(module) && t2->isFloatingPointTy())
+		if (t1 == Abi::getDefaultPointerType(module) && t2->isFloatingPointTy())
 		{
 			return t2;
 		}
@@ -906,7 +906,7 @@ llvm::Type* EqSet::getHigherPriorityTypePrivate(
 	}
 	else if (t2->isPointerTy())
 	{
-		if (t2 == getDefaultPointerType(module) && t1->isFloatingPointTy())
+		if (t2 == Abi::getDefaultPointerType(module) && t1->isFloatingPointTy())
 		{
 			return t1;
 		}
@@ -1089,7 +1089,7 @@ llvm::Type* EqSet::getHigherPriorityTypePrivate(
 	{
 		auto sz1 = module->getDataLayout().getTypeSizeInBits(t1);
 		auto sz2 = module->getDataLayout().getTypeSizeInBits(t2);
-		auto defSz = getDefaultType(module)->getBitWidth();
+		auto defSz = Abi::getDefaultType(module)->getBitWidth();
 
 		if (sz1 == defSz)
 		{

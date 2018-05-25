@@ -190,7 +190,7 @@ void StackAnalysis::handleInstruction(
 
 	std::string name = debugSv ? debugSv->getName() : "";
 	Type* t = debugSv ?
-			stringToLlvmTypeDefault(_module, debugSv->type.getLlvmIr()) :
+			llvm_utils::stringToLlvmTypeDefault(_module, debugSv->type.getLlvmIr()) :
 			type;
 
 	IrModifier irModif(_module, _config);

@@ -11,6 +11,11 @@
 #ifndef RETDEC_BIN2LLVMIR_UTILS_LLVM_H
 #define RETDEC_BIN2LLVMIR_UTILS_LLVM_H
 
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 
 namespace retdec {
@@ -24,6 +29,23 @@ namespace llvm_utils {
 //
 
 llvm::Value* skipCasts(llvm::Value* val);
+
+//
+//==============================================================================
+// Types
+//==============================================================================
+//
+
+llvm::IntegerType* getCharType(llvm::LLVMContext& ctx);
+llvm::PointerType* getCharPointerType(llvm::LLVMContext& ctx);
+
+bool isCharType(const llvm::Type* t);
+bool isCharPointerType(const llvm::Type* t);
+bool isStringArrayType(const llvm::Type* t);
+bool isStringArrayPointeType(const llvm::Type* t);
+
+llvm::Type* stringToLlvmType(llvm::LLVMContext& ctx, const std::string& str);
+llvm::Type* stringToLlvmTypeDefault(llvm::Module* m, const std::string& str);
 
 } // namespace llvm_utils
 } // namespace bin2llvmir

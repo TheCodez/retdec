@@ -342,7 +342,7 @@ IrModifier::StackPair IrModifier::getStackVariable(
 {
 	if (!PointerType::isValidElementType(type))
 	{
-		type = getDefaultType(fnc->getParent());
+		type = Abi::getDefaultType(fnc->getParent());
 	}
 
 	std::string n = name.empty() ? "stack_var" : name;

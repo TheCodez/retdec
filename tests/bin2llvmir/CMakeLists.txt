@@ -22,8 +22,8 @@ set(RETDEC_TESTS_BIN2LLVMIR_SOURCES
 	utils/instcombine_tests.cpp
 	utils/instruction_tests.cpp
 	utils/ir_modifier_tests.cpp
+	utils/llvm_tests.cpp
 	utils/simplifycfg_tests.cpp
-	utils/type_tests.cpp
 )
 
 add_executable(retdec-tests-bin2llvmir ${RETDEC_TESTS_BIN2LLVMIR_SOURCES})

@@ -127,7 +127,7 @@ llvm::Function* Decoder::createFunction(utils::Address a, bool declaration)
 
 	Function* f = Function::Create(
 			FunctionType::get(
-					getDefaultType(_module),
+					Abi::getDefaultType(_module),
 					false),
 			GlobalValue::ExternalLinkage,
 			n);

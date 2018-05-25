@@ -2058,7 +2058,7 @@ void DataFlowEntry::setTypeFromExtraInfo()
 	{
 		for (auto& a : dbgFnc->parameters)
 		{
-			auto* t = stringToLlvmTypeDefault(_module, a.type.getLlvmIr());
+			auto* t = llvm_utils::stringToLlvmTypeDefault(_module, a.type.getLlvmIr());
 			argTypes.push_back(t);
 			argNames.push_back(a.getName());
 		}
@@ -2066,7 +2066,7 @@ void DataFlowEntry::setTypeFromExtraInfo()
 		{
 			isVarArg = true;
 		}
-		retType = stringToLlvmTypeDefault(
+		retType = llvm_utils::stringToLlvmTypeDefault(
 				_module,
 				dbgFnc->returnType.getLlvmIr());
 		typeSet = true;
@@ -2077,7 +2077,7 @@ void DataFlowEntry::setTypeFromExtraInfo()
 	{
 		for (auto& a : configFnc->parameters)
 		{
-			auto* t = stringToLlvmTypeDefault(_module, a.type.getLlvmIr());
+			auto* t = llvm_utils::stringToLlvmTypeDefault(_module, a.type.getLlvmIr());
 			argTypes.push_back(t);
 			argNames.push_back(a.getName());
 
@@ -2097,7 +2097,7 @@ void DataFlowEntry::setTypeFromExtraInfo()
 		{
 			isVarArg = true;
 		}
-		retType = stringToLlvmTypeDefault(
+		retType = llvm_utils::stringToLlvmTypeDefault(
 				_module,
 				configFnc->returnType.getLlvmIr());
 		if (!argTypes.empty())
@@ -2211,7 +2211,7 @@ void DataFlowEntry::setArgumentTypes()
 		argTypes.insert(
 				argTypes.end(),
 				argLoads.size(),
-				getDefaultType(_module));
+				Abi::getDefaultType(_module));
 	}
 	else
 	{
@@ -2229,7 +2229,7 @@ void DataFlowEntry::setArgumentTypes()
 		argTypes.insert(
 				argTypes.end(),
 				ce->possibleArgStores.size(),
-				getDefaultType(_module));
+				Abi::getDefaultType(_module));
 	}
 }
 

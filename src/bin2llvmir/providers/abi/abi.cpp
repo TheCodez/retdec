@@ -22,6 +22,7 @@ namespace bin2llvmir {
 //
 
 const uint32_t Abi::REG_INVALID = 0;
+const unsigned Abi::DEFAULT_ADDR_SPACE = 0;
 
 Abi::Abi(llvm::Module* m, Config* c) :
 		_module(m),
@@ -119,6 +120,11 @@ llvm::IntegerType* Abi::getDefaultType() const
 	return Abi::getDefaultType(_module);
 }
 
+llvm::PointerType* Abi::getDefaultPointerType() const
+{
+	return Abi::getDefaultPointerType(_module);
+}
+
 std::size_t Abi::getTypeByteSize(llvm::Module* m, llvm::Type* t)
 {
 	assert(m);
@@ -136,6 +142,12 @@ llvm::IntegerType* Abi::getDefaultType(llvm::Module* m)
 	assert(m);
 	unsigned s = m->getDataLayout().getPointerSize(0) * 8;
 	return Type::getIntNTy(m->getContext(), s);
+}
+
+llvm::PointerType* Abi::getDefaultPointerType(llvm::Module* m)
+{
+	assert(m);
+	return PointerType::get(Abi::getDefaultType(m), 0);
 }
 
 //

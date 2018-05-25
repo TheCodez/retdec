@@ -18,11 +18,6 @@
 namespace retdec {
 namespace bin2llvmir {
 
-const unsigned DEFAULT_ADDR_SPACE = 0;
-
-llvm::Type* stringToLlvmType(llvm::LLVMContext& ctx, const std::string& str);
-llvm::Type* stringToLlvmTypeDefault(llvm::Module* m, const std::string& str);
-
 llvm::Value* convertValueToType(
 		llvm::Value* val,
 		llvm::Type* type,
@@ -47,19 +42,6 @@ llvm::Value* changeObjectType(
 		std::unordered_set<llvm::Instruction*>* instToErase = nullptr,
 		bool dbg = false,
 		bool wideString = false);
-
-bool isStringArrayType(const llvm::Type* t);
-bool isStringArrayPointeType(const llvm::Type* t);
-bool isCharType(const llvm::Type* t);
-bool isCharPointerType(const llvm::Type* t);
-
-unsigned getDefaultTypeBitSize(llvm::Module* module);
-unsigned getDefaultTypeByteSize(llvm::Module* module);
-llvm::IntegerType* getDefaultType(llvm::Module* module);
-llvm::PointerType* getDefaultPointerType(llvm::Module* module);
-llvm::IntegerType* getCharType(llvm::LLVMContext& ctx);
-llvm::PointerType* getCharPointerType(llvm::LLVMContext& ctx);
-llvm::PointerType* getVoidPointerType(llvm::LLVMContext& ctx);
 
 std::vector<llvm::Type*> parseFormatString(
 		llvm::Module* module,
