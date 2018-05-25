@@ -19,7 +19,6 @@
 #include "retdec/ctypes/void_type.h"
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/providers/lti.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;
 

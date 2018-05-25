@@ -323,214 +323,81 @@ TEST_F(LlvmUtilsTests, stringToLlvmTypeCanHandlePointerToVoid)
 			stringToLlvmType(context, "void*"));
 }
 
-////
-//// convertValueToType()
-////
-//
-//TEST_F(LlvmUtilsTests, convertValueToTypeFloatToInt32)
-//{
-//	parseInput(R"(
-//		define void @fnc() {
-//			%a = fadd float 1.0, 2.0
-//			ret void
-//		}
-//	)");
-//	auto* a = getValueByName("a");
-//	auto* b = getNthInstruction<ReturnInst>();
-//
-//	convertValueToType(a, Type::getInt32Ty(context), b);
-//
-//	std::string exp = R"(
-//		define void @fnc() {
-//			%a = fadd float 1.0, 2.0
-//			%1 = bitcast float %a to i32
-//			ret void
-//		}
-//	)";
-//	checkModuleAgainstExpectedIr(exp);
-//}
-//
-//TEST_F(LlvmUtilsTests, convertValueToTypeInt32ToFloat)
-//{
-//	parseInput(R"(
-//		define void @fnc() {
-//			%a = add i32 1, 2
-//			ret void
-//		}
-//	)");
-//	auto* a = getValueByName("a");
-//	auto* b = getNthInstruction<ReturnInst>();
-//
-//	convertValueToType(a, Type::getFloatTy(context), b);
-//
-//	std::string exp = R"(
-//		define void @fnc() {
-//			%a = add i32 1, 2
-//			%1 = bitcast i32 %a to float
-//			ret void
-//		}
-//	)";
-//	checkModuleAgainstExpectedIr(exp);
-//}
-//
-//TEST_F(LlvmUtilsTests, convertValueToTypeFunctionToPointer)
-//{
-//	parseInput(R"(
-//		declare void @import()
-//		define void @fnc() {
-//			ret void
-//		}
-//	)");
-//	auto* import = getValueByName("import");
-//	auto* r = getNthInstruction<ReturnInst>();
-//	auto* i32 = Type::getInt32Ty(context);
-//	auto* t = PointerType::get(
-//			FunctionType::get(
-//					i32,
-//					{i32, i32},
-//					false), // isVarArg
-//			0);
-//
-//	convertValueToType(import, t, r);
-//
-//	std::string exp = R"(
-//		declare void @import()
-//		define void @fnc() {
-//			%1 = bitcast void()* @import to i32(i32, i32)*
-//			ret void
-//		}
-//	)";
-//	checkModuleAgainstExpectedIr(exp);
-//}
-//
-////
-//// convertValueToAfter()
-////
-//
-//TEST_F(LlvmUtilsTests, convertValueToTypeAfterInt32ToDouble)
-//{
-//	parseInput(R"(
-//		define void @fnc() {
-//			%a = add i32 1, 2
-//			%b = add i32 1, 2
-//			ret void
-//		}
-//	)");
-//	auto* a = getValueByName("a");
-//	auto* b = getInstructionByName("b");
-//
-//	convertValueToTypeAfter(a, Type::getDoubleTy(context), b);
-//
-//	std::string exp = R"(
-//		define void @fnc() {
-//			%a = add i32 1, 2
-//			%b = add i32 1, 2
-//			%1 = sext i32 %a to i64
-//			%2 = bitcast i64 %1 to double
-//			ret void
-//		}
-//	)";
-//	checkModuleAgainstExpectedIr(exp);
-//}
-//
-//TEST_F(LlvmUtilsTests, convertValueToTypeAfterItselfInt32ToDouble)
-//{
-//	parseInput(R"(
-//		define void @fnc() {
-//			%a = add i32 1, 2
-//			ret void
-//		}
-//	)");
-//	auto* a = getInstructionByName("a");
-//
-//	convertValueToTypeAfter(a, Type::getDoubleTy(context), a);
-//
-//	std::string exp = R"(
-//		define void @fnc() {
-//			%a = add i32 1, 2
-//			%1 = sext i32 %a to i64
-//			%2 = bitcast i64 %1 to double
-//			ret void
-//		}
-//	)";
-//	checkModuleAgainstExpectedIr(exp);
-//}
-
 //
 // parseFormatString()
 //
 
-//TEST_F(LlvmUtilsTests, parseFormatStringBasic)
-//{
-//	std::string format =
-//			"this"
-//			"%d %i %o %u %x %X "
-//			"normal"
-//			"%f %F %e %E %g %G %a %A "
-//			"text"
-//			"%c %C "
-//			"should"
-//			"%s %S "
-//			"be"
-//			"%p %n "
-//			"skipped"
-//			"%%";
-//	auto& ctx = module->getContext();
-//	auto ret = parseFormatString(module.get(), format);
-//
-//	ASSERT_EQ(20, ret.size());
-//	EXPECT_EQ(Type::getInt32Ty(ctx), ret[0]);
-//	EXPECT_EQ(Type::getInt32Ty(ctx), ret[1]);
-//	EXPECT_EQ(Type::getInt32Ty(ctx), ret[2]);
-//	EXPECT_EQ(Type::getInt32Ty(ctx), ret[3]);
-//	EXPECT_EQ(Type::getInt32Ty(ctx), ret[4]);
-//	EXPECT_EQ(Type::getInt32Ty(ctx), ret[5]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[6]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[7]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[8]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[9]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[10]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[11]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[12]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[13]);
-//	EXPECT_EQ(Type::getInt8Ty(ctx), ret[14]);
-//	EXPECT_EQ(Type::getInt8Ty(ctx), ret[15]);
-//	EXPECT_EQ(llvm_utils::getCharPointerType(ctx), ret[16]);
-//	EXPECT_EQ(llvm_utils::getCharPointerType(ctx), ret[17]);
-//	EXPECT_EQ(Abi::getDefaultPointerType(module.get()), ret[18]);
-//	EXPECT_EQ(PointerType::get(Type::getInt32Ty(ctx), 0), ret[19]);
-//}
-//
-//TEST_F(LlvmUtilsTests, parseFormatStringBasicUnknownConversionCharacterIsDefaultInt)
-//{
-//	std::string format = "%f %y %f";
-//	auto& ctx = module->getContext();
-//	auto ret = parseFormatString(module.get(), format);
-//
-//	ASSERT_EQ(3, ret.size());
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[0]);
-//	EXPECT_EQ(Abi::getDefaultType(module.get()), ret[1]);
-//	EXPECT_EQ(Type::getDoubleTy(ctx), ret[2]);
-//}
-//
-//TEST_F(LlvmUtilsTests, parseFormatStringReturnsPointersIfCalledFunctionIsScanf)
-//{
-//	parseInput(R"(
-//		declare void @scanf()
-//		define void @fnc() {
-//			ret void
-//		}
-//	)");
-//	auto* f = getFunctionByName("scanf");
-//	std::string format = "%d %i %f";
-//	auto& ctx = module->getContext();
-//	auto ret = parseFormatString(module.get(), format, f);
-//
-//	ASSERT_EQ(3, ret.size());
-//	EXPECT_EQ(PointerType::get(Type::getInt32Ty(ctx), 0), ret[0]);
-//	EXPECT_EQ(PointerType::get(Type::getInt32Ty(ctx), 0), ret[1]);
-//	EXPECT_EQ(PointerType::get(Type::getDoubleTy(ctx), 0), ret[2]);
-//}
+TEST_F(LlvmUtilsTests, parseFormatStringBasic)
+{
+	std::string format =
+			"this"
+			"%d %i %o %u %x %X "
+			"normal"
+			"%f %F %e %E %g %G %a %A "
+			"text"
+			"%c %C "
+			"should"
+			"%s %S "
+			"be"
+			"%p %n "
+			"skipped"
+			"%%";
+	auto& ctx = module->getContext();
+	auto ret = parseFormatString(module.get(), format);
+
+	ASSERT_EQ(20, ret.size());
+	EXPECT_EQ(Type::getInt32Ty(ctx), ret[0]);
+	EXPECT_EQ(Type::getInt32Ty(ctx), ret[1]);
+	EXPECT_EQ(Type::getInt32Ty(ctx), ret[2]);
+	EXPECT_EQ(Type::getInt32Ty(ctx), ret[3]);
+	EXPECT_EQ(Type::getInt32Ty(ctx), ret[4]);
+	EXPECT_EQ(Type::getInt32Ty(ctx), ret[5]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[6]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[7]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[8]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[9]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[10]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[11]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[12]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[13]);
+	EXPECT_EQ(Type::getInt8Ty(ctx), ret[14]);
+	EXPECT_EQ(Type::getInt8Ty(ctx), ret[15]);
+	EXPECT_EQ(llvm_utils::getCharPointerType(ctx), ret[16]);
+	EXPECT_EQ(llvm_utils::getCharPointerType(ctx), ret[17]);
+	EXPECT_EQ(Abi::getDefaultPointerType(module.get()), ret[18]);
+	EXPECT_EQ(PointerType::get(Type::getInt32Ty(ctx), 0), ret[19]);
+}
+
+TEST_F(LlvmUtilsTests, parseFormatStringBasicUnknownConversionCharacterIsDefaultInt)
+{
+	std::string format = "%f %y %f";
+	auto& ctx = module->getContext();
+	auto ret = parseFormatString(module.get(), format);
+
+	ASSERT_EQ(3, ret.size());
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[0]);
+	EXPECT_EQ(Abi::getDefaultType(module.get()), ret[1]);
+	EXPECT_EQ(Type::getDoubleTy(ctx), ret[2]);
+}
+
+TEST_F(LlvmUtilsTests, parseFormatStringReturnsPointersIfCalledFunctionIsScanf)
+{
+	parseInput(R"(
+		declare void @scanf()
+		define void @fnc() {
+			ret void
+		}
+	)");
+	auto* f = getFunctionByName("scanf");
+	std::string format = "%d %i %f";
+	auto& ctx = module->getContext();
+	auto ret = parseFormatString(module.get(), format, f);
+
+	ASSERT_EQ(3, ret.size());
+	EXPECT_EQ(PointerType::get(Type::getInt32Ty(ctx), 0), ret[0]);
+	EXPECT_EQ(PointerType::get(Type::getInt32Ty(ctx), 0), ret[1]);
+	EXPECT_EQ(PointerType::get(Type::getDoubleTy(ctx), 0), ret[2]);
+}
 
 } // namespace tests
 } // namespace llvm_utils

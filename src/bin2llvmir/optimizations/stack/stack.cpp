@@ -19,7 +19,6 @@
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #define debug_enabled false
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;
 
@@ -217,7 +216,7 @@ void StackAnalysis::handleInstruction(
 	auto* l = dyn_cast<LoadInst>(inst);
 	if (s && s->getPointerOperand() == val)
 	{
-		auto* conv = convertValueToType(
+		auto* conv = IrModifier::convertValueToType(
 				s->getValueOperand(),
 				a->getType()->getElementType(),
 				inst);
@@ -227,13 +226,13 @@ void StackAnalysis::handleInstruction(
 	else if (l && l->getPointerOperand() == val)
 	{
 		auto* nl = new LoadInst(a, "", l);
-		auto* conv = convertValueToType(nl, l->getType(), l);
+		auto* conv = IrModifier::convertValueToType(nl, l->getType(), l);
 		l->replaceAllUsesWith(conv);
 		l->eraseFromParent();
 	}
 	else
 	{
-		auto* conv = convertValueToType(a, val->getType(), inst);
+		auto* conv = IrModifier::convertValueToType(a, val->getType(), inst);
 		inst->replaceUsesOfWith(val, conv);
 	}
 }

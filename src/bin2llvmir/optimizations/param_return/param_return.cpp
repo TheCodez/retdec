@@ -34,7 +34,6 @@
 #include "retdec/bin2llvmir/utils/instruction.h"
 #define debug_enabled false
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/utils/type.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 
@@ -1537,7 +1536,7 @@ void DataFlowEntry::applyToIrVariadic()
 		//
 		auto* wrapCall = isSimpleWrapper(calledFnc);
 		auto* wrapFnc = wrapCall ? wrapCall->getCalledFunction() : calledFnc;
-		std::vector<llvm::Type*> ttypes = parseFormatString(
+		std::vector<llvm::Type*> ttypes = llvm_utils::parseFormatString(
 				_module,
 				ce.formatStr,
 				wrapFnc);
@@ -1717,7 +1716,7 @@ void DataFlowEntry::applyToIrVariadic()
 
 			if (types.size() > idx)
 			{
-				l = convertValueToType(l, types[idx], ce.call);
+				l = IrModifier::convertValueToType(l, types[idx], ce.call);
 			}
 
 			loads.push_back(l);
@@ -1825,7 +1824,7 @@ void DataFlowEntry::connectWrappers()
 	unsigned i = 0;
 	for (auto& a : fnc->getArgumentList())
 	{
-		auto* conv = convertValueToType(&a, wrappedCall->getArgOperand(i)->getType(), wrappedCall);
+		auto* conv = IrModifier::convertValueToType(&a, wrappedCall->getArgOperand(i)->getType(), wrappedCall);
 		wrappedCall->setArgOperand(i++, conv);
 	}
 
@@ -1867,12 +1866,12 @@ void DataFlowEntry::connectWrappers()
 			}
 			else
 			{
-				auto* conv = convertValueToType(a, wrappedFnc->getFunctionType()->getParamType(i++), c);
+				auto* conv = IrModifier::convertValueToType(a, wrappedFnc->getFunctionType()->getParamType(i++), c);
 				args.push_back(conv);
 			}
 		}
 		auto* nc = CallInst::Create(wrappedFnc, args, "", c);
-		auto* resConv = convertValueToTypeAfter(nc, c->getType(), nc);
+		auto* resConv = IrModifier::convertValueToTypeAfter(nc, c->getType(), nc);
 		c->replaceAllUsesWith(resConv);
 		c->eraseFromParent();
 	}

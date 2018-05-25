@@ -11,10 +11,10 @@
 
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/config.h"
-#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/providers/demangler.h"
+#include "retdec/bin2llvmir/utils/debug.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace retdec::utils;
 using namespace llvm;

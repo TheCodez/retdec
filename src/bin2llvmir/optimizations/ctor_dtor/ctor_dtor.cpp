@@ -13,7 +13,7 @@
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/optimizations/ctor_dtor/ctor_dtor.h"
 #include "retdec/bin2llvmir/utils/debug.h"
-#include "retdec/bin2llvmir/utils/type.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 using namespace llvm;
 
@@ -226,7 +226,7 @@ void CtorDtor::analyseFunction(Function* fnc)
 
 void CtorDtor::replaceVtablesPointersInStores(StoreInst* store, Vtable* vtable)
 {
-	auto* cast = convertConstantToType(
+	auto* cast = IrModifier::convertConstantToType(
 			vtable->global,
 			store->getValueOperand()->getType());
 	StoreInst *store2 = new StoreInst(cast, store->getPointerOperand(), store);

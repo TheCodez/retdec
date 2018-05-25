@@ -24,7 +24,7 @@
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
-#include "retdec/bin2llvmir/utils/type.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 using namespace retdec::utils;
 using namespace llvm;
@@ -101,6 +101,8 @@ bool SimpleTypesAnalysis::runOnModule(Module& M)
 	{
 		instToErase.clear();
 
+		IrModifier irModif(module, config);
+
 		std::vector<GlobalVariable*> gvs;
 		for (auto& glob : M.getGlobalList())
 		{
@@ -154,7 +156,7 @@ bool SimpleTypesAnalysis::runOnModule(Module& M)
 
 							if (isWide)
 							{
-								changeObjectType(config, objf, module, glob, ce->getType(), nullptr, &instToErase, false, isWide);
+								irModif.changeObjectType(objf, glob, ce->getType(), nullptr, &instToErase, false, isWide);
 								done = true;
 								break;
 							}
@@ -164,7 +166,7 @@ bool SimpleTypesAnalysis::runOnModule(Module& M)
 								auto* c = objf->getConstantCharArrayNice(cgv->getStorage().getAddress());
 								if (c)
 								{
-									changeObjectType(config, objf, module, glob, c->getType(), c, &instToErase);
+									irModif.changeObjectType(objf, glob, c->getType(), c, &instToErase);
 									done = true;
 									break;
 								}
@@ -200,7 +202,7 @@ bool SimpleTypesAnalysis::runOnModule(Module& M)
 
 					if (isWide)
 					{
-						changeObjectType(config, objf, module, glob, glob->getType()->getPointerElementType(), nullptr, &instToErase, false, isWide);
+						irModif.changeObjectType(objf, glob, glob->getType()->getPointerElementType(), nullptr, &instToErase, false, isWide);
 						done = true;
 						break;
 					}
@@ -1228,6 +1230,7 @@ void EqSet::apply(
 
 	static auto &conf = config->getConfig();
 
+	IrModifier irModif(module, config);
 	for (auto& vs : valSet)
 	{
 		if (!(isa<AllocaInst>(vs.value) || isa<GlobalVariable>(vs.value) || isa<Argument>(vs.value)))
@@ -1260,7 +1263,7 @@ void EqSet::apply(
 
 		LOG << "\t" << vs << "  ==>  " << llvmObjToString(masterType.type) << std::endl;
 
-		changeObjectType(config, objf, module, vs.value, masterType.type, nullptr, &instToErase);
+		irModif.changeObjectType(objf, vs.value, masterType.type, nullptr, &instToErase);
 	}
 
 	LOG << "\napply END   " << id << " =============================\n";

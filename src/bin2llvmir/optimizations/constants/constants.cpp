@@ -27,7 +27,7 @@
 #include "retdec/bin2llvmir/utils/instruction.h"
 const bool debug_enabled = false;
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/utils/type.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 using namespace retdec::utils;
 using namespace llvm;
@@ -138,13 +138,13 @@ void ConstantsAnalysis::checkForGlobalInInstruction(
 		{
 			if (max == &root)
 			{
-				auto* conv = convertConstantToType(ngv, val->getType());
+				auto* conv = IrModifier::convertConstantToType(ngv, val->getType());
 				inst->replaceUsesOfWith(val, conv);
 				return;
 			}
 			else if (userI)
 			{
-				auto* conv = convertConstantToType(ngv, maxC->getType());
+				auto* conv = IrModifier::convertConstantToType(ngv, maxC->getType());
 				userI->replaceUsesOfWith(maxC, conv);
 				return;
 			}
@@ -154,7 +154,7 @@ void ConstantsAnalysis::checkForGlobalInInstruction(
 	auto* gv = dyn_cast<GlobalVariable>(root.value);
 	if (isa<LoadInst>(inst) && gv && root.ops.size() <= 1)
 	{
-		auto* conv = convertConstantToType(gv, val->getType());
+		auto* conv = IrModifier::convertConstantToType(gv, val->getType());
 		inst->replaceUsesOfWith(val, conv);
 		return;
 	}

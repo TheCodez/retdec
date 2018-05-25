@@ -12,9 +12,9 @@
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/names.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
+#include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;
 
@@ -364,6 +364,275 @@ IrModifier::StackPair IrModifier::getStackVariable(
 	auto* csv = _config->insertStackVariable(ret, offset);
 
 	return {ret, csv};
+}
+
+/**
+ * Change @c val declaration to @c toType. Only the object type is changed,
+ * not its usages. Because of this, it is not safe to use this function alone.
+ * This function is not public, i.e. accessible from other modules.
+ * @param config Configuration that needs to be changed when object changed.
+ * @param objf   Object file for this object -- needed to initialize it values.
+ * @param module Module.
+ * @param val    Value which type to change.
+ * @param toType Type to change it to.
+ * @param init   Initializer constant.
+ * @return New value with a desired type. This may be the same as @a val if
+ * value's type can be mutated, or a new object if it cannot.
+ */
+Value* changeObjectDeclarationType(
+		Config* config,
+		FileImage* objf,
+		Module* module,
+		Value* val,
+		Type* toType,
+		Constant* init = nullptr,
+		bool wideString = false)
+{
+	if (val->getType() == toType)
+	{
+		return val;
+	}
+
+	if (auto* alloca = dyn_cast<AllocaInst>(val))
+	{
+		auto* ret = new AllocaInst(toType, alloca->getName(), alloca);
+		ret->takeName(alloca);
+		return ret;
+	}
+	else if (auto* ogv = dyn_cast<GlobalVariable>(val))
+	{
+		if (init == nullptr)
+		{
+			init = objf->getConstant(
+					toType,
+					config->getGlobalAddress(ogv),
+					wideString);
+		}
+
+		auto* old = ogv;
+		ogv = new GlobalVariable(
+				*module,
+				init ? init->getType() : toType,
+				old->isConstant(),
+				old->getLinkage(),
+				init,
+				old->getName());
+		ogv->takeName(old);
+
+		auto* ecgv = config->getConfigGlobalVariable(ogv);
+		if (ecgv)
+		{
+			retdec::config::Object cgv(
+					ecgv->getName(),
+					ecgv->getStorage());
+			cgv.type.setLlvmIr(
+					llvmObjToString(ogv->getType()->getPointerElementType()));
+			cgv.type.setIsWideString(wideString);
+			config->getConfig().globals.insert(cgv);
+		}
+
+		return ogv;
+	}
+	else if (auto* arg = dyn_cast<Argument>(val))
+	{
+		return modifyFunctionArgumentType(config, arg, toType);
+	}
+	else
+	{
+		errs() << "unhandled value type : " << *val << "\n";
+		assert(false && "unhandled value type");
+		return val;
+	}
+}
+
+/**
+ * Change @c val type to @c toType and fix all its uses.
+ * @param config Configuration that needs to be changed when object changed.
+ * @param objf   Object file for this object -- needed to initialize it values.
+ * @param module Module.
+ * @param val    Value which type to change.
+ * @param toType Type to change it to.
+ * @param init   Initializer constant.
+ * @param instToErase Some instructions may become obsolete. If pointer to this
+ *                    container is provided, function adds such instructions to
+ *                    it and it is up to the caller to erase them. Otherwise,
+ *                    function erases such instructions from parent.
+ *                    If caller does not have instructions saved, it is save
+ *                    to erase them here -- pass nullptr.
+ *                    If caller is performing some analysis where it has
+ *                    instructions stored in internal structures and it is
+ *                    possible that they will be used after they would
+ *                    have been erased, it should pass pointer to container
+ *                    here and erase instructions when it is finished.
+ * @param dbg    Flag to enable debug messages.
+ * @param wideString Is type a wide string?
+ */
+llvm::Value* IrModifier::changeObjectType(
+		FileImage* objf,
+		Value* val,
+		Type* toType,
+		Constant* init,
+		std::unordered_set<llvm::Instruction*>* instToErase,
+		bool dbg,
+		bool wideString)
+{
+	if (!(isa<AllocaInst>(val)
+			|| isa<GlobalVariable>(val)
+			|| isa<Argument>(val)))
+	{
+		assert(false && "only globals, allocas and arguments can be changed");
+		return val;
+	}
+
+	if (val->getType() == toType)
+	{
+		return val;
+	}
+
+	Type* origType = val->getType();
+	auto* nval = changeObjectDeclarationType(
+			_config,
+			objf,
+			_module,
+			val,
+			toType,
+			init,
+			wideString);
+	Constant* newConst = dyn_cast<Constant>(nval);
+
+	// For some reason, iteration using val->user_begin() and val->user_end()
+	// may break -- there are many uses, but after modifying one of them,
+	// iteration ends before visiting all of them. Even when we increment
+	// iterator before modification.
+	// Example: @glob_var_0 in arm-elf-059c1a6996c630386b5067c2ccc6ddf2
+	// Therefore, we store all uses to our own container.
+	//
+	std::list<User*> users;
+	for (const auto& U : val->users())
+	{
+		users.push_back(U);
+	}
+
+	for (auto* user : users)
+	{
+		Constant* c = dyn_cast<Constant>(user);
+		auto* gvDeclr = dyn_cast<GlobalVariable>(user);
+
+		if (auto* store = dyn_cast<StoreInst>(user))
+		{
+			Value* src = store->getValueOperand();
+			Value* dst = store->getPointerOperand();
+
+			if (val == dst)
+			{
+				PointerType* ptr = dyn_cast<PointerType>(nval->getType());
+				assert(ptr);
+				auto* conv = IrModifier::convertValueToType(src, ptr->getElementType(), store);
+				store->setOperand(0, conv);
+				store->setOperand(1, nval);
+			}
+			else
+			{
+				auto* conv = IrModifier::convertValueToType(nval, origType, store);
+				store->setOperand(0, conv);
+			}
+		}
+		else if (auto* load = dyn_cast<LoadInst>(user))
+		{
+			assert(val == load->getPointerOperand());
+
+			auto* newLoad = new LoadInst(nval);
+			newLoad->insertBefore(load);
+
+			// load->getType() stays unchanged even after loaded object's type is mutated.
+			// we can use it here as a target type, but the origianl load instruction can
+			// not be used afterwards, because its type is incorrect.
+			auto* conv = IrModifier::convertValueToType(newLoad, load->getType(), load);
+
+			if (conv != load)
+			{
+				load->replaceAllUsesWith(conv);
+				if (instToErase)
+				{
+					instToErase->insert(load);
+				}
+				else
+				{
+					load->eraseFromParent();
+				}
+			}
+		}
+		else if (auto* cast = dyn_cast<CastInst>(user))
+		{
+			if (nval->getType() == cast->getType())
+			{
+				if (val != cast)
+				{
+					cast->replaceAllUsesWith(nval);
+					if (instToErase)
+					{
+						instToErase->insert(cast);
+					}
+					else
+					{
+						cast->eraseFromParent();
+					}
+				}
+			}
+			else
+			{
+				auto* conv = IrModifier::convertValueToType(nval, cast->getType(), cast);
+				if (cast != conv)
+				{
+					cast->replaceAllUsesWith(conv);
+					if (instToErase)
+					{
+						instToErase->insert(cast);
+					}
+					else
+					{
+						cast->eraseFromParent();
+					}
+				}
+			}
+		}
+		// maybe GetElementPtrInst should be specially handled?
+		else if (auto* instr = dyn_cast<Instruction>(user))
+		{
+			auto* conv = IrModifier::convertValueToType(nval, origType, instr);
+			if (val != conv)
+			{
+				instr->replaceUsesOfWith(val, conv);
+			}
+		}
+		else if (newConst && gvDeclr)
+		{
+			auto* conv = IrModifier::convertConstantToType(
+					newConst,
+					gvDeclr->getType()->getPointerElementType());
+			if (gvDeclr != conv)
+			{
+				gvDeclr->replaceUsesOfWith(val, conv);
+			}
+		}
+		// Needs to be at the very end, many objects can be casted to Constant.
+		//
+		else if (newConst && c)
+		{
+			auto* conv = IrModifier::convertConstantToType(newConst, c->getType());
+			if (c != conv)
+			{
+				c->replaceAllUsesWith(conv);
+			}
+		}
+		else
+		{
+			errs() << "unhandled use : " << *user << " -> " << *toType << "\n";
+			assert(false && "unhandled use");
+		}
+	}
+
+	return nval;
 }
 
 //

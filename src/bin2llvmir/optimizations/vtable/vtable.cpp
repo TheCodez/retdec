@@ -15,10 +15,10 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include "retdec/bin2llvmir/optimizations/vtable/vtable.h"
-#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/providers/fileimage.h"
 #include "retdec/bin2llvmir/utils/debug.h"
-#include "retdec/bin2llvmir/utils/type.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace retdec::utils;
 using namespace llvm;
@@ -390,6 +390,8 @@ void VtableAnalysis::createFunctions()
 
 void VtableAnalysis::createVtableStructures()
 {
+	IrModifier irModif(module, config);
+
 	for (auto& p : vtableMap)
 	{
 		auto& vt = p.second;
@@ -412,10 +414,8 @@ void VtableAnalysis::createVtableStructures()
 		auto* configOld = config->getLlvmGlobalVariable(vt->vtableAddress);
 		if (configOld)
 		{
-			vt->global = dyn_cast<GlobalVariable>(changeObjectType(
-					config,
+			vt->global = dyn_cast<GlobalVariable>(irModif.changeObjectType(
 					objf,
-					module,
 					configOld,
 					structType,
 					init));

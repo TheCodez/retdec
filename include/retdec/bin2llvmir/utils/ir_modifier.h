@@ -11,6 +11,7 @@
 #include <llvm/IR/Module.h>
 
 #include "retdec/bin2llvmir/providers/config.h"
+#include "retdec/bin2llvmir/providers/fileimage.h"
 
 namespace retdec {
 namespace bin2llvmir {
@@ -63,6 +64,15 @@ class IrModifier
 				int offset,
 				llvm::Type* type,
 				const std::string& name = "stack_var");
+
+		llvm::Value* changeObjectType(
+				FileImage* objf,
+				llvm::Value* val,
+				llvm::Type* toType,
+				llvm::Constant* init = nullptr,
+				std::unordered_set<llvm::Instruction*>* instToErase = nullptr,
+				bool dbg = false,
+				bool wideString = false);
 
 	protected:
 		llvm::Module* _module = nullptr;

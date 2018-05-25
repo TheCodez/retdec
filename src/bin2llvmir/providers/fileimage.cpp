@@ -8,7 +8,6 @@
 #include "retdec/bin2llvmir/providers/fileimage.h"
 #include "retdec/bin2llvmir/utils/global_var.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
-#include "retdec/bin2llvmir/utils/type.h"
 #include "retdec/loader/image_factory.h"
 #include "retdec/loader/loader/raw_data/raw_data_image.h"
 

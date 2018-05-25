@@ -13,8 +13,8 @@
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #define debug_enabled false
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;
 using namespace retdec::bin2llvmir::llvm_utils;
@@ -266,7 +266,7 @@ bool RegisterAnalysis::x86FpuAnalysisBb(
 
 			auto* reg = getLlvmRegister(regClass, regNum);
 			auto* l = new LoadInst(reg, "", c);
-			auto* conv = convertValueToType(l, c->getType(), c);
+			auto* conv = IrModifier::convertValueToType(l, c->getType(), c);
 
 			c->replaceAllUsesWith(conv);
 			c->eraseFromParent();

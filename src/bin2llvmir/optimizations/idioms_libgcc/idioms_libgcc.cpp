@@ -17,7 +17,6 @@
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace retdec::utils;
 using namespace llvm;
@@ -293,14 +292,14 @@ llvm::Value* IdiomsLibgccImpl::getOp0<float>(llvm::CallInst* call)
 {
 	auto* t = Type::getFloatTy(call->getContext());
 	auto* l = new llvm::LoadInst(op0Single, "", call);
-	return convertValueToType(l, t, call);
+	return IrModifier::convertValueToType(l, t, call);
 }
 template<>
 llvm::Value* IdiomsLibgccImpl::getOp0<double>(llvm::CallInst* call)
 {
 	auto* t = Type::getDoubleTy(call->getContext());
 	auto* l = new llvm::LoadInst(op0Double, "", call);
-	return convertValueToType(l, t, call);
+	return IrModifier::convertValueToType(l, t, call);
 }
 
 template<>
@@ -318,53 +317,80 @@ llvm::Value* IdiomsLibgccImpl::getOp1<float>(llvm::CallInst* call)
 {
 	auto* t = Type::getFloatTy(call->getContext());
 	auto* l = new llvm::LoadInst(op1Single, "", call);
-	return convertValueToType(l, t, call);
+	return IrModifier::convertValueToType(l, t, call);
 }
 template<>
 llvm::Value* IdiomsLibgccImpl::getOp1<double>(llvm::CallInst* call)
 {
 	auto* t = Type::getDoubleTy(call->getContext());
 	auto* l = new llvm::LoadInst(op1Double, "", call);
-	return convertValueToType(l, t, call);
+	return IrModifier::convertValueToType(l, t, call);
 }
 
 template<>
-llvm::Value* IdiomsLibgccImpl::getRes0<std::int32_t>(llvm::CallInst* call, llvm::Value* res)
+llvm::Value* IdiomsLibgccImpl::getRes0<std::int32_t>(
+		llvm::CallInst* call,
+		llvm::Value* res)
 {
-	auto* c = convertValueToType(res, res0Single->getType()->getElementType(), call);
+	auto* c = IrModifier::convertValueToType(
+			res,
+			res0Single->getType()->getElementType(),
+			call);
 	return new llvm::StoreInst(c, res0Single, call);
 }
 template<>
-llvm::Value* IdiomsLibgccImpl::getRes0<std::int64_t>(llvm::CallInst* call, llvm::Value* res)
+llvm::Value* IdiomsLibgccImpl::getRes0<std::int64_t>(
+		llvm::CallInst* call,
+		llvm::Value* res)
 {
-	auto* c = convertValueToType(res, res0Double->getType()->getElementType(), call);
+	auto* c = IrModifier::convertValueToType(
+			res,
+			res0Double->getType()->getElementType(),
+			call);
 	return new llvm::StoreInst(c, res0Double, call);
 }
 template<>
-llvm::Value* IdiomsLibgccImpl::getRes0<float>(llvm::CallInst* call, llvm::Value* res)
+llvm::Value* IdiomsLibgccImpl::getRes0<float>(
+		llvm::CallInst* call,
+		llvm::Value* res)
 {
-	auto* c = convertValueToType(res, res0Single->getType()->getElementType(), call);
+	auto* c = IrModifier::convertValueToType(
+			res,
+			res0Single->getType()->getElementType(),
+			call);
 	return new llvm::StoreInst(c, res0Single, call);
 }
 template<>
-llvm::Value* IdiomsLibgccImpl::getRes0<double>(llvm::CallInst* call, llvm::Value* res)
+llvm::Value* IdiomsLibgccImpl::getRes0<double>(
+		llvm::CallInst* call,
+		llvm::Value* res)
 {
 	auto* m = call->getModule();
 	auto* resType = res0Double->getType()->getElementType();
-	auto* c = convertValueToType(res, resType, call);
+	auto* c = IrModifier::convertValueToType(res, resType, call);
 	return new llvm::StoreInst(c, res0Double, call);
 }
 
 template<>
-llvm::Value* IdiomsLibgccImpl::getRes1<std::int32_t>(llvm::CallInst* call, llvm::Value* res)
+llvm::Value* IdiomsLibgccImpl::getRes1<std::int32_t>(
+		llvm::CallInst* call,
+		llvm::Value* res)
 {
-	auto* c = convertValueToType(res, res1Single->getType()->getElementType(), call);
+	auto* c = IrModifier::convertValueToType(
+			res,
+			res1Single->getType()->getElementType(),
+			call);
 	return new llvm::StoreInst(c, res1Single, call);
 }
 template<>
-llvm::Value* IdiomsLibgccImpl::getRes1<std::int64_t>(llvm::CallInst* call, llvm::Value* res)
+llvm::Value* IdiomsLibgccImpl::getRes1<std::int64_t>(
+		llvm::CallInst* call,
+		llvm::Value* res)
 {
-	auto* c = convertValueToType(res, res1Double->getType()->getElementType(), call);
+	auto* c = IrModifier::convertValueToType(
+			res,
+			res1Double->getType()->getElementType(),
+			call);
 	return new llvm::StoreInst(c, res1Double, call);
 }
 

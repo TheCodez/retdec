@@ -16,7 +16,7 @@
 #include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
-#include "retdec/bin2llvmir/utils/type.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 using namespace llvm;
 
@@ -70,7 +70,7 @@ bool localizeDefinition(
 			t,
 			"",
 			fncFirst);
-	auto* c1 = convertValueToType(s->getValueOperand(), t, s);
+	auto* c1 = IrModifier::convertValueToType(s->getValueOperand(), t, s);
 	new StoreInst(
 			c1,
 			localVar,
@@ -79,7 +79,7 @@ bool localizeDefinition(
 	for (auto* us : def->uses)
 	{
 		auto* u = us->use;
-		auto* c2 = convertValueToType(localVar, val->getType(), u);
+		auto* c2 = IrModifier::convertValueToType(localVar, val->getType(), u);
 		u->replaceUsesOfWith(val, c2);
 	}
 
@@ -107,7 +107,7 @@ llvm::CallInst* _modifyCallInst(
 	{
 		if (!newCall->getType()->isVoidTy())
 		{
-			auto* cast = convertValueToType(newCall, call->getType(), call);
+			auto* cast = IrModifier::convertValueToType(newCall, call->getType(), call);
 			call->replaceAllUsesWith(cast);
 		}
 		else
@@ -142,7 +142,7 @@ llvm::CallInst* _modifyCallInst(
 				//
 //				i->eraseFromParent();
 				auto* conf = ConfigProvider::getConfig(call->getModule());
-				auto* c = convertValueToType(
+				auto* c = IrModifier::convertValueToType(
 						conf->getGlobalDummy(),
 						i->getValueOperand()->getType(),
 						i);
@@ -191,7 +191,7 @@ llvm::CallInst* modifyCallInst(
 					argTypes,
 					false), // isVarArg
 			0);
-	auto* conv = convertValueToType(call->getCalledValue(), t, call);
+	auto* conv = IrModifier::convertValueToType(call->getCalledValue(), t, call);
 
 	return _modifyCallInst(call, conv, args);
 }
@@ -373,7 +373,7 @@ FunctionPair modifyFunction(
 				auto* inst = dyn_cast<Instruction>(u);
 				assert(inst && "we need an instruction here");
 
-				auto* conv = convertValueToType(a2, a1->getType(), inst);
+				auto* conv = IrModifier::convertValueToType(a2, a1->getType(), inst);
 				inst->replaceUsesOfWith(a1, conv);
 			}
 		}
@@ -394,7 +394,7 @@ FunctionPair modifyFunction(
 		auto* v = *asIt;
 
 		assert(v->getType()->isPointerTy());
-		auto* conv = convertValueToType(
+		auto* conv = IrModifier::convertValueToType(
 				a,
 				v->getType()->getPointerElementType(),
 				&nf->front().front());
@@ -439,7 +439,7 @@ FunctionPair modifyFunction(
 				}
 				else if (fIt != rets2vals.end())
 				{
-					auto* conv = convertValueToType(
+					auto* conv = IrModifier::convertValueToType(
 							fIt->second,
 							nf->getReturnType(),
 							retI);
@@ -455,7 +455,7 @@ FunctionPair modifyFunction(
 				}
 				else if (auto* val = retI->getReturnValue())
 				{
-					auto* conv = convertValueToType(
+					auto* conv = IrModifier::convertValueToType(
 							val,
 							nf->getReturnType(),
 							retI);
@@ -463,7 +463,7 @@ FunctionPair modifyFunction(
 				}
 				else
 				{
-					auto* conv = convertConstantToType(
+					auto* conv = IrModifier::convertConstantToType(
 							config->getGlobalDummy(),
 							nf->getReturnType());
 					ReturnInst::Create(nf->getContext(), conv, retI);
@@ -493,7 +493,7 @@ FunctionPair modifyFunction(
 				{
 					if (vIt != fIt->second.end())
 					{
-						auto* conv = convertValueToType(
+						auto* conv = IrModifier::convertValueToType(
 								*vIt,
 								fa->getType(),
 								call);
@@ -502,7 +502,7 @@ FunctionPair modifyFunction(
 					}
 					else
 					{
-						auto* conv = convertValueToType(
+						auto* conv = IrModifier::convertValueToType(
 								config->getGlobalDummy(),
 								fa->getType(),
 								call);
@@ -523,7 +523,7 @@ FunctionPair modifyFunction(
 				{
 					if (ai != ae)
 					{
-						auto* conv = convertValueToType(
+						auto* conv = IrModifier::convertValueToType(
 								call->getArgOperand(ai),
 								fa->getType(),
 								call);
@@ -532,7 +532,7 @@ FunctionPair modifyFunction(
 					}
 					else
 					{
-						auto* conv = convertValueToType(
+						auto* conv = IrModifier::convertValueToType(
 								config->getGlobalDummy(),
 								fa->getType(),
 								call);
@@ -551,7 +551,7 @@ FunctionPair modifyFunction(
 			{
 				auto* n = nc->getNextNode();
 				assert(n);
-				auto* conv = convertValueToType(
+				auto* conv = IrModifier::convertValueToType(
 						nc,
 						retVal->getType()->getPointerElementType(),
 						n);
@@ -560,12 +560,12 @@ FunctionPair modifyFunction(
 		}
 		else if (StoreInst* s = dyn_cast<StoreInst>(u))
 		{
-			auto* conv = convertValueToType(nf, fnc->getType(), s);
+			auto* conv = IrModifier::convertValueToType(nf, fnc->getType(), s);
 			s->replaceUsesOfWith(fnc, conv);
 		}
 		else if (auto* c = dyn_cast<CastInst>(u))
 		{
-			auto* conv = convertValueToType(nf, fnc->getType(), c);
+			auto* conv = IrModifier::convertValueToType(nf, fnc->getType(), c);
 			c->replaceUsesOfWith(fnc, conv);
 		}
 		else if (isa<Constant>(u))
@@ -574,7 +574,7 @@ FunctionPair modifyFunction(
 		}
 		else
 		{
-			// we could do generic convertValueToType() and hope for the best,
+			// we could do generic IrModifier::convertValueToType() and hope for the best,
 			// but we would prefer to know about such cases -> throw assert.
 			errs() << "unhandled use : " << *u << "\n";
 			assert(false && "unhandled use");
@@ -583,7 +583,7 @@ FunctionPair modifyFunction(
 
 	if (nf->getType() != fnc->getType())
 	{
-		auto* conv = convertConstantToType(nf, fnc->getType());
+		auto* conv = IrModifier::convertConstantToType(nf, fnc->getType());
 		fnc->replaceAllUsesWith(conv);
 	}
 

@@ -9,10 +9,11 @@
 
 #include "retdec/utils/container.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
-#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/providers/names.h"
-#include "retdec/bin2llvmir/utils/type.h"
+#include "retdec/bin2llvmir/utils/debug.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace llvm;
 
@@ -547,7 +548,7 @@ bool AsmInstruction::eraseInstructions()
 		if (!genRet->getReturnType()->isVoidTy())
 		{
 			auto* ci = ConstantInt::get(Abi::getDefaultType(m), 0);
-			retVal = convertConstantToType(ci, genRet->getReturnType());
+			retVal = IrModifier::convertConstantToType(ci, genRet->getReturnType());
 		}
 
 		auto* ret = ReturnInst::Create(m->getContext(), retVal);

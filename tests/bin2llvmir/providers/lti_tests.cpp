@@ -16,7 +16,6 @@
 #include "retdec/ctypes/void_type.h"
 #include "retdec/bin2llvmir/providers/lti.h"
 #include "bin2llvmir/utils/llvmir_tests.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace ::testing;
 using namespace llvm;

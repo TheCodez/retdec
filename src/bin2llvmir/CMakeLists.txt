@@ -86,7 +86,6 @@ set(BIN2LLVMIR_SOURCES
 
 	utils/global_var.cpp
 	utils/instruction.cpp
-	utils/type.cpp
 )
 
 add_library(retdec-bin2llvmir STATIC ${BIN2LLVMIR_SOURCES})

@@ -5,7 +5,6 @@
 */
 
 #include "retdec/bin2llvmir/optimizations/decoder/decoder.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace retdec::utils;
 using namespace llvm;
@@ -23,7 +22,7 @@ llvm::CallInst* Decoder::transformToCall(
 	if (auto* retObj = getCallReturnObject())
 	{
 		auto* cc = cast<Instruction>(
-				convertValueToTypeAfter(c, retObj->getValueType(), c));
+				IrModifier::convertValueToTypeAfter(c, retObj->getValueType(), c));
 		auto* s = new StoreInst(cc, retObj);
 		s->insertAfter(cc);
 	}
@@ -552,7 +551,7 @@ llvm::Function* Decoder::splitFunctionOn(
 			if (auto* retObj = getCallReturnObject())
 			{
 				auto* cc = cast<Instruction>(
-						convertValueToTypeAfter(c, retObj->getValueType(), c));
+						IrModifier::convertValueToTypeAfter(c, retObj->getValueType(), c));
 				auto* s = new StoreInst(cc, retObj);
 				s->insertAfter(cc);
 			}

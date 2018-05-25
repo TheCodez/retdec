@@ -7,8 +7,8 @@
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/utils/global_var.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;
 
@@ -250,7 +250,7 @@ GlobalVariable* getGlobalVariable(
 				c,
 				name);
 
-		auto* conv = convertConstantToType(ngv, gv->getType());
+		auto* conv = IrModifier::convertConstantToType(ngv, gv->getType());
 		if (conv != ngv)
 		{
 			gv->replaceAllUsesWith(conv);

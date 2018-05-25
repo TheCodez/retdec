@@ -404,6 +404,380 @@ Type* stringToLlvmType(LLVMContext& ctx, const std::string& str)
 	return nullptr;
 }
 
+/**
+ * Parse format string @a format used in functions such as @c printf or @c scanf
+ * into vector of data types in context of module @a module.
+ * If @a calledFnc provided and called function name contains "scan" string, all
+ * types are transformed to pointers.
+ * @return Vector of data types used in format string.
+ *
+ * This is done according to:
+ * http://www.cplusplus.com/reference/cstdio/printf/
+ * but we need small updates, because it is used for scanf where are small
+ * differences in floating point numbers:
+ * http://www.cplusplus.com/reference/cstdio/scanf/
+ */
+std::vector<llvm::Type*> parseFormatString(
+		llvm::Module* module,
+		const std::string& format,
+		llvm::Function* calledFnc)
+{
+	LLVMContext& ctx = module->getContext();
+	std::vector<Type*> ret;
+
+	const char *cp = format.c_str();
+	size_t max_width_length = 0;
+	size_t max_precision_length = 0;
+
+	while (*cp != '\0')
+	{
+		char c = *cp++;
+		if (c != '%')
+		{
+			continue;
+		}
+
+		// Test for positional argument.
+		//
+		if (*cp >= '0' && *cp <= '9')
+		{
+			const char *np;
+
+			for (np = cp; *np >= '0' && *np <= '9'; np++) {};
+
+			if (*np == '$')
+			{
+				size_t n = 0;
+				for (np = cp; *np >= '0' && *np <= '9'; np++)
+				{
+					n += n*10 + *np - '0';
+				}
+				if (n == 0) // Positional argument 0.
+				{
+					return ret;
+				}
+				cp = np + 1;
+			}
+		}
+
+		// Read the flags.
+		//
+		for (;;)
+		{
+			if (*cp == '\'')
+			{
+				cp++;
+			}
+			else if (*cp == '-')
+			{
+				cp++;
+			}
+			else if (*cp == '+')
+			{
+				cp++;
+			}
+			else if (*cp == ' ')
+			{
+				cp++;
+			}
+			else if (*cp == '#')
+			{
+				cp++;
+			}
+			else if (*cp == '0')
+			{
+				cp++;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		// Parse the field width.
+		//
+		if (*cp == '*')
+		{
+			cp++;
+			if (max_width_length < 1)
+			{
+				max_width_length = 1;
+			}
+
+			// Test for positional argument.
+			if (*cp >= '0' && *cp <= '9')
+			{
+				const char *np;
+
+				for (np = cp; *np >= '0' && *np <= '9'; np++) {};
+
+				if (*np == '$')
+				{
+					size_t n = 0;
+					for (np = cp; *np >= '0' && *np <= '9'; np++)
+					{
+						n += n * 10 + *np - '0';
+					}
+					if (n == 0) // Positional argument 0.
+					{
+						return ret;
+					}
+					cp = np + 1;
+				}
+			}
+
+			ret.push_back(Abi::getDefaultType(module));
+		}
+		else if (*cp >= '0' && *cp <= '9')
+		{
+			for (; *cp >= '0' && *cp <= '9'; cp++) {}; // skipping
+		}
+
+		// Parse the precision.
+		//
+		if (*cp == '.')
+		{
+			cp++;
+			if (*cp == '*')
+			{
+				cp++;
+				if (max_precision_length < 2)
+				{
+					max_precision_length = 2;
+				}
+
+				// Test for positional argument.
+				if (*cp >= '0' && *cp <= '9')
+				{
+					const char *np;
+
+					for (np = cp; *np >= '0' && *np <= '9'; np++) {};
+
+					if (*np == '$')
+					{
+						size_t n = 0;
+						for (np = cp; *np >= '0' && *np <= '9'; np++)
+						{
+							n += n * 10 + *np - '0';
+						}
+						if (n == 0) // Positional argument 0.
+						{
+							return ret;
+						}
+						cp = np + 1;
+					}
+				}
+
+				ret.push_back(Abi::getDefaultType(module));
+			}
+			else
+			{
+				for (; *cp >= '0' && *cp <= '9'; cp++) {}; // skipping
+			}
+		}
+
+		// Parse argument type/size specifiers.
+		//
+		int flags = 0;
+		for (;;)
+		{
+			if (*cp == 'h')
+			{
+				flags |= (1 << (flags & 1));
+				cp++;
+			}
+			else if (*cp == 'L')
+			{
+				flags |= 4;
+				cp++;
+			}
+			else if (*cp == 'l')
+			{
+				flags += 8;
+				cp++;
+			}
+			else if (*cp == 'I')
+			{
+				// specific to msvs, see http://msdn.microsoft.com/en-us/library/56e442dc.aspx
+				// can be: "I" or "I32" or "I64"
+				cp++;
+				if (*cp == '3' || *cp == '6')
+				{
+					cp++;
+					if (*cp == '2')
+					{
+						flags += 8;
+					}
+					else if (*cp == '4')
+					{
+						flags += 16;
+					}
+					cp++;
+				}
+			}
+			else if (*cp == 'j')
+			{
+				// 64 -> +16, 32 -> +8, always 64?
+				flags += 16;
+				cp++;
+			}
+			// 'z' is standardized in ISO C 99, but glibc uses 'Z'
+			// because the warning facility in gcc-2.95.2 understands
+			// only 'Z' (see gcc-2.95.2/gcc/c-common.c:1784).
+			else if (*cp == 'z' || *cp == 'Z')
+			{
+				// 64 -> +16, 32 -> +8, always 64?
+				flags += 16;
+				cp++;
+			}
+			else if (*cp == 't')
+			{
+				auto* dt = Abi::getDefaultType(module);
+				if (dt->getBitWidth() == 64)
+				{
+					flags += 16;
+				}
+				else
+				{
+					flags += 8;
+				}
+				cp++;
+			}
+			else
+				break;
+		}
+
+		// Read the conversion character.
+		//
+		Type* type = nullptr;
+		c = *cp++;
+		switch (c)
+		{
+			case 'd':
+			case 'i':
+			{
+				if (flags >= 16 || (flags & 4))
+				{
+					type = Type::getInt64Ty(ctx);
+				}
+				else
+				{
+					if (flags >= 8) type = Type::getInt32Ty(ctx);
+					else if (flags & 2) type = Type::getInt8Ty(ctx);
+					else if (flags & 1) type = Type::getInt16Ty(ctx);
+					else type = Abi::getDefaultType(module);
+				}
+				break;
+			}
+			case 'o':
+			case 'u':
+			case 'x':
+			case 'X':
+			{
+				if (flags >= 16 || (flags & 4))
+				{
+					type = Type::getInt64Ty(ctx);
+				}
+				else
+				{
+					if (flags >= 8) type = Type::getInt32Ty(ctx);
+					else if (flags & 2) type = Type::getInt8Ty(ctx);
+					else if (flags & 1) type = Type::getInt16Ty(ctx);
+					else type = Type::getInt32Ty(ctx);
+				}
+				break;
+			}
+			case 'f':
+			case 'F':
+			case 'e':
+			case 'E':
+			case 'g':
+			case 'G':
+			case 'a':
+			case 'A':
+			{
+				if (flags >= 16 || (flags & 4))
+				{
+					type = Type::getX86_FP80Ty(ctx);
+				}
+				else
+				{
+					type = Type::getDoubleTy(ctx);
+				}
+				break;
+			}
+			case 'c':
+			{
+				type = Type::getInt8Ty(ctx);
+				break;
+			}
+			case 'C':
+			{
+				type = Type::getInt8Ty(ctx);
+				c = 'c';
+				break;
+			}
+			case 's':
+			{
+				type = llvm_utils::getCharPointerType(ctx);
+				break;
+			}
+			case 'S':
+			{
+				type = llvm_utils::getCharPointerType(ctx);
+				c = 's';
+				break;
+			}
+			case 'p':
+			{
+				type = Abi::getDefaultPointerType(module);
+				break;
+			}
+			case 'n':
+			{
+				if (flags >= 16 || (flags & 4))
+				{
+					type = PointerType::get(Type::getInt64Ty(ctx), 0);
+				}
+				else
+				{
+					if (flags >= 8) type = Type::getInt32Ty(ctx);
+					else if (flags & 2) type = Type::getInt8Ty(ctx);
+					else if (flags & 1) type = Type::getInt16Ty(ctx);
+					else type = Type::getInt32Ty(ctx);
+					type = PointerType::get(type, 0);
+				}
+				break;
+			}
+			case '%':
+			{
+				type = nullptr;
+				break;
+			}
+			default: // Unknown conversion character.
+			{
+				type = Abi::getDefaultType(module);
+				break;
+			}
+		}
+
+		if (type)
+		{
+			ret.push_back(type);
+		}
+	}
+
+	if (calledFnc && retdec::utils::contains(calledFnc->getName(), "scan"))
+	{
+		for (size_t i = 0; i < ret.size(); ++i)
+		{
+			ret[i] = PointerType::get(ret[i], 0);
+		}
+	}
+
+	return ret;
+}
+
 } // namespace llvm_utils
 } // namespace bin2llvmir
 } // namespace retdec
