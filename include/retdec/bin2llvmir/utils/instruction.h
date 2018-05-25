@@ -25,14 +25,6 @@ namespace bin2llvmir {
 class Definition;
 class ReachingDefinitionsAnalysis;
 
-bool localizeDefinition(
-		const ReachingDefinitionsAnalysis& RDA,
-		const llvm::Instruction* def,
-		llvm::Type* type = nullptr);
-bool localizeDefinition(
-		const Definition* def,
-		llvm::Type* type = nullptr);
-
 llvm::CallInst* modifyCallInst(
 		llvm::CallInst* call,
 		llvm::Type* ret,

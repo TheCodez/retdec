@@ -26,9 +26,10 @@ class IrModifier
 	// Can be used simply like this: \c IrModifier::method().
 	//
 	public:
+		template<typename Container>
 		static bool localize(
-				llvm::StoreInst* definition,
-				std::set<llvm::Instruction*>& uses);
+				llvm::Instruction* storeDefinition,
+				const Container& uses);
 
 		static llvm::AllocaInst* createAlloca(
 				llvm::Function* fnc,
@@ -85,6 +86,34 @@ class IrModifier
 		llvm::Module* _module = nullptr;
 		Config* _config = nullptr;
 };
+
+template<typename Container>
+bool IrModifier::localize(
+		llvm::Instruction* storeDefinition,
+		const Container& uses)
+{
+	llvm::StoreInst* definition = llvm::dyn_cast_or_null<llvm::StoreInst>(
+			storeDefinition);
+	if (definition == nullptr)
+	{
+		false;
+	}
+	auto* ptr = definition->getPointerOperand();
+	auto* f = definition->getFunction();
+
+	auto* local = new llvm::AllocaInst(ptr->getType()->getPointerElementType());
+	local->insertBefore(&f->getEntryBlock().front());
+
+	new llvm::StoreInst(definition->getValueOperand(), local, definition);
+	definition->eraseFromParent();
+
+	for (auto* u : uses)
+	{
+		reinterpret_cast<llvm::Instruction*>(u)->replaceUsesOfWith(ptr, local);
+	}
+
+	return true;
+}
 
 } // namespace bin2llvmir
 } // namespace retdec

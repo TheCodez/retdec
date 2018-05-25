@@ -15,7 +15,7 @@
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/optimizations/local_vars/local_vars.h"
 #include "retdec/bin2llvmir/utils/debug.h"
-#include "retdec/bin2llvmir/utils/instruction.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 using namespace retdec::utils;
 using namespace llvm;
@@ -87,11 +87,11 @@ bool LocalVars::runOnModule(Module& M)
 				if (a->getType()->isFloatingPointTy()
 						&& !d->getSource()->getType()->isFloatingPointTy())
 				{
-					localizeDefinition(d);
+					IrModifier::localize(d->def, d->uses);
 				}
 				else if (config->isRegister(d->getSource()))
 				{
-					localizeDefinition(d);
+					IrModifier::localize(d->def, d->uses);
 				}
 			}
 		}
@@ -112,7 +112,7 @@ bool LocalVars::runOnModule(Module& M)
 				{
 					continue;
 				}
-				localizeDefinition(d);
+				IrModifier::localize(d->def, d->uses);
 			}
 		}
 		else if (StoreInst* s = dyn_cast<StoreInst>(&I))
@@ -131,11 +131,11 @@ bool LocalVars::runOnModule(Module& M)
 			auto* vo = llvm_utils::skipCasts(s->getValueOperand());
 			if (isa<CallInst>(vo))
 			{
-				localizeDefinition(d);
+				IrModifier::localize(d->def, d->uses);
 			}
 			else if (isa<Argument>(vo))
 			{
-				localizeDefinition(d);
+				IrModifier::localize(d->def, d->uses);
 			}
 		}
 	}

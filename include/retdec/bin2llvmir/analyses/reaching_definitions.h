@@ -60,6 +60,8 @@ class Use
 	public:
 		Use(llvm::Instruction* u, llvm::Value* s);
 		bool operator==(const Use &o) const;
+		using shit = llvm::Instruction*;
+		operator shit() const { return use; }
 
 		bool isUndef() const;
 

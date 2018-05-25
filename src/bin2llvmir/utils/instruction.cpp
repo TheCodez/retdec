@@ -24,44 +24,33 @@ namespace retdec {
 namespace bin2llvmir {
 
 /**
- * @return @c True if @a def was localized using the @a RDA results and @c type
- *         data type.
- */
-bool localizeDefinition(
-		const ReachingDefinitionsAnalysis& RDA,
-		const llvm::Instruction* def,
-		llvm::Type* type)
-{
-	return localizeDefinition(RDA.getDef(def), type);
-}
-
-/**
  * @return @c True if @a def was localized using @c type data type.
  */
 bool localizeDefinition(
 		const Definition* def,
 		llvm::Type* type)
 {
-	if (def == nullptr || def->uses.empty())
-	{
-		return false;
-	}
+//	if (def == nullptr || def->uses.empty())
+//	{
+//		return false;
+//	}
 
 	StoreInst* s = dyn_cast<StoreInst>(def->def);
-	if (s == nullptr)
-	{
-		assert("only stores are expected");
-		return false;
-	}
+//	if (s == nullptr)
+//	{
+//		assert("only stores are expected");
+//		return false;
+//	}
 	auto* val = s->getPointerOperand();
 
-	for (auto* u : def->uses)
-	{
-		if (u->defs.size() > 1)
-		{
-			return false;
-		}
-	}
+// TODO
+//	for (auto* u : def->uses)
+//	{
+//		if (u->defs.size() > 1)
+//		{
+//			return false;
+//		}
+//	}
 
 	auto* fnc = def->def->getFunction();
 	auto* fncFirst = &(fnc->getEntryBlock().getInstList().front());

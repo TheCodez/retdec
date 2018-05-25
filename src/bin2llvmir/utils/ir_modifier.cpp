@@ -889,27 +889,6 @@ llvm::Value* IrModifier::changeObjectType(
 //==============================================================================
 //
 
-bool IrModifier::localize(
-		llvm::StoreInst* definition,
-		std::set<llvm::Instruction*>& uses)
-{
-	auto* ptr = definition->getPointerOperand();
-	auto* f = definition->getFunction();
-
-	auto* local = new AllocaInst(ptr->getType()->getPointerElementType());
-	local->insertBefore(&f->getEntryBlock().front());
-
-	new StoreInst(definition->getValueOperand(), local, definition);
-	definition->eraseFromParent();
-
-	for (auto* u : uses)
-	{
-		u->replaceUsesOfWith(ptr, local);
-	}
-
-	return true;
-}
-
 llvm::AllocaInst* IrModifier::createAlloca(
 		llvm::Function* fnc,
 		llvm::Type* ty,
