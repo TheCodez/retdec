@@ -12,7 +12,7 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/optimizations/stack_pointer_ops/stack_pointer_ops.h"
 #include "retdec/bin2llvmir/utils/debug.h"

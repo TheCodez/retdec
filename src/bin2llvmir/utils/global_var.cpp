@@ -4,10 +4,10 @@
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/utils/global_var.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;

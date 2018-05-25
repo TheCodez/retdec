@@ -11,7 +11,7 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/optimizations/local_vars/local_vars.h"
 #include "retdec/bin2llvmir/utils/debug.h"
@@ -73,7 +73,7 @@ bool LocalVars::runOnModule(Module& M)
 
 			for (auto& a : call->arg_operands())
 			{
-				auto* aa = dyn_cast_or_null<Instruction>(skipCasts(a));
+				auto* aa = dyn_cast_or_null<Instruction>(llvm_utils::skipCasts(a));
 				if (aa == nullptr)
 				{
 					continue;
@@ -97,7 +97,7 @@ bool LocalVars::runOnModule(Module& M)
 		}
 		else if (ReturnInst* ret = dyn_cast<ReturnInst>(&I))
 		{
-			auto* a = skipCasts(ret->getReturnValue());
+			auto* a = llvm_utils::skipCasts(ret->getReturnValue());
 			if (a == nullptr)
 				continue;
 			if (auto* l = dyn_cast<LoadInst>(a))
@@ -128,7 +128,7 @@ bool LocalVars::runOnModule(Module& M)
 				continue;
 			}
 
-			auto* vo = skipCasts(s->getValueOperand());
+			auto* vo = llvm_utils::skipCasts(s->getValueOperand());
 			if (isa<CallInst>(vo))
 			{
 				localizeDefinition(d);

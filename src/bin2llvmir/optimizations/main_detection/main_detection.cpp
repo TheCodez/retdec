@@ -12,9 +12,9 @@
 #include "retdec/bin2llvmir/optimizations/main_detection/main_detection.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
-#include "retdec/bin2llvmir/utils/ir_modifier.h"
 #define debug_enabled false
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace retdec::utils;
 using namespace llvm;

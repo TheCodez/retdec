@@ -18,7 +18,7 @@
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #define debug_enabled false
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;

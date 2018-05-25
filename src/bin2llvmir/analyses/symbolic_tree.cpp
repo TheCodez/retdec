@@ -14,10 +14,10 @@
 
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/analyses/symbolic_tree.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/utils/debug.h"
-#include "retdec/bin2llvmir/utils/utils.h"
 
 using namespace llvm;
 
@@ -415,7 +415,7 @@ void SymbolicTree::_simplifyNode(Config* config)
 	else if (auto* l = dyn_cast<LoadInst>(value))
 	{
 			auto* ptr = l->getPointerOperand();
-			ptr = skipCasts(ptr);
+			ptr = llvm_utils::skipCasts(ptr);
 			if (isa<AllocaInst>(ptr) || isa<GlobalVariable>(ptr))
 			{
 					if (ops.size() == 1)

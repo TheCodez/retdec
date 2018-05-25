@@ -13,10 +13,11 @@
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #define debug_enabled false
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/type.h"
 
 using namespace llvm;
+using namespace retdec::bin2llvmir::llvm_utils;
 
 namespace {
 

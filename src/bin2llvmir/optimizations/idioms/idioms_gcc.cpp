@@ -9,8 +9,8 @@
 #include <llvm/IR/PatternMatch.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/bin2llvmir/optimizations/idioms/idioms_gcc.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -503,7 +503,7 @@ Instruction * IdiomsGCC::exchangeCopysign(BasicBlock::iterator iter) const {
 			&& ! match(op_and1, m_And(m_ConstantInt(cnst1), m_Value(op_a))))
 	{
 		// left hand side of or is (fabsf(A)?
-		op_and1 = skipCasts(op_and1);
+		op_and1 = llvm_utils::skipCasts(op_and1);
 		if (isa<CallInst>(op_and1)
 				&& cast<CallInst>(op_and1)->getCalledFunction()
 				&& cast<CallInst>(op_and1)->getCalledFunction()->getIntrinsicID() == Intrinsic::fabs)

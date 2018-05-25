@@ -16,7 +16,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/utils/address.h"
 #include "retdec/utils/value.h"
 

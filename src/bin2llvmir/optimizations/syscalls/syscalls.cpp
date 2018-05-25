@@ -4,8 +4,8 @@
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/bin2llvmir/optimizations/syscalls/syscalls.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 using namespace llvm;

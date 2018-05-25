@@ -13,6 +13,13 @@
 
 namespace retdec {
 namespace bin2llvmir {
+namespace llvm_utils {
+
+//
+//==============================================================================
+// Values
+//==============================================================================
+//
 
 /**
  * Skips both casts and getelementptr instructions and constant expressions.
@@ -50,5 +57,6 @@ llvm::Value* skipCasts(llvm::Value* val)
 	return val;
 }
 
+} // namespace llvm_utils
 } // namespace bin2llvmir
 } // namespace retdec

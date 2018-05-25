@@ -81,11 +81,12 @@ set(BIN2LLVMIR_SOURCES
 	providers/names.cpp
 	utils/capstone.cpp
 	utils/debug.cpp
+	utils/ir_modifier.cpp
+	utils/llvm.cpp
+
 	utils/global_var.cpp
 	utils/instruction.cpp
-	utils/ir_modifier.cpp
 	utils/type.cpp
-	utils/utils.cpp
 )
 
 add_library(retdec-bin2llvmir STATIC ${BIN2LLVMIR_SOURCES})

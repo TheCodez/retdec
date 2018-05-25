@@ -11,10 +11,10 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/optimizations/idioms_libgcc/idioms_libgcc.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/bin2llvmir/utils/type.h"
@@ -249,7 +249,7 @@ bool IdiomsLibgccImpl::testArchAndInitialize(
 
 void IdiomsLibgccImpl::localize(llvm::Value* v)
 {
-	Instruction* i = dyn_cast<Instruction>(skipCasts(v));
+	Instruction* i = dyn_cast<Instruction>(llvm_utils::skipCasts(v));
 	if (i == nullptr)
 	{
 		return;

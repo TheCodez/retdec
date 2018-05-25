@@ -18,9 +18,9 @@
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/fileformat/file_format/raw_data/raw_data_format.h"
 #include "retdec/loader/loader.h"
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/providers/debugformat.h"
@@ -28,7 +28,6 @@
 #include "retdec/bin2llvmir/providers/fileimage.h"
 #include "retdec/bin2llvmir/providers/lti.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/utils/string.h"
 

@@ -26,7 +26,7 @@
 #include "retdec/bin2llvmir/utils/global_var.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
 const bool debug_enabled = false;
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/type.h"
 
 using namespace retdec::utils;

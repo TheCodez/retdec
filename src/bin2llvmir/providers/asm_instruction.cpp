@@ -7,9 +7,9 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 
-#include "retdec/bin2llvmir/utils/utils.h"
 #include "retdec/utils/container.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/providers/names.h"
 #include "retdec/bin2llvmir/utils/type.h"

@@ -33,7 +33,7 @@
 #include "retdec/bin2llvmir/optimizations/param_return/param_return.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
 #define debug_enabled false
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/type.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
@@ -57,7 +57,7 @@ llvm::Value* getRoot(ReachingDefinitionsAnalysis& RDA, llvm::Value* i, bool firs
 	}
 	seen.insert(i);
 
-	i = skipCasts(i);
+	i = llvm_utils::skipCasts(i);
 	if (auto* ii = dyn_cast<Instruction>(i))
 	{
 		if (auto* u = RDA.getUse(ii))
@@ -443,7 +443,7 @@ void CallEntry::filterLeaveOnlyContinuousStackOffsets(Config* _config)
 	{
 		auto* s = *it;
 		auto off = _config->getStackVariableOffset(s->getPointerOperand());
-		auto* val = skipCasts(s->getValueOperand());
+		auto* val = llvm_utils::skipCasts(s->getValueOperand());
 
 		int gap = 8;
 //		int gap = 4;

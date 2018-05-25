@@ -24,7 +24,7 @@
 #include "retdec/bin2llvmir/providers/names.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
 #define debug_enabled false
-#include "retdec/bin2llvmir/utils/utils.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace retdec::utils;
 using namespace llvm;
