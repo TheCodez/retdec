@@ -23,7 +23,6 @@
 #include "retdec/bin2llvmir/analyses/symbolic_tree.h"
 #include "retdec/bin2llvmir/optimizations/constants/constants.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
-#include "retdec/bin2llvmir/utils/global_var.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
 const bool debug_enabled = false;
 #include "retdec/bin2llvmir/utils/llvm.h"
@@ -126,9 +125,8 @@ void ConstantsAnalysis::checkForGlobalInInstruction(
 	if (userI || max == &root)
 	if (objf->getImage()->hasDataOnAddress(maxC->getZExtValue()))
 	{
-		auto* ngv = getGlobalVariable(
-				m_module,
-				config,
+		IrModifier irm(m_module, config);
+		auto* ngv = irm.getGlobalVariable(
 				objf,
 				dbgf,
 				maxC->getZExtValue(),

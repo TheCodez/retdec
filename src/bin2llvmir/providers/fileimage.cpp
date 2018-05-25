@@ -6,7 +6,6 @@
 
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/providers/fileimage.h"
-#include "retdec/bin2llvmir/utils/global_var.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/loader/image_factory.h"
 #include "retdec/loader/loader/raw_data/raw_data_image.h"
@@ -459,7 +458,8 @@ llvm::Constant* FileImage::getConstant(
 				}
 			}
 
-			auto* newGv = getGlobalVariable(_module, config, this, dbgf, val);
+			IrModifier irm(_module, config);
+			auto* newGv = irm.getGlobalVariable(this, dbgf, val);
 			if (newGv == nullptr)
 			{
 				break;

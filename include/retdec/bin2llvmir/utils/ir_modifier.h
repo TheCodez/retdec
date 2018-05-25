@@ -65,6 +65,13 @@ class IrModifier
 				llvm::Type* type,
 				const std::string& name = "stack_var");
 
+		llvm::GlobalVariable* getGlobalVariable(
+				FileImage* objf,
+				DebugFormat* dbgf,
+				retdec::utils::Address addr,
+				bool strict = false,
+				std::string name = "global_var");
+
 		llvm::Value* changeObjectType(
 				FileImage* objf,
 				llvm::Value* val,

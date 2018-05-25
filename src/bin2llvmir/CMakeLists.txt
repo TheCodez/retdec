@@ -84,7 +84,6 @@ set(BIN2LLVMIR_SOURCES
 	utils/ir_modifier.cpp
 	utils/llvm.cpp
 
-	utils/global_var.cpp
 	utils/instruction.cpp
 )
 
