@@ -24,6 +24,8 @@ class DebugFormat;
 
 class FileImage
 {
+	// Ctors.
+	//
 	public:
 		FileImage(
 				llvm::Module* m,
@@ -38,11 +40,8 @@ class FileImage
 				std::unique_ptr<retdec::loader::Image> img,
 				Config* config);
 
-		bool isOk() const;
-
-		retdec::loader::Image* getImage() const;
-		retdec::fileformat::FileFormat* getFileFormat() const;
-
+	// Constant getters - get LLVM constant from the given address.
+	//
 	public:
 		llvm::ConstantInt* getConstantInt(
 				llvm::IntegerType* t,
@@ -72,14 +71,26 @@ class FileImage
 				DebugFormat* dbgf = nullptr,
 				retdec::utils::Address addr = retdec::utils::Address::getUndef);
 
+	// Miscellaneous
+	//
 	public:
 		bool isImportTerminating(
 				const fileformat::ImportTable* impTbl,
 				const fileformat::Import* imp) const;
 
+	// Image getters.
+	//
 	public:
+		retdec::loader::Image* getImage() const;
 		auto& getSegments() const { return _image->getSegments(); }
 
+	// FileFormat getters.
+	//
+	public:
+		retdec::fileformat::FileFormat* getFileFormat() const;
+
+	// Private data.
+	//
 	private:
 		llvm::Module* _module = nullptr;
 		std::unique_ptr<retdec::loader::Image> _image;

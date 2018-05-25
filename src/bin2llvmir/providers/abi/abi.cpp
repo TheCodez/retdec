@@ -104,26 +104,38 @@ bool Abi::isNopInstruction(AsmInstruction ai)
 	return isNopInstruction(ai.getCapstoneInsn());
 }
 
-std::size_t Abi::getTypeByteSize(llvm::Type* t)
+std::size_t Abi::getTypeByteSize(llvm::Type* t) const
 {
-	assert(_module);
-	return _module->getDataLayout().getTypeStoreSize(t);
+	return Abi::getTypeByteSize(_module, t);
 }
 
-std::size_t Abi::getTypeBitSize(llvm::Type* t)
+std::size_t Abi::getTypeBitSize(llvm::Type* t) const
 {
-	assert(_module);
-	return _module->getDataLayout().getTypeSizeInBits(t);
+	return Abi::getTypeBitSize(_module, t);
+}
+
+llvm::IntegerType* Abi::getDefaultType() const
+{
+	return Abi::getDefaultType(_module);
 }
 
 std::size_t Abi::getTypeByteSize(llvm::Module* m, llvm::Type* t)
 {
+	assert(m);
 	return m->getDataLayout().getTypeStoreSize(t);
 }
 
 std::size_t Abi::getTypeBitSize(llvm::Module* m, llvm::Type* t)
 {
+	assert(m);
 	return m->getDataLayout().getTypeSizeInBits(t);
+}
+
+llvm::IntegerType* Abi::getDefaultType(llvm::Module* m)
+{
+	assert(m);
+	unsigned s = m->getDataLayout().getPointerSize(0) * 8;
+	return Type::getIntNTy(m->getContext(), s);
 }
 
 //

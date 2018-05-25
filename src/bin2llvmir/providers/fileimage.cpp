@@ -7,6 +7,7 @@
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/providers/fileimage.h"
 #include "retdec/bin2llvmir/utils/global_var.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/bin2llvmir/utils/type.h"
 #include "retdec/loader/image_factory.h"
 #include "retdec/loader/loader/raw_data/raw_data_image.h"
@@ -59,7 +60,6 @@ FileImage::FileImage(
 	if (_image == nullptr)
 	{
 		_image.reset();
-		// && !path.empty() ???
 		throw std::runtime_error("Failed to load input file");
 	}
 
@@ -78,11 +78,6 @@ FileImage::FileImage(
 		throw std::runtime_error("Missing basic info about input file"
 				" -> there can be no decompilation");
 	}
-}
-
-bool FileImage::isOk() const
-{
-	return _image != nullptr;
 }
 
 retdec::loader::Image* FileImage::getImage() const
@@ -111,7 +106,7 @@ ConstantInt* FileImage::getConstantInt(
 
 llvm::ConstantInt* FileImage::getConstantDefault(retdec::utils::Address addr)
 {
-	return getConstantInt(getDefaultType(_module), addr);
+	return getConstantInt(Abi::getDefaultType(_module), addr);
 }
 
 llvm::Constant* FileImage::getConstantHalf(retdec::utils::Address addr)
@@ -184,7 +179,7 @@ llvm::Constant* FileImage::getConstantCharPointer(retdec::utils::Address addr)
 				GlobalValue::ExternalLinkage,
 				sc);
 
-		return convertConstantToType(
+		return IrModifier::convertConstantToType(
 				gv,
 				getCharPointerType(_module->getContext()));
 	}
@@ -213,11 +208,6 @@ llvm::Constant* FileImage::getConstantCharArrayNice(
 	}
 }
 
-/**
- * TODO: we should get existing or create a new global variable
- * on referenced address (if valid). Then we could probably return this
- * global var as constant
- */
 llvm::Constant* FileImage::getConstantPointer(
 		llvm::PointerType* type,
 		retdec::utils::Address addr)
@@ -230,7 +220,7 @@ llvm::Constant* FileImage::getConstantPointer(
 	std::uint64_t v = 0;
 	if (_image->getWord(addr, v))
 	{
-		auto* dt = getDefaultType(_module);
+		auto* dt = Abi::getDefaultType(_module);
 		auto* ci = ConstantInt::get(dt, v);
 		return ConstantExpr::getIntToPtr(ci, type);;
 	}
@@ -312,12 +302,11 @@ llvm::Constant* FileImage::getConstant(
 		retdec::utils::Address addr,
 		bool wideString)
 {
-	Constant* c = nullptr;
-
 	if (addr.isUndefined())
 	{
 		return nullptr;
 	}
+	Constant* c = nullptr;
 
 	if (wideString)
 	{
@@ -399,7 +388,7 @@ llvm::Constant* FileImage::getConstant(
 	}
 
 	// Make extra sure the returned constant's type is the same as expected.
-	return convertConstantToType(c, type);
+	return IrModifier::convertConstantToType(c, type);
 }
 
 /**
@@ -478,7 +467,7 @@ llvm::Constant* FileImage::getConstant(
 			}
 
 			refGvs.push_back(newGv);
-			addr += getDefaultTypeByteSize(_module);
+			addr += Abi::getTypeByteSize(_module, Abi::getDefaultType(_module));
 
 			static auto& conf = config->getConfig();
 			if (conf.globals.getObjectByAddress(addr))
@@ -499,7 +488,7 @@ llvm::Constant* FileImage::getConstant(
 
 			std::vector<Constant*> av2;
 			for (auto* c : refGvs)
-				av2.push_back(convertConstantToType(
+				av2.push_back(IrModifier::convertConstantToType(
 						c,
 						PointerType::get(Type::getInt8Ty(ctx), 0)) );
 
@@ -530,7 +519,7 @@ llvm::Constant* FileImage::getConstant(
 	}
 	else
 	{
-		c = getConstantInt(getDefaultType(_module), addr);
+		c = getConstantInt(Abi::getDefaultType(_module), addr);
 	}
 
 	return c;
@@ -605,11 +594,6 @@ FileImage* FileImageProvider::addFileImage(
 		llvm::Module* m,
 		FileImage img)
 {
-	if (!img.isOk())
-	{
-		return nullptr;
-	}
-
 	auto p = _module2image.emplace(m, std::move(img));
 	return &p.first->second;
 }
