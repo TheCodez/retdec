@@ -27,7 +27,6 @@
 #include "retdec/bin2llvmir/providers/demangler.h"
 #include "retdec/bin2llvmir/providers/fileimage.h"
 #include "retdec/bin2llvmir/providers/lti.h"
-#include "retdec/bin2llvmir/utils/instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/utils/string.h"
 

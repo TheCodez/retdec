@@ -20,7 +20,6 @@ set(RETDEC_TESTS_BIN2LLVMIR_SOURCES
 	providers/fileimage_tests.cpp
 	providers/lti_tests.cpp
 	utils/instcombine_tests.cpp
-	utils/instruction_tests.cpp
 	utils/ir_modifier_tests.cpp
 	utils/llvm_tests.cpp
 	utils/simplifycfg_tests.cpp

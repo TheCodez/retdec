@@ -31,7 +31,6 @@
 #include "retdec/utils/container.h"
 #include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/optimizations/param_return/param_return.h"
-#include "retdec/bin2llvmir/utils/instruction.h"
 #define debug_enabled false
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
@@ -1448,8 +1447,8 @@ void DataFlowEntry::applyToIrOrdinary()
 		}
 
 		auto* oldType = fnc->getType();
-		auto* newFnc = modifyFunction(
-				_config,
+		IrModifier irm(_module, _config);
+		auto* newFnc = irm.modifyFunction(
 				fnc,
 				retType,
 				argTypes,
@@ -1482,7 +1481,7 @@ void DataFlowEntry::applyToIrOrdinary()
 			}
 
 			auto* ret = fnc ? fnc->getReturnType() : call->getType();
-			modifyCallInst(call, ret, loads);
+			IrModifier::modifyCallInst(call, ret, loads);
 		}
 	}
 }
@@ -1768,8 +1767,8 @@ void DataFlowEntry::applyToIrVariadic()
 	auto* fnc = getFunction();
 	auto* oldType = fnc->getType();
 
-	auto* newFnc = modifyFunction(
-			_config,
+	IrModifier irm(_module, _config);
+	auto* newFnc = irm.modifyFunction(
 			fnc,
 			retType,
 			argTypes,

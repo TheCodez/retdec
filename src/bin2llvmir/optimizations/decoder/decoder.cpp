@@ -14,7 +14,6 @@
 #include "retdec/bin2llvmir/optimizations/decoder/decoder.h"
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/capstone.h"
-#include "retdec/bin2llvmir/utils/instruction.h"
 
 using namespace retdec::utils;
 using namespace retdec::capstone2llvmir;

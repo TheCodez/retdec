@@ -22,7 +22,6 @@
 #include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/names.h"
-#include "retdec/bin2llvmir/utils/instruction.h"
 #define debug_enabled false
 #include "retdec/bin2llvmir/utils/llvm.h"
 

@@ -83,8 +83,6 @@ set(BIN2LLVMIR_SOURCES
 	utils/debug.cpp
 	utils/ir_modifier.cpp
 	utils/llvm.cpp
-
-	utils/instruction.cpp
 )
 
 add_library(retdec-bin2llvmir STATIC ${BIN2LLVMIR_SOURCES})

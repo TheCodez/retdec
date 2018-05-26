@@ -19,7 +19,6 @@
 #include "retdec/bin2llvmir/optimizations/globals/dead_global_assign.h"
 #include "retdec/bin2llvmir/optimizations/globals/global_to_local.h"
 #include "retdec/bin2llvmir/optimizations/globals/global_to_local_and_dead_global_assign.h"
-#include "retdec/bin2llvmir/utils/instruction.h"
 
 #define DEBUG_TYPE "global-to-local-and-dead-global-assign"
 

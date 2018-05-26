@@ -51,6 +51,11 @@ class IrModifier
 				llvm::Constant* val,
 				llvm::Type* type);
 
+		static llvm::CallInst* modifyCallInst(
+				llvm::CallInst* call,
+				llvm::Type* ret,
+				llvm::ArrayRef<llvm::Value*> args);
+
 	public:
 		IrModifier(llvm::Module* m, Config* c);
 
@@ -81,6 +86,32 @@ class IrModifier
 				llvm::Constant* init = nullptr,
 				std::unordered_set<llvm::Instruction*>* instToErase = nullptr,
 				bool dbg = false,
+				bool wideString = false);
+
+		FunctionPair modifyFunction(
+				llvm::Function* fnc,
+				llvm::Type* ret,
+				std::vector<llvm::Type*> args,
+				bool isVarArg = false,
+				const std::map<llvm::ReturnInst*, llvm::Value*>& rets2vals =
+						std::map<llvm::ReturnInst*, llvm::Value*>(),
+				const std::map<llvm::CallInst*, std::vector<llvm::Value*>>& calls2vals =
+						std::map<llvm::CallInst*, std::vector<llvm::Value*>>(),
+				llvm::Value* retVal = nullptr,
+				const std::vector<llvm::Value*>& argStores =
+						std::vector<llvm::Value*>(),
+				const std::vector<std::string>& argNames = std::vector<std::string>());
+
+		llvm::Argument* modifyFunctionArgumentType(
+				llvm::Argument* arg,
+				llvm::Type* type);
+
+	protected:
+		llvm::Value* changeObjectDeclarationType(
+				FileImage* objf,
+				llvm::Value* val,
+				llvm::Type* toType,
+				llvm::Constant* init = nullptr,
 				bool wideString = false);
 
 	protected:
