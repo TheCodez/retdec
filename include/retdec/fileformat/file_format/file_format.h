@@ -236,6 +236,7 @@ class FileFormat : public retdec::utils::ByteValueStorage, private retdec::utils
 		const Import* getImport(unsigned long long address) const;
 		const Export* getExport(const std::string &name) const;
 		const Export* getExport(unsigned long long address) const;
+		const Vtable* getVtable(unsigned long long address) const;
 		const Resource* getManifestResource() const;
 		const Resource* getVersionResource() const;
 		bool isSignaturePresent() const;

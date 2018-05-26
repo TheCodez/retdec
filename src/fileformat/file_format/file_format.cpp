@@ -1683,6 +1683,29 @@ const Export* FileFormat::getExport(unsigned long long address) const
 }
 
 /**
+ * Get vtable on address @a address.
+ * This tries to get vtable from both GCC and MSVC vtable containers
+ * and expect that only one of them was loaded -> there should not be a vtable
+ * at the address in both of them.
+ */
+const Vtable* FileFormat::getVtable(unsigned long long address) const
+{
+	auto gccIt = vtablesGcc.find(address);
+	if (gccIt != vtablesGcc.end())
+	{
+		return &gccIt->second;
+	}
+
+	auto msvcIt = vtablesMsvc.find(address);
+	if (msvcIt != vtablesMsvc.end())
+	{
+		return &msvcIt->second;
+	}
+
+	return nullptr;
+}
+
+/**
  * Get resource that represents side-by-side assembly manifest
  * @return Pointer to manifest resource or @c nullptr if such resource is not found
  */
