@@ -10,6 +10,7 @@
 
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/InstIterator.h>
 
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/utils/string.h"
@@ -40,9 +41,16 @@ LocalVars::LocalVars() :
 
 }
 
-void LocalVars::getAnalysisUsage(AnalysisUsage &AU) const
+bool canBeLocalized(const Definition* def)
 {
-
+	for (auto* u : def->uses)
+	{
+		if (u->defs.size() > 1)
+		{
+			return false;
+		}
+	}
+	return !def->uses.empty();
 }
 
 /**
@@ -60,10 +68,11 @@ bool LocalVars::runOnModule(Module& M)
 	ReachingDefinitionsAnalysis RDA;
 	RDA.runOnModule(M, config);
 
-	for (auto &F : M.getFunctionList())
-	for (auto &B : F)
-	for (auto &I : B)
+	for (Function &F : M)
+	for (auto it = inst_begin(&F), eIt = inst_end(&F); it != eIt; ++it)
 	{
+		Instruction& I = *it;
+
 		if (CallInst* call = dyn_cast<CallInst>(&I))
 		{
 			if (call->getCalledFunction() == nullptr)
@@ -85,13 +94,14 @@ bool LocalVars::runOnModule(Module& M)
 				}
 				auto* d = *use->defs.begin();
 				if (a->getType()->isFloatingPointTy()
-						&& !d->getSource()->getType()->isFloatingPointTy())
+						&& !d->getSource()->getType()->isFloatingPointTy()
+						&& canBeLocalized(d))
 				{
-					IrModifier::localize(d->def, d->uses);
+					IrModifier::localize(d->def, d->uses, false);
 				}
-				else if (config->isRegister(d->getSource()))
+				else if (config->isRegister(d->getSource()) && canBeLocalized(d))
 				{
-					IrModifier::localize(d->def, d->uses);
+					IrModifier::localize(d->def, d->uses, false);
 				}
 			}
 		}
@@ -112,7 +122,10 @@ bool LocalVars::runOnModule(Module& M)
 				{
 					continue;
 				}
-				IrModifier::localize(d->def, d->uses);
+				if (canBeLocalized(d))
+				{
+					IrModifier::localize(d->def, d->uses, false);
+				}
 			}
 		}
 		else if (StoreInst* s = dyn_cast<StoreInst>(&I))
@@ -129,13 +142,13 @@ bool LocalVars::runOnModule(Module& M)
 			}
 
 			auto* vo = llvm_utils::skipCasts(s->getValueOperand());
-			if (isa<CallInst>(vo))
+			if (isa<CallInst>(vo) && canBeLocalized(d))
 			{
-				IrModifier::localize(d->def, d->uses);
+				IrModifier::localize(d->def, d->uses, false);
 			}
-			else if (isa<Argument>(vo))
+			else if (isa<Argument>(vo) && canBeLocalized(d))
 			{
-				IrModifier::localize(d->def, d->uses);
+				IrModifier::localize(d->def, d->uses, false);
 			}
 		}
 	}

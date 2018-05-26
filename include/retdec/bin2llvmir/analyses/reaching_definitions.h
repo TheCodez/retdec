@@ -47,6 +47,9 @@ class Definition
 		Definition(llvm::Instruction* d, llvm::Value* s);
 		bool operator==(const Definition& o) const;
 
+		using LlvmValuePtr = llvm::Instruction*;
+		operator LlvmValuePtr() const { return def; }
+
 		llvm::Value* getSource();
 
 	public:
@@ -60,8 +63,9 @@ class Use
 	public:
 		Use(llvm::Instruction* u, llvm::Value* s);
 		bool operator==(const Use &o) const;
-		using shit = llvm::Instruction*;
-		operator shit() const { return use; }
+
+		using LlvmValuePtr = llvm::Instruction*;
+		operator LlvmValuePtr() const { return use; }
 
 		bool isUndef() const;
 

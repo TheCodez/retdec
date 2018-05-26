@@ -29,7 +29,8 @@ class IrModifier
 		template<typename Container>
 		static bool localize(
 				llvm::Instruction* storeDefinition,
-				const Container& uses);
+				const Container& uses,
+				bool eraseDefinition = true);
 
 		static llvm::AllocaInst* createAlloca(
 				llvm::Function* fnc,
@@ -90,13 +91,14 @@ class IrModifier
 template<typename Container>
 bool IrModifier::localize(
 		llvm::Instruction* storeDefinition,
-		const Container& uses)
+		const Container& uses,
+		bool eraseDefinition)
 {
 	llvm::StoreInst* definition = llvm::dyn_cast_or_null<llvm::StoreInst>(
 			storeDefinition);
-	if (definition == nullptr)
+	if (definition == nullptr || uses.empty())
 	{
-		false;
+		return false;
 	}
 	auto* ptr = definition->getPointerOperand();
 	auto* f = definition->getFunction();
@@ -105,7 +107,10 @@ bool IrModifier::localize(
 	local->insertBefore(&f->getEntryBlock().front());
 
 	new llvm::StoreInst(definition->getValueOperand(), local, definition);
-	definition->eraseFromParent();
+	if (eraseDefinition)
+	{
+		definition->eraseFromParent();
+	}
 
 	for (auto* u : uses)
 	{

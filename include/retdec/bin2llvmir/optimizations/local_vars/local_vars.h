@@ -22,7 +22,6 @@ class LocalVars : public llvm::ModulePass
 	public:
 		static char ID;
 		LocalVars();
-		virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 		virtual bool runOnModule(llvm::Module& M) override;
 
 	private:
