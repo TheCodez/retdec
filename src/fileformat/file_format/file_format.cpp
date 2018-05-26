@@ -22,6 +22,7 @@
 #include "retdec/fileformat/file_format/file_format.h"
 #include "retdec/fileformat/file_format/intel_hex/intel_hex_format.h"
 #include "retdec/fileformat/file_format/raw_data/raw_data_format.h"
+#include "retdec/fileformat/types/cpp_vtable/vtable_finder.h"
 #include "retdec/fileformat/types/strings/character_iterator.h"
 #include "retdec/fileformat/utils/conversions.h"
 #include "retdec/fileformat/utils/file_io.h"
@@ -475,6 +476,30 @@ bool FileFormat::isInValidState() const
 LoadFlags FileFormat::getLoadFlags() const
 {
 	return loadFlags;
+}
+
+/**
+ * Load GCC/Clang C++ vtables and RTTI from file.
+ * Fill @c vtablesGcc and @c rttiGcc;
+ *
+ * @c vtablesGcc is not filled by default, @c FileFormat user must call this
+ * method if access to this information is desired.
+ */
+void FileFormat::loadCppVtableGcc()
+{
+	findGccVtables(this, vtablesGcc, rttiGcc);
+}
+
+/**
+ * Load MSVC C++ vtables and RTTI from file.
+ * Fill @c vtablesMsvc and @c rttiMsvc.
+ *
+ * @c vtablesMsvc is not filled by default, @c FileFormat user must call this
+ * method if access to this information is desired.
+ */
+void FileFormat::loadCppVtableMsvc()
+{
+	findMsvcVtables(this, vtablesMsvc, rttiMsvc);
 }
 
 /**
@@ -1857,6 +1882,50 @@ const std::set<std::uint64_t> &FileFormat::getUnknownRelocations() const
 }
 
 /**
+ * @return C++ GCC/Clang virtual tables, including RTTI information.
+ *
+ * These information are not parsed by default, @c FileFormat user must
+ * initialize it by calling @c loadCppVtableGcc() method first.
+ */
+const CppVtablesGcc& FileFormat::getCppVtablesGcc() const
+{
+	return vtablesGcc;
+}
+
+/**
+ * @return C++ MSVC virtual tables, including RTTI information.
+ *
+ * These information are not parsed by default, @c FileFormat user must
+ * initialize it by calling @c loadCppVtableMsvc() method first.
+ */
+const CppVtablesMsvc& FileFormat::getCppVtablesMsvc() const
+{
+	return vtablesMsvc;
+}
+
+/**
+ * @return C++ GCC/Clang RTTI information.
+ *
+ * These information are not parsed by default, @c FileFormat user must
+ * initialize it by calling @c loadCppVtableGcc() method first.
+ */
+const CppRttiGcc& FileFormat::getCppRttiGcc() const
+{
+	return rttiGcc;
+}
+
+/**
+ * @return C++ MSVC RTTI information.
+ *
+ * These information are not parsed by default, @c FileFormat user must
+ * initialize it by calling @c loadCppVtableMsvc() method first.
+ */
+const CppRttiMsvc& FileFormat::getCppRttiMsvc() const
+{
+	return rttiMsvc;
+}
+
+/**
  * Get integer (@a x bytes) located at provided address using the specified endian or default file endian
  * @param address Address to get integer from
  * @param x Number of bytes for conversion
@@ -1912,10 +1981,18 @@ bool FileFormat::setXBytes(std::uint64_t address, const std::vector<std::uint8_t
  * @param address Address to check
  * @return @c true if pointer on address, @c false otherwise
  */
-bool FileFormat::isPointer(unsigned long long address)
+bool FileFormat::isPointer(unsigned long long address, std::uint64_t* pointer) const
 {
 	std::uint64_t val = 0;
-	return getWord(address, val) && haveDataOnAddress(val);
+	if (getWord(address, val) && haveDataOnAddress(val))
+	{
+		if (pointer)
+		{
+			*pointer = val;
+		}
+		return true;
+	}
+	return false;
 }
 
 /**

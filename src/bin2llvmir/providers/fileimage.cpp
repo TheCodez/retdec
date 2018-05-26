@@ -76,6 +76,15 @@ FileImage::FileImage(
 		throw std::runtime_error("Missing basic info about input file"
 				" -> there can be no decompilation");
 	}
+
+	if (config->getConfig().tools.isMsvc())
+	{
+		_image->getFileFormat()->loadCppVtableMsvc();
+	}
+	else
+	{
+		_image->getFileFormat()->loadCppVtableGcc();
+	}
 }
 
 retdec::loader::Image* FileImage::getImage() const

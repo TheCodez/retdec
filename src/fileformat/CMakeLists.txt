@@ -31,6 +31,9 @@ set(FILEFORMAT_SOURCES
 	types/resource_table/resource_tree.cpp
 	types/certificate_table/certificate.cpp
 	types/certificate_table/certificate_table.cpp
+	types/cpp_rtti/rtti_gcc_parser.cpp
+	types/cpp_rtti/rtti_msvc_parser.cpp
+	types/cpp_vtable/vtable_finder.cpp
 	types/dotnet_types/dotnet_type_reconstructor.cpp
 	types/dotnet_types/dotnet_class.cpp
 	types/dotnet_types/dotnet_property.cpp

@@ -88,6 +88,10 @@ class FileFormat : public retdec::utils::ByteValueStorage, private retdec::utils
 		std::vector<std::pair<std::size_t, std::size_t>> secHashInfo;     ///< information for calculation of section table hash
 		retdec::utils::Maybe<bool> signatureVerified;                     ///< indicates whether the signature is present and also verified
 		retdec::utils::RangeContainer<std::uint64_t> nonDecodableRanges;  ///< Address ranges which should not be decoded for instructions.
+		CppVtablesGcc vtablesGcc;                                         ///< C++ GCC/Clang vtables, including RTTIs.
+		CppVtablesMsvc vtablesMsvc;                                       ///< C++ MSVC vtables, including RTTIs.
+		CppRttiGcc rttiGcc;                                               ///< C++ GCC/Clang RTTI;
+		CppRttiMsvc rttiMsvc;                                             ///< C++ MSVC RTTI;
 
 		/// @name Clear methods
 		/// @{
@@ -118,6 +122,8 @@ class FileFormat : public retdec::utils::ByteValueStorage, private retdec::utils
 		void loadImpHash();
 		bool isInValidState() const;
 		LoadFlags getLoadFlags() const;
+		void loadCppVtableGcc();
+		void loadCppVtableMsvc();
 		/// @}
 
 		/// @name Auxiliary offset detection methods
@@ -253,6 +259,10 @@ class FileFormat : public retdec::utils::ByteValueStorage, private retdec::utils
 		const std::vector<String>& getStrings() const;
 		const std::vector<ElfNoteSecSeg>& getElfNoteSecSegs() const;
 		const std::set<std::uint64_t>& getUnknownRelocations() const;
+		const CppVtablesGcc& getCppVtablesGcc() const;
+		const CppVtablesMsvc& getCppVtablesMsvc() const;
+		const CppRttiGcc& getCppRttiGcc() const;
+		const CppRttiMsvc& getCppRttiMsvc() const;
 		/// @}
 
 		/// @name Address interpretation methods
@@ -261,7 +271,7 @@ class FileFormat : public retdec::utils::ByteValueStorage, private retdec::utils
 		virtual bool getXBytes(std::uint64_t address, std::uint64_t x, std::vector<std::uint8_t> &res) const override;
 		virtual bool setXByte(std::uint64_t address, std::uint64_t x, std::uint64_t val, retdec::utils::Endianness e = retdec::utils::Endianness::UNKNOWN) override;
 		virtual bool setXBytes(std::uint64_t address, const std::vector<std::uint8_t> &val) override;
-		bool isPointer(unsigned long long address);
+		bool isPointer(unsigned long long address, std::uint64_t* pointer = nullptr) const;
 		/// @}
 
 		/// @name Offset interpretation methods
