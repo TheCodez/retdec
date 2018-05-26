@@ -41,14 +41,18 @@ LocalVars::LocalVars() :
 
 }
 
-bool canBeLocalized(const Definition* def)
+bool canBeLocalized(
+		const Definition* def,
+		std::set<llvm::Instruction*>& uses)
 {
+	uses.clear();
 	for (auto* u : def->uses)
 	{
 		if (u->defs.size() > 1)
 		{
 			return false;
 		}
+		uses.insert(u->use);
 	}
 	return !def->uses.empty();
 }
@@ -67,6 +71,8 @@ bool LocalVars::runOnModule(Module& M)
 
 	ReachingDefinitionsAnalysis RDA;
 	RDA.runOnModule(M, config);
+
+	std::set<llvm::Instruction*> uses;
 
 	for (Function &F : M)
 	for (auto it = inst_begin(&F), eIt = inst_end(&F); it != eIt; ++it)
@@ -95,13 +101,14 @@ bool LocalVars::runOnModule(Module& M)
 				auto* d = *use->defs.begin();
 				if (a->getType()->isFloatingPointTy()
 						&& !d->getSource()->getType()->isFloatingPointTy()
-						&& canBeLocalized(d))
+						&& canBeLocalized(d, uses))
 				{
-					IrModifier::localize(d->def, d->uses, false);
+					IrModifier::localize(d->def, uses, false);
 				}
-				else if (config->isRegister(d->getSource()) && canBeLocalized(d))
+				else if (config->isRegister(d->getSource())
+						&& canBeLocalized(d, uses))
 				{
-					IrModifier::localize(d->def, d->uses, false);
+					IrModifier::localize(d->def, uses, false);
 				}
 			}
 		}
@@ -122,9 +129,9 @@ bool LocalVars::runOnModule(Module& M)
 				{
 					continue;
 				}
-				if (canBeLocalized(d))
+				if (canBeLocalized(d, uses))
 				{
-					IrModifier::localize(d->def, d->uses, false);
+					IrModifier::localize(d->def, uses, false);
 				}
 			}
 		}
@@ -142,13 +149,13 @@ bool LocalVars::runOnModule(Module& M)
 			}
 
 			auto* vo = llvm_utils::skipCasts(s->getValueOperand());
-			if (isa<CallInst>(vo) && canBeLocalized(d))
+			if (isa<CallInst>(vo) && canBeLocalized(d, uses))
 			{
-				IrModifier::localize(d->def, d->uses, false);
+				IrModifier::localize(d->def, uses, false);
 			}
-			else if (isa<Argument>(vo) && canBeLocalized(d))
+			else if (isa<Argument>(vo) && canBeLocalized(d, uses))
 			{
-				IrModifier::localize(d->def, d->uses, false);
+				IrModifier::localize(d->def, uses, false);
 			}
 		}
 	}

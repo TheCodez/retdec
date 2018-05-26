@@ -127,7 +127,7 @@ bool IrModifier::localize(
 {
 	llvm::StoreInst* definition = llvm::dyn_cast_or_null<llvm::StoreInst>(
 			storeDefinition);
-	if (definition == nullptr || uses.empty())
+	if (definition == nullptr)
 	{
 		return false;
 	}
