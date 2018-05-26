@@ -7,16 +7,18 @@
 #ifndef RETDEC_BIN2LLVMIR_OPTIMIZATIONS_LOCAL_VARS_LOCAL_VARS_H
 #define RETDEC_BIN2LLVMIR_OPTIMIZATIONS_LOCAL_VARS_LOCAL_VARS_H
 
-#include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
 
-#include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/providers/config.h"
 
 namespace retdec {
 namespace bin2llvmir {
 
+/**
+ * TODO: We either should not be doing this at all, or be doing it in mor
+ * robust and safe way and for much more cases.
+ */
 class LocalVars : public llvm::ModulePass
 {
 	public:

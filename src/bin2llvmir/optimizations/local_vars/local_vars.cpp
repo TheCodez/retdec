@@ -4,42 +4,23 @@
 * @copyright (c) 2017 Avast Software, licensed under the MIT license
 */
 
-#include <cassert>
-#include <iomanip>
-#include <iostream>
-
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/InstIterator.h>
 
-#include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/utils/string.h"
+#include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/optimizations/local_vars/local_vars.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/debug.h"
+#define debug_enabled false
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
+#include "retdec/utils/string.h"
 
 using namespace retdec::utils;
 using namespace llvm;
 
-#define debug_enabled false
-
 namespace retdec {
 namespace bin2llvmir {
-
-char LocalVars::ID = 0;
-
-static RegisterPass<LocalVars> X(
-		"local-vars",
-		"Register localization optimization",
-		false, // Only looks at CFG
-		false // Analysis Pass
-);
-
-LocalVars::LocalVars() :
-		ModulePass(ID)
-{
-
-}
 
 bool canBeLocalized(
 		const Definition* def,
@@ -55,6 +36,21 @@ bool canBeLocalized(
 		uses.insert(u->use);
 	}
 	return !def->uses.empty();
+}
+
+char LocalVars::ID = 0;
+
+static RegisterPass<LocalVars> X(
+		"local-vars",
+		"Register localization optimization",
+		false, // Only looks at CFG
+		false // Analysis Pass
+);
+
+LocalVars::LocalVars() :
+		ModulePass(ID)
+{
+
 }
 
 /**
@@ -105,57 +101,6 @@ bool LocalVars::runOnModule(Module& M)
 				{
 					IrModifier::localize(d->def, uses, false);
 				}
-				else if (config->isRegister(d->getSource())
-						&& canBeLocalized(d, uses))
-				{
-					IrModifier::localize(d->def, uses, false);
-				}
-			}
-		}
-		else if (ReturnInst* ret = dyn_cast<ReturnInst>(&I))
-		{
-			auto* a = llvm_utils::skipCasts(ret->getReturnValue());
-			if (a == nullptr)
-				continue;
-			if (auto* l = dyn_cast<LoadInst>(a))
-			{
-				auto* use = RDA.getUse(l);
-				if (use == nullptr || use->defs.size() != 1)
-				{
-					continue;
-				}
-				auto* d = *use->defs.begin();
-				if (!config->isRegister(d->getSource()))
-				{
-					continue;
-				}
-				if (canBeLocalized(d, uses))
-				{
-					IrModifier::localize(d->def, uses, false);
-				}
-			}
-		}
-		else if (StoreInst* s = dyn_cast<StoreInst>(&I))
-		{
-			if (!config->isRegister(s->getPointerOperand()))
-			{
-				continue;
-			}
-
-			auto* d = RDA.getDef(s);
-			if (d == nullptr)
-			{
-				continue;
-			}
-
-			auto* vo = llvm_utils::skipCasts(s->getValueOperand());
-			if (isa<CallInst>(vo) && canBeLocalized(d, uses))
-			{
-				IrModifier::localize(d->def, uses, false);
-			}
-			else if (isa<Argument>(vo) && canBeLocalized(d, uses))
-			{
-				IrModifier::localize(d->def, uses, false);
 			}
 		}
 	}
