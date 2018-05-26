@@ -77,11 +77,11 @@ CtorDtor::CtorDtor() :
 {
 }
 
-void CtorDtor::getAnalysisUsage(AnalysisUsage &AU) const
-{
-	AU.setPreservesAll();
-	AU.addRequired<VtableAnalysis>();
-}
+//void CtorDtor::getAnalysisUsage(AnalysisUsage &AU) const
+//{
+//	AU.setPreservesAll();
+//	AU.addRequired<VtableAnalysis>();
+//}
 
 bool CtorDtor::runOnModule(Module& M)
 {
@@ -119,7 +119,7 @@ void CtorDtor::findPossibleCtorsDtors()
 {
 	LOG << "\n*** findPossibleCtorsDtors()" << std::endl;
 
-	auto& VA = getAnalysis<VtableAnalysis>();
+	auto image = FileImageProvider::getFileImage(module);
 
 	for (auto &F : *module)
 	{
@@ -149,11 +149,12 @@ void CtorDtor::findPossibleCtorsDtors()
 				addr = config->getGlobalAddress(gv);
 			}
 
-			auto* vt = VA.getVtableOnAddress(addr);
+			auto* vt = image->getFileFormat()->getVtable(addr);
 			if (vt)
 			{
 				LOG << "\t" << llvmObjToString(store)
-					<< " -> " << vt->getName() << std::endl;
+					<< " -> " << names::generateVtableName(vt->vtableAddress)
+					<< std::endl;
 
 				stores2vtables[store] = vt;
 				possibleCtorsDtors.insert(&F);
@@ -224,10 +225,13 @@ void CtorDtor::analyseFunction(Function* fnc)
 	function2info[fnc] = result;
 }
 
-void CtorDtor::replaceVtablesPointersInStores(StoreInst* store, Vtable* vtable)
+void CtorDtor::replaceVtablesPointersInStores(StoreInst* store, const fileformat::Vtable* vtable)
 {
+	auto* global = config->getLlvmGlobalVariable(vtable->vtableAddress);
+	assert(global);
+
 	auto* cast = IrModifier::convertConstantToType(
-			vtable->global,
+			global,
 			store->getValueOperand()->getType());
 	StoreInst *store2 = new StoreInst(cast, store->getPointerOperand(), store);
 	store->replaceAllUsesWith(store2);

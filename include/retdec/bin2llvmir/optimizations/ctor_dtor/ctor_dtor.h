@@ -14,8 +14,9 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
 
-#include "retdec/bin2llvmir/optimizations/vtable/vtable.h"
 #include "retdec/bin2llvmir/providers/config.h"
+#include "retdec/bin2llvmir/providers/fileimage.h"
+#include "retdec/bin2llvmir/providers/names.h"
 
 namespace retdec {
 namespace bin2llvmir {
@@ -25,7 +26,6 @@ class CtorDtor : public llvm::ModulePass
 	public:
 		static char ID;
 		CtorDtor();
-		virtual void getAnalysisUsage(llvm::AnalysisUsage& AU) const override;
 		virtual bool runOnModule(llvm::Module& M) override;
 
 	public:
@@ -37,7 +37,7 @@ class CtorDtor : public llvm::ModulePass
 				/// Super method offsets in order.
 				std::vector<int> superMethodOffsets;
 				/// Virtual table stores in order.
-				std::vector<std::pair<llvm::StoreInst*, Vtable*>> vftableStores;
+				std::vector<std::pair<llvm::StoreInst*, const fileformat::Vtable*>> vftableStores;
 				/// Virtual table offsets in order.
 				std::vector<int> vftableOffsets;
 				///
@@ -48,7 +48,7 @@ class CtorDtor : public llvm::ModulePass
 	public:
 		using FunctionSet    = std::set<llvm::Function*>;
 		using FunctionToInfo = std::map<llvm::Function*, FunctionInfo>;
-		using StoreToVtable  = std::map<llvm::StoreInst*, Vtable*>;
+		using StoreToVtable  = std::map<llvm::StoreInst*, const fileformat::Vtable*>;
 
 	public:
 		FunctionToInfo& getResults();
@@ -64,7 +64,7 @@ class CtorDtor : public llvm::ModulePass
 		void propagateCtorDtor();
 		void replaceVtablesPointersInStores(
 				llvm::StoreInst* store,
-				Vtable* vtable);
+				const fileformat::Vtable* vtable);
 
 		template<class T>
 		FunctionInfo analyseFunctionCommon(T begin, T end);

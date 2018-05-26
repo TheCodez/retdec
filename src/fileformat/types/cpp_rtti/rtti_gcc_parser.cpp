@@ -12,7 +12,7 @@
 
 #define LOG \
 	if (!debug_enabled) {} \
-	else std::cout << std::showbase
+	else std::cout << std::showbase << std::hex
 const bool debug_enabled = false;
 
 using namespace retdec::utils;
@@ -28,6 +28,8 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 		CppRttiGcc& rttis,
 		retdec::utils::Address rttiAddr)
 {
+	LOG << "\n\t" << "parseGccRtti() @ " << rttiAddr << std::endl;
+
 	auto findRtti = rttis.find(rttiAddr);
 	if (findRtti != rttis.end())
 	{
@@ -44,10 +46,10 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 		LOG << "\t[FAILED] vptrAddr @ " << addr <<  std::endl << std::endl;
 		return nullptr;
 	}
-	if (vptrAddr != 0 && !ff->getSegmentFromAddress(vptrAddr))
+	if (vptrAddr != 0 && !ff->getSectionFromAddress(vptrAddr))
 	{
 		LOG << "\t[FAILED] vptrAddr not valid = " << vptrAddr
-			<<  std::endl << std::endl;
+			 << " @ " << addr << std::endl << std::endl;
 		return nullptr;
 	}
 	LOG << "\t\tvptr = " << vptrAddr << "\n";

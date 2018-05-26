@@ -9,6 +9,7 @@
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/optimizations/class_hierarchy/hierarchy_analysis.h"
 #include "retdec/bin2llvmir/utils/debug.h"
+#include "retdec/bin2llvmir/utils/ir_modifier.h"
 
 #define debug_enabled false
 
@@ -34,7 +35,6 @@ ClassHierarchyAnalysis::ClassHierarchyAnalysis() :
 
 void ClassHierarchyAnalysis::getAnalysisUsage(AnalysisUsage& AU) const
 {
-	AU.addRequired<VtableAnalysis>();
 	AU.addRequired<CtorDtor>();
 	AU.setPreservesAll();
 }
@@ -46,6 +46,133 @@ bool ClassHierarchyAnalysis::runOnModule(Module& M)
 		LOG << "[ABORT] config file is not available\n";
 		return false;
 	}
+
+//=============================================================================
+
+auto* image = FileImageProvider::getFileImage(config->_module);
+auto* ff = image->getFileFormat();
+IrModifier irModif(&M, config);
+
+//=============================================================================
+
+std::vector<const fileformat::Vtable*> vtable;
+
+for (auto& p : ff->getCppVtablesGcc())
+{
+	vtable.push_back(&p.second);
+}
+for (auto& p : ff->getCppVtablesMsvc())
+{
+	vtable.push_back(&p.second);
+}
+
+for (auto* p : vtable)
+{
+	auto& vt = *p;
+	for (auto& item : vt.virtualFncAddresses)
+	{
+		auto *fnc = config->getLlvmFunction(item.address);
+		if (fnc == nullptr)
+		{
+			std::string name = names::generateFunctionName(item.address);
+
+			auto* ft = FunctionType::get(
+					Type::getInt32Ty(M.getContext()),
+					false);
+			fnc = Function::Create(
+					ft,
+					GlobalValue::ExternalLinkage,
+					name,
+					&M);
+
+			config->insertFunction(fnc, item.address);
+		}
+	}
+}
+
+//=============================================================================
+
+for (auto* p : vtable)
+{
+	auto& vt = *p;
+
+	std::string varName = names::generateVtableName(vt.vtableAddress);
+	std::string typeName = varName + "_type";
+
+	std::vector<Type*> itemTypes;
+	std::vector<Constant*> functionPtrs;
+	for (auto& item : vt.virtualFncAddresses)
+	{
+		auto *fnc = config->getLlvmFunction(item.address);
+		assert(fnc);
+		itemTypes.push_back(fnc->getType());
+		functionPtrs.push_back(fnc);
+	}
+
+	StructType *structType = StructType::create(itemTypes, typeName);
+	Constant *init = ConstantStruct::get(structType, functionPtrs);
+
+	auto* configOld = config->getLlvmGlobalVariable(vt.vtableAddress);
+	if (configOld)
+	{
+		irModif.changeObjectType(
+				image,
+				configOld,
+				structType,
+				init);
+		continue;
+	}
+
+	auto* existingLlvm = M.getGlobalVariable(varName);
+	if (existingLlvm)
+	{
+		config->insertGlobalVariable(existingLlvm, vt.vtableAddress);
+		continue;
+	}
+
+	auto* tmp = M.getOrInsertGlobal(varName, structType);
+	GlobalVariable* global = dyn_cast_or_null<GlobalVariable>(tmp);
+	assert(global != nullptr);
+	global->setInitializer(init);
+
+	config->insertGlobalVariable(global, vt.vtableAddress);
+}
+
+//=============================================================================
+
+for (auto* p : vtable)
+{
+	auto& vt = *p;
+
+	retdec::config::Vtable confVt(vt.vtableAddress);
+	confVt.setName(names::generateVtableName(vt.vtableAddress));
+
+	retdec::utils::Address itemAddr = vt.vtableAddress;
+	for (auto& item : vt.virtualFncAddresses)
+	{
+		retdec::config::VtableItem confItem(itemAddr);
+		confItem.setTargetFunctionAddress(item.address);
+		if (auto *fnc = config->getLlvmFunction(item.address))
+			confItem.setTargetFunctionName(fnc->getName().str());
+		confVt.items.insert(confItem);
+
+		itemAddr += config->getConfig().architecture.getByteSize();
+	}
+
+	config->getConfig().vtables.insert(confVt);
+
+	auto* global = config->getLlvmGlobalVariable(vt.vtableAddress);
+	assert(global);
+
+	retdec::config::Object cg(
+			global->getName(),
+			retdec::config::Storage::inMemory(vt.vtableAddress)
+	);
+	cg.setIsFromDebug(true);
+	config->getConfig().globals.insert(cg);
+}
+
+//=============================================================================
 
 	processRttiGcc();
 	processRttiMsvc();
@@ -59,36 +186,37 @@ bool ClassHierarchyAnalysis::runOnModule(Module& M)
 
 void ClassHierarchyAnalysis::processRttiGcc()
 {
-	auto& rttiGcc = getAnalysis<VtableAnalysis>().rttiAnalysis.gccRttis;
+	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto& rttiGcc = ff->getCppRttiGcc();
 
 	Class* c = nullptr;
-	std::map<ClassTypeInfo*, Class*> rtti2class;
+	std::map<const fileformat::ClassTypeInfo*, Class*> rtti2class;
 
 	for (auto& rtti : rttiGcc)
 	{
 		c = classHierarchy.addAndGetNewClass();
 		c->name = rtti.second->name;
-		c->gccRtti = rtti.second;
+		c->gccRtti = rtti.second.get();
 		rtti2class[c->gccRtti] = c;
 	}
 
 	for (auto& rtti : rttiGcc)
 	{
-		auto fIt = rtti2class.find(rtti.second);
+		auto fIt = rtti2class.find(rtti.second.get());
 		assert(fIt != rtti2class.end());
 		c = fIt->second;
 
-		if (auto* scti = dynamic_cast<SiClassTypeInfo*>(rtti.second))
+		if (auto* scti = dynamic_cast<fileformat::SiClassTypeInfo*>(rtti.second.get()))
 		{
-			auto fIt = rtti2class.find(scti->baseClass);
+			auto fIt = rtti2class.find(scti->baseClass.get());
 			assert(fIt != rtti2class.end());
 			c->superClasses.insert(fIt->second);
 		}
-		else if (auto* vcti = dynamic_cast<VmiClassTypeInfo*>(rtti.second))
+		else if (auto* vcti = dynamic_cast<fileformat::VmiClassTypeInfo*>(rtti.second.get()))
 		{
 			for (auto& bi : vcti->baseInfo)
 			{
-				auto fIt = rtti2class.find(bi.baseClass);
+				auto fIt = rtti2class.find(bi.baseClass.get());
 				assert(fIt != rtti2class.end());
 				c->superClasses.insert(fIt->second);
 			}
@@ -100,12 +228,13 @@ void ClassHierarchyAnalysis::processRttiGcc()
 
 void ClassHierarchyAnalysis::processRttiMsvc()
 {
-	auto& rttiA = getAnalysis<VtableAnalysis>().rttiAnalysis;
+	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto& rttiA = ff->getCppRttiMsvc();
 
 	Class* c = nullptr;
-	std::map<RTTITypeDescriptor*, Class*> rtti2class;
+	std::map<const fileformat::RTTITypeDescriptor*, Class*> rtti2class;
 
-	for (auto& rtti : rttiA.msvcTypeDescriptors)
+	for (auto& rtti : rttiA.typeDescriptors)
 	{
 		c = classHierarchy.addAndGetNewClass();
 		c->name = rtti.second.name;
@@ -113,7 +242,7 @@ void ClassHierarchyAnalysis::processRttiMsvc()
 		rtti2class[c->msvcRtti] = c;
 	}
 
-	for (auto& objLoc : rttiA.msvcObjLocators)
+	for (auto& objLoc : rttiA.objLocators)
 	{
 		auto fIt = rtti2class.find(objLoc.second.typeDescriptor);
 		assert(fIt != rtti2class.end());
@@ -135,33 +264,33 @@ void ClassHierarchyAnalysis::processRttiMsvc()
 }
 
 void ClassHierarchyAnalysis::processVtablesGcc(
-		std::map<ClassTypeInfo*, Class*> &rtti2class)
+		std::map<const fileformat::ClassTypeInfo*, Class*> &rtti2class)
 {
-	auto& vtables = getAnalysis<VtableAnalysis>().getVtableMap();
+	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto& vtables = ff->getCppVtablesGcc();
 	auto& cdtor = getAnalysis<CtorDtor>().getResults();
 
 	for (auto& vt : vtables)
 	{
-		VtableGcc* gcc = dynamic_cast<VtableGcc*>(vt.second);
-		if (gcc == nullptr)
-			continue;
-
-		auto fIt = rtti2class.find(gcc->rtti);
+		const fileformat::VtableGcc* gcc = &vt.second;
+		auto fIt = rtti2class.find(gcc->rtti.get());
 		assert(fIt != rtti2class.end());
 		auto* c = fIt->second;
 
 		for (auto& vf : gcc->virtualFncAddresses)
 		{
-			c->virtualFunctions.insert(vf.function);
+			auto* fnc = config->getLlvmFunction(vf.address);
+			assert(fnc);
+			c->virtualFunctions.insert(fnc);
 
-			auto cIt = cdtor.find(vf.function);
+			auto cIt = cdtor.find(fnc);
 			if (cIt == cdtor.end())
 				continue;
 
 			if (cIt->second.ctor)
-				c->constructors.insert(vf.function);
+				c->constructors.insert(fnc);
 			if (cIt->second.dtor)
-				c->destructors.insert(vf.function);
+				c->destructors.insert(fnc);
 		}
 
 		c->virtualFunctionTables.insert(gcc);
@@ -169,33 +298,33 @@ void ClassHierarchyAnalysis::processVtablesGcc(
 }
 
 void ClassHierarchyAnalysis::processVtablesMsvc(
-		std::map<RTTITypeDescriptor*, Class*> &rtti2class)
+		std::map<const fileformat::RTTITypeDescriptor*, Class*> &rtti2class)
 {
-	auto& vtables = getAnalysis<VtableAnalysis>().getVtableMap();
+	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto& vtables = ff->getCppVtablesMsvc();
 	auto& cdtor = getAnalysis<CtorDtor>().getResults();
 
 	for (auto& vt : vtables)
 	{
-		VtableMsvc* msvc = dynamic_cast<VtableMsvc*>(vt.second);
-		if (msvc == nullptr)
-			continue;
-
+		const fileformat::VtableMsvc* msvc = &vt.second;
 		auto fIt = rtti2class.find(msvc->rtti->typeDescriptor);
 		assert(fIt != rtti2class.end());
 		auto* c = fIt->second;
 
 		for (auto& vf : msvc->virtualFncAddresses)
 		{
-			c->virtualFunctions.insert(vf.function);
+			auto* fnc = config->getLlvmFunction(vf.address);
+			assert(fnc);
+			c->virtualFunctions.insert(fnc);
 
-			auto cIt = cdtor.find(vf.function);
+			auto cIt = cdtor.find(fnc);
 			if (cIt == cdtor.end())
 				continue;
 
 			if (cIt->second.ctor)
-				c->constructors.insert(vf.function);
+				c->constructors.insert(fnc);
 			if (cIt->second.dtor)
-				c->destructors.insert(vf.function);
+				c->destructors.insert(fnc);
 		}
 
 		c->virtualFunctionTables.insert(msvc);

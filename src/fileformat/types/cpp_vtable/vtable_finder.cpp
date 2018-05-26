@@ -4,10 +4,17 @@
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
+#include <iostream>
+
 #include "retdec/fileformat/file_format/file_format.h"
 #include "retdec/fileformat/types/cpp_rtti/rtti_gcc_parser.h"
 #include "retdec/fileformat/types/cpp_rtti/rtti_msvc_parser.h"
 #include "retdec/fileformat/types/cpp_vtable/vtable_finder.h"
+
+#define LOG \
+	if (!debug_enabled) {} \
+	else std::cout << std::showbase
+const bool debug_enabled = false;
 
 using namespace retdec::utils;
 
@@ -71,6 +78,8 @@ bool fillVtable(
 		Address a,
 		Vtable& vt)
 {
+	LOG << "\t\t" << "fillVtable() @ " << a << std::endl;
+
 	std::set<retdec::utils::Address> items;
 
 	auto bpw = ff->getBytesPerWord();
@@ -80,6 +89,7 @@ bool fillVtable(
 	{
 		if (!isPtr)
 		{
+			LOG << "\t\t\t" << a << " @ !isPtr" << std::endl;
 			break;
 		}
 		if (ff->isArm() && ptr % 2)
@@ -88,11 +98,13 @@ bool fillVtable(
 		}
 		if (processedAddresses.find(a) != processedAddresses.end())
 		{
+			LOG << "\t\t\t" << a << " @ !processedAddresses" << std::endl;
 			break;
 		}
 		auto* sec = ff->getSectionFromAddress(ptr);
 		if (sec == nullptr || !sec->isSomeCode())
 		{
+			LOG << "\t\t\t" << a << " @ !isSomeCode" << std::endl;
 			break;
 		}
 
@@ -100,9 +112,11 @@ bool fillVtable(
 		//
 		if (items.find(ptr) != items.end())
 		{
+			LOG << "\t\t\t" << a << " @ !unique" << std::endl;
 			return false;
 		}
 
+		LOG << "\t\t\t" << a << " @ OK" << std::endl;
 		vt.virtualFncAddresses.emplace_back(VtableItem(ptr));
 		items.insert(ptr);
 		processedAddresses.insert(a);
@@ -113,24 +127,30 @@ bool fillVtable(
 
 	if (vt.virtualFncAddresses.empty())
 	{
+		LOG << "\t\t\t" << "===> FAIL" << std::endl;
 		return false;
 	}
 
+	LOG << "\t\t\t" << "===> OK" << std::endl;
 	return true;
 }
 
 void findGccVtables(FileFormat* ff, CppVtablesGcc& vtables, CppRttiGcc& rttis)
 {
+	LOG << "findGccVtables():" << std::endl;
+
 	std::set<retdec::utils::Address> possibleVtables;
 	findPossibleVtables(ff, possibleVtables, true);
 
 	std::set<retdec::utils::Address> processedAddresses;
 	for (auto addr : possibleVtables)
 	{
+		LOG << "\t" << "possible vtable @ " << addr << std::endl;
 		VtableGcc vt(addr);
 
 		if (!fillVtable(ff, processedAddresses, addr, vt))
 		{
+			LOG << "\t\t" << "fillVtable() failed" << std::endl;
 			continue;
 		}
 
@@ -142,6 +162,7 @@ void findGccVtables(FileFormat* ff, CppVtablesGcc& vtables, CppRttiGcc& rttis)
 			vt.rtti = parseGccRtti(ff, rttis, vt.rttiAddress);
 			if (vt.rtti == nullptr)
 			{
+				LOG << "\t\t" << "parseGccRtti() failed" << std::endl;
 				continue;
 			}
 		}
@@ -153,6 +174,7 @@ void findGccVtables(FileFormat* ff, CppVtablesGcc& vtables, CppRttiGcc& rttis)
 		vtables.emplace(addr, vt);
 	}
 
+	LOG << "\t\t" << "vtable OK" << std::endl;
 	finalizeGccRtti(rttis);
 }
 

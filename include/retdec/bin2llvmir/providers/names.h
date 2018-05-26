@@ -30,6 +30,7 @@ const std::string generatedFunctionPrefixUnk   = "unknown_";
 const std::string generatedTempVarPrefix       = "v";
 const std::string generatedBasicBlockPrefix    = "dec_label_pc_";
 const std::string generatedUndefFunctionPrefix = "__decompiler_undefined_function_";
+const std::string generatedVtablePrefix        = "vtable_";
 const std::string asm2llvmGv                   = "_asm_program_counter";
 const std::string pseudoCallFunction           = "__pseudo_call";
 const std::string pseudoReturnFunction         = "__pseudo_return";
@@ -45,6 +46,7 @@ std::string generateFunctionNameUnknown(utils::Address a, bool ida = false);
 std::string generateBasicBlockName(utils::Address a);
 std::string generateTempVariableName(utils::Address a, unsigned cntr);
 std::string generateFunctionNameUndef(unsigned cntr);
+std::string generateVtableName(utils::Address a);
 
 } // namespace names
 

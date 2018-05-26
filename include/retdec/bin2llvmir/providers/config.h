@@ -151,8 +151,10 @@ class Config
 				std::string& description,
 				llvm::Type*& type) const;
 
-	private:
+	public:
 		llvm::Module* _module = nullptr;
+
+	private:
 		retdec::config::Config _configDB;
 		std::string _configPath;
 		llvm::GlobalVariable* _globalDummy = nullptr;

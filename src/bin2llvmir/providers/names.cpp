@@ -47,6 +47,11 @@ std::string generateFunctionNameUndef(unsigned cntr)
 	return generatedUndefFunctionPrefix + std::to_string(cntr);
 }
 
+std::string generateVtableName(utils::Address a)
+{
+	return generatedVtablePrefix + a.toHexString();
+}
+
 } // namespace names
 
 //

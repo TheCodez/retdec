@@ -13,8 +13,8 @@
 
 #include <llvm/IR/Function.h>
 
-#include "retdec/bin2llvmir/optimizations/vtable/vtable.h"
 #include "retdec/bin2llvmir/providers/config.h"
+#include "retdec/bin2llvmir/providers/names.h"
 
 namespace retdec {
 namespace bin2llvmir {
@@ -36,12 +36,12 @@ class Class
 		std::set<const llvm::Function*> destructors;
 		std::set<const llvm::Function*> methods;
 		std::set<const llvm::Function*> virtualFunctions;
-		std::set<const Vtable*> virtualFunctionTables;
+		std::set<const fileformat::Vtable*> virtualFunctionTables;
 		std::set<Class*> superClasses;
 		llvm::Value* structure;
 
-		ClassTypeInfo* gccRtti;
-		RTTITypeDescriptor* msvcRtti;
+		const fileformat::ClassTypeInfo* gccRtti = nullptr;
+		const fileformat::RTTITypeDescriptor* msvcRtti = nullptr;
 };
 
 /**
