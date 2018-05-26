@@ -6,14 +6,12 @@
 
 #include <iostream>
 
-#include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/optimizations/vtable/rtti_analysis.h"
 #include "retdec/bin2llvmir/utils/debug.h"
+#define debug_enabled false
 
 using namespace retdec::utils;
 using namespace llvm;
-
-#define debug_enabled false
 
 namespace retdec {
 namespace bin2llvmir {

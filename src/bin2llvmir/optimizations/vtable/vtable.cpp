@@ -17,13 +17,12 @@
 #include "retdec/bin2llvmir/optimizations/vtable/vtable.h"
 #include "retdec/bin2llvmir/providers/fileimage.h"
 #include "retdec/bin2llvmir/utils/debug.h"
+#define debug_enabled false
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace retdec::utils;
 using namespace llvm;
-
-#define debug_enabled false
 
 namespace retdec {
 namespace bin2llvmir {
