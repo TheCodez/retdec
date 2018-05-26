@@ -22,20 +22,9 @@
 namespace retdec {
 namespace bin2llvmir {
 
-class Definition;
-class ReachingDefinitionsAnalysis;
-
 llvm::CallInst* modifyCallInst(
 		llvm::CallInst* call,
 		llvm::Type* ret,
-		llvm::ArrayRef<llvm::Value*> args);
-
-llvm::CallInst* modifyCallInst(
-		llvm::CallInst* call,
-		llvm::Type* ret);
-
-llvm::CallInst* modifyCallInst(
-		llvm::CallInst* call,
 		llvm::ArrayRef<llvm::Value*> args);
 
 using FunctionPair = std::pair<llvm::Function*, retdec::config::Function*>;

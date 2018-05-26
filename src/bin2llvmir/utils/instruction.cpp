@@ -13,7 +13,6 @@
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/utils/container.h"
 #include "retdec/utils/string.h"
-#include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/instruction.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
@@ -22,58 +21,6 @@ using namespace llvm;
 
 namespace retdec {
 namespace bin2llvmir {
-
-/**
- * @return @c True if @a def was localized using @c type data type.
- */
-bool localizeDefinition(
-		const Definition* def,
-		llvm::Type* type)
-{
-//	if (def == nullptr || def->uses.empty())
-//	{
-//		return false;
-//	}
-
-	StoreInst* s = dyn_cast<StoreInst>(def->def);
-//	if (s == nullptr)
-//	{
-//		assert("only stores are expected");
-//		return false;
-//	}
-	auto* val = s->getPointerOperand();
-
-// TODO
-//	for (auto* u : def->uses)
-//	{
-//		if (u->defs.size() > 1)
-//		{
-//			return false;
-//		}
-//	}
-
-	auto* fnc = def->def->getFunction();
-	auto* fncFirst = &(fnc->getEntryBlock().getInstList().front());
-	auto* t = type ? type : val->getType()->getPointerElementType();
-	auto* localVar = new AllocaInst(
-			t,
-			"",
-			fncFirst);
-	auto* c1 = IrModifier::convertValueToType(s->getValueOperand(), t, s);
-	new StoreInst(
-			c1,
-			localVar,
-			s);
-
-	for (auto* us : def->uses)
-	{
-		auto* u = us->use;
-		auto* c2 = IrModifier::convertValueToType(localVar, val->getType(), u);
-		u->replaceUsesOfWith(val, c2);
-	}
-
-	return true;
-}
 
 /**
  * Modify @a call instruction to call @a calledVal value with @a args arguments.
@@ -183,27 +130,6 @@ llvm::CallInst* modifyCallInst(
 	auto* conv = IrModifier::convertValueToType(call->getCalledValue(), t, call);
 
 	return _modifyCallInst(call, conv, args);
-}
-
-/**
- * Modify only call instruction's return type. Arguments are left unchanged.
- */
-llvm::CallInst* modifyCallInst(
-		llvm::CallInst* call,
-		llvm::Type* ret)
-{
-	std::vector<llvm::Value*> args(call->arg_operands().begin(), call->arg_operands().end());
-	return modifyCallInst(call, ret, args);
-}
-
-/**
- * Modify only call instruction's arguments. Return type is left unchanged.
- */
-llvm::CallInst* modifyCallInst(
-		llvm::CallInst* call,
-		llvm::ArrayRef<llvm::Value*> args)
-{
-	return modifyCallInst(call, nullptr, args);
 }
 
 /**
