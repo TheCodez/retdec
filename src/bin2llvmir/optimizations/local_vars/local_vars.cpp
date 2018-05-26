@@ -101,6 +101,13 @@ bool LocalVars::runOnModule(Module& M)
 				{
 					IrModifier::localize(d->def, uses, false);
 				}
+				// Not necessary to pass all regression tests,
+				// but it gives a slight speeds-up.
+				else if (config->isRegister(d->getSource())
+						&& canBeLocalized(d, uses))
+				{
+					IrModifier::localize(d->def, uses, false);
+				}
 			}
 		}
 	}
