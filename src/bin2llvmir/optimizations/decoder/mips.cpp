@@ -156,7 +156,7 @@ void Decoder::initializeGpReg_mips()
 		if (lastStore)
 		{
 			SymbolicTree root(_RDA, lastStore->getValueOperand());
-			root.simplifyNode(_config);
+			root.simplifyNode();
 			if (auto* ci = dyn_cast_or_null<ConstantInt>(root.value))
 			{
 				gp->setInitializer(ci);

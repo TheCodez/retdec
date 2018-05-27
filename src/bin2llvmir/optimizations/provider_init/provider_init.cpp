@@ -65,6 +65,7 @@ bool ProviderInitialization::runOnModule(Module& m)
 
 	auto* abi = AbiProvider::addAbi(&m, c);
 	SymbolicTree::setAbi(abi);
+	SymbolicTree::setConfig(c);
 
 	auto* d = DemanglerProvider::addDemangler(&m, c->getConfig().tools);
 	if (d == nullptr)

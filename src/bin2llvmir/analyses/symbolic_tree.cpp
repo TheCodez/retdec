@@ -29,6 +29,7 @@ namespace retdec {
 namespace bin2llvmir {
 
 Abi* SymbolicTree::_abi = nullptr;
+Config* SymbolicTree::_config = nullptr;
 bool SymbolicTree::_val2valUsed = false;
 bool SymbolicTree::_trackThroughAllocaLoads = true;
 bool SymbolicTree::_trackThroughGeneralRegisterLoads = true;
@@ -192,71 +193,39 @@ void SymbolicTree::expandNode(
 			return;
 		}
 	}
+	processed.insert(value);
 
-	if (User* U = dyn_cast<User>(value))
+	if (auto* l = dyn_cast<LoadInst>(value))
 	{
-		processed.insert(value);
-		Instruction *I = dyn_cast<Instruction>(value);
-
-		if (auto* l = dyn_cast<LoadInst>(value))
+		if (!_trackThroughAllocaLoads
+				&& isa<AllocaInst>(l->getPointerOperand()))
 		{
-			if (!_trackThroughAllocaLoads
-					&& isa<AllocaInst>(l->getPointerOperand()))
-			{
-				return;
-			}
+			return;
+		}
 
-			if (_trackOnlyFlagRegisters
-					&& _abi
-					&& _abi->isRegister(l->getPointerOperand())
-					&& !_abi->isFlagRegister(l->getPointerOperand()))
-			{
-				return;
-			}
+		if (_trackOnlyFlagRegisters
+				&& _abi
+				&& _abi->isRegister(l->getPointerOperand())
+				&& !_abi->isFlagRegister(l->getPointerOperand()))
+		{
+			return;
+		}
 
-			if (!_trackThroughGeneralRegisterLoads
-					&& _abi
-					&& _abi->isGeneralPurposeRegister(l->getPointerOperand()))
-			{
-				return;
-			}
+		if (!_trackThroughGeneralRegisterLoads
+				&& _abi
+				&& _abi->isGeneralPurposeRegister(l->getPointerOperand()))
+		{
+			return;
+		}
 
-			if (RDA && RDA->wasRun())
-			{
-				auto defs = RDA->defsFromUse(I);
-				for (auto* d : defs)
-				{
-					ops.emplace_back(
-							RDA,
-							d->def,
-							I,
-							processed,
-							getLevel() + 1,
-							maxNodeLevel,
-							val2val);
-				}
-			}
-			else
-			{
-				auto defs = ReachingDefinitionsAnalysis::defsFromUse_onDemand(I);
-				for (auto* d : defs)
-				{
-					ops.emplace_back(
-							RDA,
-							d,
-							I,
-							processed,
-							getLevel() + 1,
-							maxNodeLevel,
-							val2val);
-				}
-			}
-
-			if (ops.empty())
+		if (RDA && RDA->wasRun())
+		{
+			auto defs = RDA->defsFromUse(l);
+			for (auto* d : defs)
 			{
 				ops.emplace_back(
 						RDA,
-						l->getPointerOperand(),
+						d->def,
 						l,
 						processed,
 						getLevel() + 1,
@@ -264,52 +233,78 @@ void SymbolicTree::expandNode(
 						val2val);
 			}
 		}
-		else if (isa<StoreInst>(value))
-		{
-			ops.emplace_back(
-					RDA,
-					I->getOperand(0),
-					I,
-					processed,
-					getLevel() + 1,
-					maxNodeLevel,
-					val2val);
-		}
-		else if (isa<AllocaInst>(value)
-				|| isa<CallInst>(value)
-				|| (_abi
-						&& _abi->isRegister(value)
-						&& !_abi->isStackPointerRegister(value)
-						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_ZERO))
-						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_GP)))
-				)
-		{
-			// nothing
-		}
 		else
 		{
-			for (unsigned i = 0; i < U->getNumOperands(); ++i)
+			auto defs = ReachingDefinitionsAnalysis::defsFromUse_onDemand(l);
+			for (auto* d : defs)
 			{
 				ops.emplace_back(
 						RDA,
-						U->getOperand(i),
-						U,
+						d,
+						l,
 						processed,
 						getLevel() + 1,
 						maxNodeLevel,
 						val2val);
 			}
 		}
+
+		if (ops.empty())
+		{
+			ops.emplace_back(
+					RDA,
+					l->getPointerOperand(),
+					l,
+					processed,
+					getLevel() + 1,
+					maxNodeLevel,
+					val2val);
+		}
+	}
+	else if (auto* s = dyn_cast<StoreInst>(value))
+	{
+		ops.emplace_back(
+				RDA,
+				s->getValueOperand(),
+				s,
+				processed,
+				getLevel() + 1,
+				maxNodeLevel,
+				val2val);
+	}
+	else if (isa<AllocaInst>(value)
+			|| isa<CallInst>(value)
+			|| (_abi
+					&& _abi->isRegister(value)
+					&& !_abi->isStackPointerRegister(value)
+					&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_ZERO))
+					&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_GP))))
+	{
+		// nothing
+	}
+	else if (User* U = dyn_cast<User>(value))
+	{
+		for (unsigned i = 0; i < U->getNumOperands(); ++i)
+		{
+			ops.emplace_back(
+					RDA,
+					U->getOperand(i),
+					U,
+					processed,
+					getLevel() + 1,
+					maxNodeLevel,
+					val2val);
+		}
 	}
 }
 
-void SymbolicTree::simplifyNode(Config* config)
+void SymbolicTree::simplifyNode()
 {
-	_simplifyNode(config);
+	_simplifyNode();
 	fixLevel();
 }
 
-void SymbolicTree::_simplifyNode(Config* config)
+void SymbolicTree::_simplifyNode()
 {
 	if (ops.empty())
 	{
@@ -318,7 +313,7 @@ void SymbolicTree::_simplifyNode(Config* config)
 
 	for (auto &o : ops)
 	{
-		o._simplifyNode(config);
+		o._simplifyNode();
 	}
 
 	if (isa<LoadInst>(value) && ops.size() > 1)
@@ -415,9 +410,9 @@ void SymbolicTree::_simplifyNode(Config* config)
 	}
 	else if (match(*this, m_Add(m_GlobalVariable(global), m_ConstantInt(c1)))
 			&& ops[0].user && !isa<LoadInst>(ops[0].user)
-			&& config)
+			&& _config)
 	{
-		if (auto addr = config->getGlobalAddress(global))
+		if (auto addr = _config->getGlobalAddress(global))
 		{
 			value = ConstantInt::get(c1->getType(), addr + c1->getSExtValue());
 			ops.clear();
@@ -672,6 +667,11 @@ bool SymbolicTree::isVal2ValMapUsed()
 void SymbolicTree::setAbi(Abi* abi)
 {
 	_abi = abi;
+}
+
+void SymbolicTree::setConfig(Config* config)
+{
+	_config = config;
 }
 
 void SymbolicTree::setToDefaultConfiguration()

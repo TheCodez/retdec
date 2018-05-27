@@ -99,7 +99,7 @@ bool CondBranchOpt::runOnInstruction(
 	SymbolicTree root(RDA, cond);
 	LOG << root << std::endl;
 
-	root.simplifyNode(_config);
+	root.simplifyNode();
 	LOG << root << std::endl;
 
 	Value* testedVal = nullptr;

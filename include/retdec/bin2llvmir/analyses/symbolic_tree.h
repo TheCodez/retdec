@@ -46,11 +46,11 @@ class SymbolicTree
 	public:
 		SymbolicTree(
 				llvm::Value* v,
-				unsigned maxNodeLevel = 16);
+				unsigned maxNodeLevel = 14);
 		SymbolicTree(
 				ReachingDefinitionsAnalysis& rda,
 				llvm::Value* v,
-				unsigned maxNodeLevel = 16);
+				unsigned maxNodeLevel = 14);
 		SymbolicTree(
 				ReachingDefinitionsAnalysis& rda,
 				llvm::Value* v,
@@ -81,7 +81,7 @@ class SymbolicTree
 
 		unsigned getLevel() const;
 
-		void simplifyNode(Config* config);
+		void simplifyNode();
 		void solveMemoryLoads(FileImage* image);
 
 		SymbolicTree* getMaxIntValue();
@@ -105,6 +105,7 @@ class SymbolicTree
 	public:
 		static bool isVal2ValMapUsed();
 		static void setAbi(Abi* abi);
+		static void setConfig(Config* config);
 		static void setToDefaultConfiguration();
 		static void setTrackThroughAllocaLoads(bool b);
 		static void setTrackThroughGeneralRegisterLoads(bool b);
@@ -112,6 +113,7 @@ class SymbolicTree
 
 	private:
 		static Abi* _abi;
+		static Config* _config;
 		static bool _val2valUsed;
 		static bool _trackThroughAllocaLoads;
 		static bool _trackThroughGeneralRegisterLoads;
@@ -126,7 +128,7 @@ class SymbolicTree
 				unsigned maxNodeLevel,
 				std::unordered_set<llvm::Value*>& processed);
 
-		void _simplifyNode(Config* config);
+		void _simplifyNode();
 		void fixLevel(unsigned level = 0);
 
 		void _getPreOrder(std::vector<SymbolicTree*>& res) const;

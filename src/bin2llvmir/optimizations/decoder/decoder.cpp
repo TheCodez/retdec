@@ -715,7 +715,7 @@ bool Decoder::getJumpTargetsFromInstruction(
 			if (auto* l = dyn_cast<LoadInst>(&i))
 			{
 				SymbolicTree st(_RDA, l->getPointerOperand(), nullptr, 8);
-				st.simplifyNode(_config);
+				st.simplifyNode();
 
 				if (auto* ci = dyn_cast<ConstantInt>(st.value))
 				{
@@ -779,7 +779,7 @@ utils::Address Decoder::getJumpTarget(
 		}
 	}
 
-	st.simplifyNode(_config);
+	st.simplifyNode();
 
 	if (auto* ci = dyn_cast<ConstantInt>(st.value))
 	{
@@ -862,7 +862,7 @@ utils::Address Decoder::getJumpTarget(
 
 	// If there are loads, try to solve them.
 	st.solveMemoryLoads(_image);
-	st.simplifyNode(_config);
+	st.simplifyNode();
 
 // TODO: doing this will solve more, also it will screw up integration.ack.Test_2015_ThumbGccElf
 	if (getJumpTargetSwitch(addr, branchCall, val, st))
@@ -1010,7 +1010,7 @@ bool Decoder::getJumpTargetSwitch(
 if (brToSwitch)
 {
 	SymbolicTree stCond(_RDA, brToSwitch->getCondition());
-	stCond.simplifyNode(_config);
+	stCond.simplifyNode();
 
 	auto levelOrd = stCond.getLevelOrder();
 	for (SymbolicTree* n : levelOrd)
@@ -1123,7 +1123,7 @@ if (brToSwitch)
 	std::vector<unsigned> idxs;
 	unsigned maxIdx = 0;
 	SymbolicTree idxRoot(_RDA, idx);
-	idxRoot.simplifyNode(_config);
+	idxRoot.simplifyNode();
 	if (_config->getConfig().architecture.isX86()
 			&& tableSize
 			&& isa<LoadInst>(idxRoot.value)

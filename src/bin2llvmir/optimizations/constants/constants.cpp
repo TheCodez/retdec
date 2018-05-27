@@ -114,7 +114,7 @@ void ConstantsAnalysis::checkForGlobalInInstruction(
 	}
 
 	SymbolicTree root(RDA, val);
-	root.simplifyNode(config);
+	root.simplifyNode();
 
 	LOG << root << std::endl;
 

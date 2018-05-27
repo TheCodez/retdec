@@ -165,7 +165,7 @@ void StackAnalysis::handleInstruction(
 
 	auto* debugSv = getDebugStackVariable(inst->getFunction(), root);
 
-	root.simplifyNode(_config);
+	root.simplifyNode();
 	LOG << root << std::endl;
 
 	if (debugSv == nullptr)
