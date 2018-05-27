@@ -279,8 +279,7 @@ void SymbolicTree::expandNode(
 						&& _abi->isRegister(value)
 						&& !_abi->isStackPointerRegister(value)
 						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_ZERO))
-						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_GP))
-						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_T9)))
+						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_GP)))
 				)
 		{
 			// nothing
@@ -359,17 +358,12 @@ void SymbolicTree::_simplifyNode(Config* config)
 			&& isa<LoadInst>(value)
 			&& ops.size() == 1
 			&& isa<GlobalVariable>(ops[0].value)
-			&& cast<GlobalVariable>(ops[0].value)->getName() == "t9"
-			&& ops[0].ops.size() == 1
-			&& isa<ConstantInt>(ops[0].ops[0].value)
-			&& cast<ConstantInt>(ops[0].ops[0].value)->isZero())
+			&& cast<GlobalVariable>(ops[0].value)->getName() == "t9")
 	{
 		auto* l = cast<LoadInst>(value);
 		auto addr = AsmInstruction::getFunctionAddress(l->getFunction());
-
-		auto* ci = cast<ConstantInt>(ops[0].ops[0].value);
-		ops[0].ops[0].value = ConstantInt::get(ci->getType(), addr);
-		*this = std::move(ops[0].ops[0]);
+		value = ConstantInt::get(l->getType(), addr);
+		ops.clear();
 	}
 	// >|  %addr = load @gv_1
 	//     >|  @gv_1 = value
