@@ -65,6 +65,10 @@ SymbolicTree::SymbolicTree(
 
 }
 
+/**
+ * Them main "public" ctor -- it is not really public, but all public ctors
+ * end up here and it does all the work.
+ */
 SymbolicTree::SymbolicTree(
 		ReachingDefinitionsAnalysis* rda,
 		llvm::Value* v,
@@ -306,6 +310,11 @@ void SymbolicTree::simplifyNode(Config* config)
 
 void SymbolicTree::_simplifyNode(Config* config)
 {
+	if (ops.empty())
+	{
+		return;
+	}
+
 	for (auto &o : ops)
 	{
 		o._simplifyNode(config);
@@ -331,22 +340,14 @@ void SymbolicTree::_simplifyNode(Config* config)
 		}
 	}
 
-	if (ops.empty())
-	{
-		return;
-	}
-
-	if (isa<PtrToIntInst>(value) ||
-	    isa<IntToPtrInst>(value))
+	if (isa<CastInst>(value))
 	{
 		*this = std::move(ops[0]);
 	}
-	// PtrToIntInst && IntToPtrInst inherit from CastInst.
-	// maybe this is to general and we do not want to skip all possible casts.
-	//
-	else if (isa<CastInst>(value))
+	else if (ConstantExpr* ce = dyn_cast<ConstantExpr>(value))
 	{
-		*this = std::move(ops[0]);
+		if (ce->isCast())
+			*this = std::move(ops[0]);
 	}
 	else if (isa<StoreInst>(value))
 	{
@@ -364,9 +365,6 @@ void SymbolicTree::_simplifyNode(Config* config)
 			&& cast<ConstantInt>(ops[0].ops[0].value)->isZero())
 	{
 		auto* l = cast<LoadInst>(value);
-
-// TODO: none of these is ideal.
-//		auto addr = config->getFunctionAddress(l->getFunction());
 		auto addr = AsmInstruction::getFunctionAddress(l->getFunction());
 
 		auto* ci = cast<ConstantInt>(ops[0].ops[0].value);
@@ -397,11 +395,6 @@ void SymbolicTree::_simplifyNode(Config* config)
 							*this = std::move(ops[0]);
 					}
 			}
-	}
-	else if (ConstantExpr* ce = dyn_cast<ConstantExpr>(value))
-	{
-		if (ce->isCast())
-			*this = std::move(ops[0]);
 	}
 	else if (ops.size() == 2
 			&& isa<ConstantInt>(ops[0].value)
