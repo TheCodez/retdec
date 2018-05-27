@@ -33,7 +33,7 @@ class CtorDtor : public llvm::ModulePass
 		{
 			public:
 				/// Super method calls in order.
-				std::vector<const llvm::CallInst*> superMethods;
+				std::vector<llvm::CallInst*> superMethods;
 				/// Super method offsets in order.
 				std::vector<int> superMethodOffsets;
 				/// Virtual table stores in order.
@@ -58,9 +58,9 @@ class CtorDtor : public llvm::ModulePass
 		void analyseFunction(llvm::Function* fnc);
 		FunctionInfo analyseFunctionForward(llvm::Function* fnc);
 		FunctionInfo analyseFunctionBackward(llvm::Function* fnc);
-		int getOffset(const llvm::Value* ecxStoreOp);
-		const llvm::StoreInst* findPreviousStoreToECX(
-				const llvm::Instruction* inst);
+		int getOffset(llvm::Value* ecxStoreOp);
+		llvm::StoreInst* findPreviousStoreToECX(
+				llvm::Instruction* inst);
 		void propagateCtorDtor();
 		void replaceVtablesPointersInStores(
 				llvm::StoreInst* store,

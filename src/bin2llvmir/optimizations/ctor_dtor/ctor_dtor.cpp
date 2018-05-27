@@ -14,51 +14,11 @@
 #include "retdec/bin2llvmir/optimizations/ctor_dtor/ctor_dtor.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
+#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace llvm;
 
 #define debug_enabled false
-
-/**
-* Helper function, meybe move to utils.
-*/
-static const Value* goThroughCasts(const Value *v)
-{
-	if (isa<CastInst>(v))
-	{
-		return goThroughCasts(cast<CastInst>(v)->getOperand(0));
-	}
-	else if (isa<ConstantExpr>(v) && cast<ConstantExpr>(v)->isCast())
-	{
-		return goThroughCasts(cast<ConstantExpr>(v)->getOperand(0));
-	}
-	else if (isa<InsertValueInst>(v))
-	{
-		const InsertValueInst *ins = cast<InsertValueInst>(v);
-
-		// skip aggregate value and inserted value operands,
-		// all other (hence index) operands must be zero
-		//
-		bool allZeros = true;
-		for (unsigned i = 2; i < ins->getNumOperands(); i++)
-		{
-			Value *op = ins->getOperand(i);
-
-			if (!isa<ConstantInt>(op) || !cast<ConstantInt>(op)->isNullValue())
-			{
-				allZeros = false;
-				break;
-			}
-		}
-
-		if (allZeros)
-		{
-			return goThroughCasts(ins->getInsertedValueOperand());
-		}
-	}
-
-	return v;
-}
 
 namespace retdec {
 namespace bin2llvmir {
@@ -76,12 +36,6 @@ CtorDtor::CtorDtor() :
 		ModulePass(ID)
 {
 }
-
-//void CtorDtor::getAnalysisUsage(AnalysisUsage &AU) const
-//{
-//	AU.setPreservesAll();
-//	AU.addRequired<VtableAnalysis>();
-//}
 
 bool CtorDtor::runOnModule(Module& M)
 {
@@ -139,7 +93,7 @@ void CtorDtor::findPossibleCtorsDtors()
 				continue;
 
 			retdec::utils::Address addr;
-			const Value* v = goThroughCasts(store->getValueOperand());
+			const Value* v = llvm_utils::skipCasts(store->getValueOperand());
 			if (auto* ci = dyn_cast<ConstantInt>(store->getValueOperand()))
 			{
 				addr = ci->getZExtValue();
@@ -264,11 +218,11 @@ CtorDtor::FunctionInfo CtorDtor::analyseFunctionBackward(Function* fnc)
 			bb.rend());
 }
 
-int CtorDtor::getOffset(const Value* ecxStoreOp)
+int CtorDtor::getOffset(Value* ecxStoreOp)
 {
 	LOG << "\n*** getOffset() : " << llvmObjToString(ecxStoreOp) << std::endl;
 
-	ecxStoreOp = goThroughCasts(ecxStoreOp);
+	ecxStoreOp = llvm_utils::skipCasts(ecxStoreOp);
 	LOG << "\tdef @ " << llvmObjToString(ecxStoreOp) << std::endl;
 
 	int offset = 0;
@@ -300,7 +254,7 @@ int CtorDtor::getOffset(const Value* ecxStoreOp)
  *
  * TODO: maybe I could move this to RDA? would it make sense? would it work?
  */
-const StoreInst* CtorDtor::findPreviousStoreToECX(const Instruction* inst)
+StoreInst* CtorDtor::findPreviousStoreToECX(Instruction* inst)
 {
 	LOG << "\n*** findPreviousStoreToECX() : "
 		<< llvmObjToString(inst) << std::endl;
