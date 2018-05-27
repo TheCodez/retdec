@@ -42,19 +42,21 @@ bool CondBranchOpt::runOnModule(llvm::Module& m)
 {
 	_module = &m;
 	_config = ConfigProvider::getConfig(_module);
+	_abi = AbiProvider::getAbi(_module);
 	return run();
 }
 
-bool CondBranchOpt::runOnModuleCustom(llvm::Module& m, Config* c)
+bool CondBranchOpt::runOnModuleCustom(llvm::Module& m, Config* c, Abi* abi)
 {
 	_module = &m;
 	_config = c;
+	_abi = abi;
 	return run();
 }
 
 bool CondBranchOpt::run()
 {
-	if (_config == nullptr)
+	if (_config == nullptr || _abi == nullptr)
 	{
 		return false;
 	}
@@ -62,7 +64,7 @@ bool CondBranchOpt::run()
 	bool changed = false;
 
 	ReachingDefinitionsAnalysis RDA;
-	RDA.runOnModule(*_module, _config, true);
+	RDA.runOnModule(*_module, _abi, true);
 
 	for (Function& f : *_module)
 	for (auto it = inst_begin(&f), eIt = inst_end(&f); it != eIt;)

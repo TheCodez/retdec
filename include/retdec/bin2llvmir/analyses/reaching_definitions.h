@@ -20,7 +20,7 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/IR/Module.h>
 
-#include "retdec/bin2llvmir/providers/config.h"
+#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 
 namespace retdec {
@@ -116,11 +116,11 @@ class ReachingDefinitionsAnalysis
 	public:
 		bool runOnModule(
 				llvm::Module& M,
-				Config* c = nullptr,
+				Abi* abi = nullptr,
 				bool trackFlagRegs = false);
 		bool runOnFunction(
 				llvm::Function& F,
-				Config* c = nullptr,
+				Abi* abi = nullptr,
 				bool trackFlagRegs = false);
 		void clear();
 		bool wasRun() const;
@@ -163,7 +163,7 @@ class ReachingDefinitionsAnalysis
 		bool _run = false;
 
 	public:
-		Config* _config = nullptr;
+		Abi* _abi = nullptr;
 };
 
 } // namespace bin2llvmir

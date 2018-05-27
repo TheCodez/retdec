@@ -39,11 +39,11 @@ namespace bin2llvmir {
 
 bool ReachingDefinitionsAnalysis::runOnModule(
 		Module& M,
-		Config* c,
+		Abi* abi,
 		bool trackFlagRegs)
 {
 	_trackFlagRegs = trackFlagRegs;
-	_config = c;
+	_abi = abi;
 	_specialGlobal = AsmInstruction::getLlvmToAsmGlobalVariable(&M);
 
 	clear();
@@ -56,11 +56,11 @@ bool ReachingDefinitionsAnalysis::runOnModule(
 
 bool ReachingDefinitionsAnalysis::runOnFunction(
 		llvm::Function& F,
-		Config* c,
+		Abi* abi,
 		bool trackFlagRegs)
 {
 	_trackFlagRegs = trackFlagRegs;
-	_config = c;
+	_abi = abi;
 	_specialGlobal = AsmInstruction::getLlvmToAsmGlobalVariable(F.getParent());
 
 	clear();
@@ -107,8 +107,8 @@ void ReachingDefinitionsAnalysis::initializeBasicBlocks(llvm::Function& F)
 					continue;
 				}
 				if (!_trackFlagRegs
-						&& _config
-						&& _config->isFlagRegister(l->getPointerOperand()))
+						&& _abi
+						&& _abi->isFlagRegister(l->getPointerOperand()))
 				{
 					continue;
 				}
@@ -123,8 +123,8 @@ void ReachingDefinitionsAnalysis::initializeBasicBlocks(llvm::Function& F)
 					continue;
 				}
 				if (!_trackFlagRegs
-						&& _config
-						&& _config->isFlagRegister(s->getPointerOperand()))
+						&& _abi
+						&& _abi->isFlagRegister(s->getPointerOperand()))
 				{
 					continue;
 				}
@@ -147,8 +147,8 @@ void ReachingDefinitionsAnalysis::initializeBasicBlocks(llvm::Function& F)
 					Value *a = call->getArgOperand(i);
 
 					if (!_trackFlagRegs
-							&& _config
-							&& _config->isFlagRegister(a))
+							&& _abi
+							&& _abi->isFlagRegister(a))
 					{
 						continue;
 					}

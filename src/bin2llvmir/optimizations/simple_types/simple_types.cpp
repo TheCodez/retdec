@@ -21,6 +21,7 @@
 #include "retdec/utils/time.h"
 #include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/optimizations/simple_types/simple_types.h"
+#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
@@ -86,7 +87,7 @@ bool SimpleTypesAnalysis::runOnModule(Module& M)
 
 	if (first)
 	{
-		RDA.runOnModule(M, config);
+		RDA.runOnModule(M, AbiProvider::getAbi(&M));
 		buildEqSets(M);
 		buildEquations();
 		eqSets.propagate(module);

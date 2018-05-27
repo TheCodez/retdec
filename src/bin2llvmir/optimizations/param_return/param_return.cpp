@@ -151,7 +151,7 @@ bool ParamReturn::run()
 		return false;
 	}
 
-	_RDA.runOnModule(*_module, _config);
+	_RDA.runOnModule(*_module, AbiProvider::getAbi(_module));
 
 //dumpModuleToFile(_module);
 

@@ -10,6 +10,7 @@
 
 #include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/optimizations/local_vars/local_vars.h"
+#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/utils/llvm.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #define debug_enabled false
@@ -59,14 +60,15 @@ LocalVars::LocalVars() :
  */
 bool LocalVars::runOnModule(Module& M)
 {
-	if (!ConfigProvider::getConfig(&M, config))
+	Abi* abi = nullptr;
+	if (!AbiProvider::getAbi(&M, abi))
 	{
 		LOG << "[ABORT] config file is not available\n";
 		return false;
 	}
 
 	ReachingDefinitionsAnalysis RDA;
-	RDA.runOnModule(M, config);
+	RDA.runOnModule(M, abi);
 
 	std::set<llvm::Instruction*> uses;
 
@@ -103,7 +105,7 @@ bool LocalVars::runOnModule(Module& M)
 				}
 				// Not necessary to pass all regression tests,
 				// but it gives a slight speeds-up.
-				else if (config->isRegister(d->getSource())
+				else if (abi->isRegister(d->getSource())
 						&& canBeLocalized(d, uses))
 				{
 					IrModifier::localize(d->def, uses, false);

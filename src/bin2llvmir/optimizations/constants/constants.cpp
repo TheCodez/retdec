@@ -22,6 +22,7 @@
 #include "retdec/utils/time.h"
 #include "retdec/bin2llvmir/analyses/symbolic_tree.h"
 #include "retdec/bin2llvmir/optimizations/constants/constants.h"
+#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 const bool debug_enabled = false;
 #include "retdec/bin2llvmir/utils/llvm.h"
@@ -53,10 +54,11 @@ bool ConstantsAnalysis::runOnModule(Module &M)
 	m_module = &M;
 	objf = FileImageProvider::getFileImage(&M);
 	config = ConfigProvider::getConfig(&M);
+	auto* abi = AbiProvider::getAbi(&M);
 	dbgf = DebugFormatProvider::getDebugFormat(&M);
 
 	ReachingDefinitionsAnalysis RDA;
-	RDA.runOnModule(M, config);
+	RDA.runOnModule(M, abi);
 
 	for (Function& f : M.getFunctionList())
 	for (inst_iterator I = inst_begin(&f), E = inst_end(&f); I != E;)

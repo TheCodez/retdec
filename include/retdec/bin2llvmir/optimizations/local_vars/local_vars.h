@@ -10,8 +10,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
 
-#include "retdec/bin2llvmir/providers/config.h"
-
 namespace retdec {
 namespace bin2llvmir {
 
@@ -25,9 +23,6 @@ class LocalVars : public llvm::ModulePass
 		static char ID;
 		LocalVars();
 		virtual bool runOnModule(llvm::Module& M) override;
-
-	private:
-		Config* config = nullptr;
 };
 
 } // namespace bin2llvmir
