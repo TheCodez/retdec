@@ -50,7 +50,9 @@ class Definition
 		llvm::Value* getSource();
 
 	public:
+		/// Definition instruction -- store or alloca.
 		llvm::Instruction* def;
+		/// Defined value -- store's pointer operand or alloca itself.
 		llvm::Value* src;
 		UseSet uses;
 };
@@ -64,7 +66,9 @@ class Use
 		bool isUndef() const;
 
 	public:
+		/// Use instruction -- load or call.
 		llvm::Instruction* use;
+		/// Used value -- load's pointer operand, call's argument operand.
 		llvm::Value* src;
 		DefSet defs;
 };
