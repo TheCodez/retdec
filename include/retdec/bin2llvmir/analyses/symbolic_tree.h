@@ -70,7 +70,7 @@ class SymbolicTree
 				const SymbolicTree& s);
 		std::string print(unsigned indent = 0) const;
 
-	//
+	// Misc methods.
 	//
 	public:
 		bool isNullary() const;
@@ -82,8 +82,8 @@ class SymbolicTree
 		unsigned getLevel() const;
 
 		void simplifyNode(Config* config);
-
 		void solveMemoryLoads(FileImage* image);
+
 		SymbolicTree* getMaxIntValue();
 
 	// Tree linearization methods.
@@ -93,24 +93,12 @@ class SymbolicTree
 		std::vector<SymbolicTree*> getPostOrder() const;
 		std::vector<SymbolicTree*> getLevelOrder() const;
 
-	// Private ctors, dtors.
-	// This is a private constructor, do not use it. It is made public only
-	// so it can be used in std::vector<>::emplace_back().
+	// Public data.
 	//
 	public:
-		SymbolicTree(
-				ReachingDefinitionsAnalysis* rda,
-				llvm::Value* v,
-				std::map<llvm::Value*, llvm::Value*>* val2val,
-				unsigned maxNodeLevel = 14);
-		SymbolicTree(
-				ReachingDefinitionsAnalysis* rda,
-				llvm::Value* v,
-				llvm::Value* u,
-				std::unordered_set<llvm::Value*>& processed,
-				unsigned nodeLevel,
-				unsigned maxNodeLevel,
-				std::map<llvm::Value*, llvm::Value*>* v2v = nullptr);
+		llvm::Value* value = nullptr;
+		llvm::Value* user = nullptr;
+		std::vector<SymbolicTree> ops;
 
 	// Global SymbolicTree configuration methods and data.
 	//
@@ -144,11 +132,27 @@ class SymbolicTree
 		void _getPreOrder(std::vector<SymbolicTree*>& res) const;
 		void _getPostOrder(std::vector<SymbolicTree*>& res) const;
 
+	// Private ctors, dtors.
+	// This is a private constructor, do not use it. It is made public only
+	// so it can be used in std::vector<>::emplace_back().
+	//
 	public:
-		llvm::Value* value = nullptr;
-		llvm::Value* user = nullptr;
-		std::vector<SymbolicTree> ops;
+		SymbolicTree(
+				ReachingDefinitionsAnalysis* rda,
+				llvm::Value* v,
+				std::map<llvm::Value*, llvm::Value*>* val2val,
+				unsigned maxNodeLevel = 14);
+		SymbolicTree(
+				ReachingDefinitionsAnalysis* rda,
+				llvm::Value* v,
+				llvm::Value* u,
+				std::unordered_set<llvm::Value*>& processed,
+				unsigned nodeLevel,
+				unsigned maxNodeLevel,
+				std::map<llvm::Value*, llvm::Value*>* v2v = nullptr);
 
+	// Private data.
+	//
 	private:
 		unsigned _level = 1;
 };
