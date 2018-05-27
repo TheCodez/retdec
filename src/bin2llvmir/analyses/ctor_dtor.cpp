@@ -1,5 +1,5 @@
 /**
- * @file src/bin2llvmir/optimizations/ctor_dtor/ctor_dtor.cpp
+ * @file src/bin2llvmir/analyses/ctor_dtor.cpp
  * @brief Constructor and destructor detection analysis.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
@@ -9,43 +9,24 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/InstIterator.h>
 
 #include "retdec/bin2llvmir/utils/llvm.h"
-#include "retdec/bin2llvmir/optimizations/ctor_dtor/ctor_dtor.h"
+#include "retdec/bin2llvmir/analyses/ctor_dtor.h"
 #include "retdec/bin2llvmir/utils/debug.h"
-#include "retdec/bin2llvmir/utils/ir_modifier.h"
+#define debug_enabled false
 #include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace llvm;
 
-#define debug_enabled false
-
 namespace retdec {
 namespace bin2llvmir {
 
-char CtorDtor::ID = 0;
-
-static RegisterPass<CtorDtor> RegisterPass(
-		"ctor-dtor",
-		"C++ constructor and destructor optimization",
-		false, // Only looks at CFG
-		false // Analysis Pass
-);
-
-CtorDtor::CtorDtor() :
-		ModulePass(ID)
+void CtorDtor::runOnModule(llvm::Module* m, Config* c, FileImage* i)
 {
-}
-
-bool CtorDtor::runOnModule(Module& M)
-{
-	module = &M;
-
-	if (!ConfigProvider::getConfig(module, config))
-	{
-		LOG << "[ABORT] config file is not available\n";
-		return false;
-	}
+	module = m;
+	config = c;
+	image = i;
 
 	findPossibleCtorsDtors();
 
@@ -55,13 +36,6 @@ bool CtorDtor::runOnModule(Module& M)
 	}
 
 	propagateCtorDtor();
-
-	for (auto& p : stores2vtables)
-	{
-		replaceVtablesPointersInStores(p.first, p.second);
-	}
-
-	return false;
 }
 
 CtorDtor::FunctionToInfo& CtorDtor::getResults()
@@ -69,36 +43,31 @@ CtorDtor::FunctionToInfo& CtorDtor::getResults()
 	return function2info;
 }
 
+/**
+ * Collects all stores to global variables at vtable addresses.
+ * Collects functions where these stores are.
+ */
 void CtorDtor::findPossibleCtorsDtors()
 {
 	LOG << "\n*** findPossibleCtorsDtors()" << std::endl;
 
-	auto image = FileImageProvider::getFileImage(module);
-
-	for (auto &F : *module)
+	for (Function& F : *module)
 	{
-		if (F.isDeclaration())
-			continue;
-
 		if (F.getName() == "main")
+		{
 			continue;
-
+		}
 		LOG << "[FUNCTION] : " << F.getName().str() << std::endl;
 
-		for (auto &B : F)
-		for (Instruction &I : B)
+		for (auto it = inst_begin(&F), eIt = inst_end(&F); it != eIt; ++it)
 		{
-			StoreInst *store = dyn_cast<StoreInst>(&I);
+			StoreInst *store = dyn_cast<StoreInst>(&*it);
 			if (store == nullptr)
 				continue;
 
 			retdec::utils::Address addr;
 			const Value* v = llvm_utils::skipCasts(store->getValueOperand());
-			if (auto* ci = dyn_cast<ConstantInt>(store->getValueOperand()))
-			{
-				addr = ci->getZExtValue();
-			}
-			else if (auto* gv = dyn_cast_or_null<GlobalVariable>(v))
+			if (auto* gv = dyn_cast_or_null<GlobalVariable>(v))
 			{
 				addr = config->getGlobalAddress(gv);
 			}
@@ -107,8 +76,7 @@ void CtorDtor::findPossibleCtorsDtors()
 			if (vt)
 			{
 				LOG << "\t" << llvmObjToString(store)
-					<< " -> " << names::generateVtableName(vt->vtableAddress)
-					<< std::endl;
+					<< " -> " << vt->vtableAddress << std::endl;
 
 				stores2vtables[store] = vt;
 				possibleCtorsDtors.insert(&F);
@@ -179,19 +147,6 @@ void CtorDtor::analyseFunction(Function* fnc)
 	function2info[fnc] = result;
 }
 
-void CtorDtor::replaceVtablesPointersInStores(StoreInst* store, const fileformat::Vtable* vtable)
-{
-	auto* global = config->getLlvmGlobalVariable(vtable->vtableAddress);
-	assert(global);
-
-	auto* cast = IrModifier::convertConstantToType(
-			global,
-			store->getValueOperand()->getType());
-	StoreInst *store2 = new StoreInst(cast, store->getPointerOperand(), store);
-	store->replaceAllUsesWith(store2);
-	store->eraseFromParent();
-}
-
 CtorDtor::FunctionInfo CtorDtor::analyseFunctionForward(Function* fnc)
 {
 	LOG << "\n*** analyseFunctionForward() : "
@@ -251,29 +206,10 @@ int CtorDtor::getOffset(Value* ecxStoreOp)
  * Find store to gpr1 (ecx) before @p inst.
  * @param inst Instruction to find store before.
  * @return Found store, or nullptr.
- *
- * TODO: maybe I could move this to RDA? would it make sense? would it work?
  */
 StoreInst* CtorDtor::findPreviousStoreToECX(Instruction* inst)
 {
-	LOG << "\n*** findPreviousStoreToECX() : "
-		<< llvmObjToString(inst) << std::endl;
-
-	if (inst->getParent()->empty())
-		return nullptr;
-
-	const Value *ecx = module->getGlobalVariable("gpr1", true);
-
-	while (inst != &inst->getParent()->front())
-	{
-		inst = inst->getPrevNode();
-		if (isa<StoreInst>(inst)
-				&& cast<StoreInst>(inst)->getPointerOperand() == ecx)
-		{
-			LOG << "\tfound = " << llvmObjToString(inst) << "\n";
-			return cast<StoreInst>(inst);
-		}
-	}
+	// TODO
 	return nullptr;
 }
 

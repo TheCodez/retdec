@@ -1,33 +1,25 @@
 /**
- * @file include/retdec/bin2llvmir/optimizations/ctor_dtor/ctor_dtor.h
+ * @file include/retdec/bin2llvmir/analyses/ctor_dtor.h
  * @brief Constructor and destructor detection analysis.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
-#ifndef RETDEC_BIN2LLVMIR_OPTIMIZATIONS_CTOR_DTOR_CTOR_DTOR_H
-#define RETDEC_BIN2LLVMIR_OPTIMIZATIONS_CTOR_DTOR_CTOR_DTOR_H
+#ifndef RETDEC_BIN2LLVMIR_ANALYSES_CTOR_DTOR_H
+#define RETDEC_BIN2LLVMIR_ANALYSES_CTOR_DTOR_H
 
 #include <map>
 #include <set>
 
-#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Pass.h>
 
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/providers/fileimage.h"
-#include "retdec/bin2llvmir/providers/names.h"
 
 namespace retdec {
 namespace bin2llvmir {
 
-class CtorDtor : public llvm::ModulePass
+class CtorDtor
 {
-	public:
-		static char ID;
-		CtorDtor();
-		virtual bool runOnModule(llvm::Module& M) override;
-
 	public:
 		class FunctionInfo
 		{
@@ -40,17 +32,16 @@ class CtorDtor : public llvm::ModulePass
 				std::vector<std::pair<llvm::StoreInst*, const fileformat::Vtable*>> vftableStores;
 				/// Virtual table offsets in order.
 				std::vector<int> vftableOffsets;
-				///
 				bool ctor = false;
 				bool dtor = false;
 		};
 
-	public:
 		using FunctionSet    = std::set<llvm::Function*>;
 		using FunctionToInfo = std::map<llvm::Function*, FunctionInfo>;
 		using StoreToVtable  = std::map<llvm::StoreInst*, const fileformat::Vtable*>;
 
 	public:
+		void runOnModule(llvm::Module* m, Config* c, FileImage* i);
 		FunctionToInfo& getResults();
 
 	private:
@@ -59,12 +50,8 @@ class CtorDtor : public llvm::ModulePass
 		FunctionInfo analyseFunctionForward(llvm::Function* fnc);
 		FunctionInfo analyseFunctionBackward(llvm::Function* fnc);
 		int getOffset(llvm::Value* ecxStoreOp);
-		llvm::StoreInst* findPreviousStoreToECX(
-				llvm::Instruction* inst);
+		llvm::StoreInst* findPreviousStoreToECX(llvm::Instruction* inst);
 		void propagateCtorDtor();
-		void replaceVtablesPointersInStores(
-				llvm::StoreInst* store,
-				const fileformat::Vtable* vtable);
 
 		template<class T>
 		FunctionInfo analyseFunctionCommon(T begin, T end);
@@ -72,6 +59,8 @@ class CtorDtor : public llvm::ModulePass
 	private:
 		llvm::Module *module = nullptr;
 		Config* config = nullptr;
+		FileImage* image = nullptr;
+
 		FunctionSet possibleCtorsDtors;
 		StoreToVtable stores2vtables;
 		FunctionToInfo function2info;

@@ -1,5 +1,6 @@
 set(BIN2LLVMIR_SOURCES
 	analyses/static_code/static_code.cpp
+	analyses/ctor_dtor.cpp
 	analyses/indirectly_called_funcs_analysis.cpp
 	analyses/reachable_funcs_analysis.cpp
 	analyses/reaching_definitions.cpp
@@ -15,7 +16,6 @@ set(BIN2LLVMIR_SOURCES
 	optimizations/class_hierarchy/hierarchy_analysis.cpp
 	optimizations/cond_branch_opt/cond_branch_opt.cpp
 	optimizations/constants/constants.cpp
-	optimizations/ctor_dtor/ctor_dtor.cpp
 	optimizations/decoder/arm.cpp
 	optimizations/decoder/bbs.cpp
 	optimizations/decoder/decoder_ranges.cpp

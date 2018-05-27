@@ -11,22 +11,19 @@
 #include <llvm/Pass.h>
 
 #include "retdec/bin2llvmir/optimizations/class_hierarchy/hierarchy.h"
-#include "retdec/bin2llvmir/optimizations/ctor_dtor/ctor_dtor.h"
+#include "retdec/bin2llvmir/analyses/ctor_dtor.h"
 #include "retdec/bin2llvmir/providers/config.h"
+#include "retdec/bin2llvmir/providers/fileimage.h"
 
 namespace retdec {
 namespace bin2llvmir {
 
-/**
- *
- */
 class ClassHierarchyAnalysis : public llvm::ModulePass
 {
 	public:
 		static char ID;
 		ClassHierarchyAnalysis();
 		virtual bool runOnModule(llvm::Module& M) override;
-		virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
 		void processRttiGcc();
 		void processRttiMsvc();
@@ -37,8 +34,11 @@ class ClassHierarchyAnalysis : public llvm::ModulePass
 		void setToConfig(llvm::Module* m) const;
 
 	private:
-		ClassHierarchy classHierarchy;
 		Config* config = nullptr;
+		FileImage* image = nullptr;
+
+		CtorDtor ctorDtor;
+		ClassHierarchy classHierarchy;
 };
 
 } // namespace bin2llvmir

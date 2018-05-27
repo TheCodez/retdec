@@ -19,9 +19,6 @@
 namespace retdec {
 namespace bin2llvmir {
 
-/**
- *
- */
 class Class
 {
 	public:
@@ -44,9 +41,6 @@ class Class
 		const fileformat::RTTITypeDescriptor* msvcRtti = nullptr;
 };
 
-/**
- *
- */
 class ClassHierarchy
 {
 	public:

@@ -33,12 +33,6 @@ ClassHierarchyAnalysis::ClassHierarchyAnalysis() :
 
 }
 
-void ClassHierarchyAnalysis::getAnalysisUsage(AnalysisUsage& AU) const
-{
-	AU.addRequired<CtorDtor>();
-	AU.setPreservesAll();
-}
-
 bool ClassHierarchyAnalysis::runOnModule(Module& M)
 {
 	if (!ConfigProvider::getConfig(&M, config))
@@ -46,22 +40,25 @@ bool ClassHierarchyAnalysis::runOnModule(Module& M)
 		LOG << "[ABORT] config file is not available\n";
 		return false;
 	}
+	if (!FileImageProvider::getFileImage(&M, image))
+	{
+		LOG << "[ABORT] config file is not available\n";
+		return false;
+	}
+
+	ctorDtor.runOnModule(&M, config, image);
 
 //=============================================================================
 
-auto* image = FileImageProvider::getFileImage(config->_module);
-auto* ff = image->getFileFormat();
 IrModifier irModif(&M, config);
-
-//=============================================================================
 
 std::vector<const fileformat::Vtable*> vtable;
 
-for (auto& p : ff->getCppVtablesGcc())
+for (auto& p : image->getFileFormat()->getCppVtablesGcc())
 {
 	vtable.push_back(&p.second);
 }
-for (auto& p : ff->getCppVtablesMsvc())
+for (auto& p : image->getFileFormat()->getCppVtablesMsvc())
 {
 	vtable.push_back(&p.second);
 }
@@ -186,7 +183,7 @@ for (auto* p : vtable)
 
 void ClassHierarchyAnalysis::processRttiGcc()
 {
-	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto* ff = image->getFileFormat();
 	auto& rttiGcc = ff->getCppRttiGcc();
 
 	Class* c = nullptr;
@@ -228,7 +225,7 @@ void ClassHierarchyAnalysis::processRttiGcc()
 
 void ClassHierarchyAnalysis::processRttiMsvc()
 {
-	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto* ff = image->getFileFormat();
 	auto& rttiA = ff->getCppRttiMsvc();
 
 	Class* c = nullptr;
@@ -266,9 +263,9 @@ void ClassHierarchyAnalysis::processRttiMsvc()
 void ClassHierarchyAnalysis::processVtablesGcc(
 		std::map<const fileformat::ClassTypeInfo*, Class*> &rtti2class)
 {
-	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto* ff = image->getFileFormat();
 	auto& vtables = ff->getCppVtablesGcc();
-	auto& cdtor = getAnalysis<CtorDtor>().getResults();
+	auto& cdtor = ctorDtor.getResults();
 
 	for (auto& vt : vtables)
 	{
@@ -300,9 +297,9 @@ void ClassHierarchyAnalysis::processVtablesGcc(
 void ClassHierarchyAnalysis::processVtablesMsvc(
 		std::map<const fileformat::RTTITypeDescriptor*, Class*> &rtti2class)
 {
-	auto* ff = FileImageProvider::getFileImage(config->_module)->getFileFormat();
+	auto* ff = image->getFileFormat();
 	auto& vtables = ff->getCppVtablesMsvc();
-	auto& cdtor = getAnalysis<CtorDtor>().getResults();
+	auto& cdtor = ctorDtor.getResults();
 
 	for (auto& vt : vtables)
 	{
@@ -335,7 +332,7 @@ void ClassHierarchyAnalysis::processCtorsDtors()
 {
 	LOG << "\n*** processCtorsDtors()" << std::endl;
 
-	auto& cdtor = getAnalysis<CtorDtor>().getResults();
+	auto& cdtor = ctorDtor.getResults();
 	for (auto& p : cdtor)
 	{
 		LOG << "\t" << p.first->getName().str() << std::endl;
