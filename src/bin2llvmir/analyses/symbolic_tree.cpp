@@ -18,8 +18,10 @@
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/utils/debug.h"
+#include "retdec/bin2llvmir/utils/symbolic_tree_match.h"
 
 using namespace llvm;
+using namespace retdec::bin2llvmir::st_match;
 
 #define debug_enabled false
 
@@ -339,6 +341,12 @@ void SymbolicTree::_simplifyNode(Config* config)
 		}
 	}
 
+	Value* val = nullptr;
+	LoadInst* load = nullptr;
+	GlobalVariable* global = nullptr;
+	ConstantInt* c1 = nullptr;
+	ConstantInt* c2 = nullptr;
+
 	if (isa<CastInst>(value))
 	{
 		*this = std::move(ops[0]);
@@ -346,7 +354,9 @@ void SymbolicTree::_simplifyNode(Config* config)
 	else if (ConstantExpr* ce = dyn_cast<ConstantExpr>(value))
 	{
 		if (ce->isCast())
+		{
 			*this = std::move(ops[0]);
+		}
 	}
 	else if (isa<StoreInst>(value))
 	{
@@ -354,135 +364,83 @@ void SymbolicTree::_simplifyNode(Config* config)
 	}
 	// MIPS, use function address for t9.
 	//
-	else if (config->getConfig().architecture.isMipsOrPic32()
-			&& isa<LoadInst>(value)
-			&& ops.size() == 1
-			&& isa<GlobalVariable>(ops[0].value)
-			&& cast<GlobalVariable>(ops[0].value)->getName() == "t9")
+	else if (_abi->isMips()
+			&& match(*this, m_Load(
+					m_Specific(_abi->getRegister(MIPS_REG_T9)),
+					&load)))
 	{
-		auto* l = cast<LoadInst>(value);
-		auto addr = AsmInstruction::getFunctionAddress(l->getFunction());
-		value = ConstantInt::get(l->getType(), addr);
+		auto addr = AsmInstruction::getFunctionAddress(load->getFunction());
+		value = ConstantInt::get(load->getType(), addr);
 		ops.clear();
 	}
-	// >|  %addr = load @gv_1
-	//     >|  @gv_1 = value
-	// =>
-	// >|  value
-	//
-	else if (isa<LoadInst>(value)
-			&& ops.size() == 1
-			&& isa<GlobalVariable>(ops[0].value)
-			&& ops[0].value == dyn_cast<LoadInst>(value)->getOperand(0)
+	else if (match(*this, m_Load(m_GlobalVariable(global), &load))
+			&& global == load->getPointerOperand()
 			&& ops[0].ops.size() == 1)
 	{
 		*this = std::move(ops[0].ops[0]);
 	}
-	else if (auto* l = dyn_cast<LoadInst>(value))
-	{
-			auto* ptr = l->getPointerOperand();
-			ptr = llvm_utils::skipCasts(ptr);
-			if (isa<AllocaInst>(ptr) || isa<GlobalVariable>(ptr))
-			{
-					if (ops.size() == 1)
-					{
-							*this = std::move(ops[0]);
-					}
-			}
-	}
-	else if (ops.size() == 2
-			&& isa<ConstantInt>(ops[0].value)
-			&& isa<ConstantInt>(ops[1].value))
-	{
-		ConstantInt* op1 = cast<ConstantInt>(ops[0].value);
-		ConstantInt* op2 = cast<ConstantInt>(ops[1].value);
-
-		if (isa<AddOperator>(value))
-		{
-			value = ConstantInt::get(
-					op1->getType(),
-					op1->getSExtValue() + op2->getSExtValue());
-			ops.clear();
-		}
-		else if (isa<SubOperator>(value))
-		{
-			value = ConstantInt::get(
-					op1->getType(),
-					op1->getSExtValue() - op2->getSExtValue());
-			ops.clear();
-		}
-		else if (auto* op = dyn_cast<BinaryOperator>(value))
-		{
-			if (op->getOpcode() == BinaryOperator::Or)
-			{
-				value = ConstantInt::get(
-						op1->getType(),
-						op1->getSExtValue() | op2->getSExtValue());
-				ops.clear();
-			}
-			else if (op->getOpcode() == BinaryOperator::And)
-			{
-				value = ConstantInt::get(
-						op1->getType(),
-						op1->getSExtValue() & op2->getSExtValue());
-				ops.clear();
-			}
-		}
-	}
-	else if (ops.size() == 2
-			&& isa<GlobalVariable>(ops[0].value)
-			&& ops[0].user
-			&& !isa<LoadInst>(ops[0].user)
-			&& isa<ConstantInt>(ops[1].value))
-	{
-		GlobalVariable* op1 = cast<GlobalVariable>(ops[0].value);
-		ConstantInt* op2 = cast<ConstantInt>(ops[1].value);
-
-		if (config)
-		{
-			auto* cgv = config->getConfigGlobalVariable(op1);
-			if (isa<AddOperator>(value) && cgv)
-			{
-				value = ConstantInt::get(
-						op2->getType(),
-						cgv->getStorage().getAddress() + op2->getSExtValue());
-				ops.clear();
-			}
-		}
-	}
-	// TODO: this is to specific, make it more general to catch more patterns.
-	//
-	// >|   %u3_401566 = add i32 %u2_401566, 8
-	// >|   %phitmp_401560 = add i32 %u1_401560, -4
-	//        >| @esp = internal global i32 0
-	//        >| i32 -4
-	// >| i32 8
-	//
-	// >|   %u3_401566 = add i32 %u2_401566, 8
-	// >| @esp = internal global i32 0
-	// >| i32 4
-	//
-	else if (ops.size() == 2
-			&& isa<AddOperator>(value)
-			&& isa<AddOperator>(ops[0].value)
-			&& ops[0].ops.size() == 2
-			&& isa<ConstantInt>(ops[0].ops[1].value)
-			&& isa<ConstantInt>(ops[1].value))
-	{
-		ConstantInt* ci1 = cast<ConstantInt>(ops[0].ops[1].value);
-		ConstantInt* ci2 = cast<ConstantInt>(ops[1].value);
-
-		ops[0] = std::move(ops[0].ops[0]);
-		ops[1].value = ConstantInt::get(
-				ci1->getType(),
-				ci1->getSExtValue() + ci2->getSExtValue());
-	}
-	else if (ops.size() == 2
-			&& (isa<AddOperator>(value) || isa<SubOperator>(value))
-			&& isa<ConstantInt>(ops[1].value)
-			&& cast<ConstantInt>(ops[1].value)->isZero())
+	else if (match(*this, m_Load(m_Value(val), &load))
+			&& (isa<AllocaInst>(llvm_utils::skipCasts(load->getPointerOperand()))
+			|| isa<GlobalVariable>(llvm_utils::skipCasts(load->getPointerOperand()))))
 	{
 		*this = std::move(ops[0]);
+	}
+	else if (match(*this, m_Add(m_ConstantInt(c1), m_ConstantInt(c2))))
+	{
+		value = ConstantInt::get(
+				c1->getType(),
+				c1->getSExtValue() + c2->getSExtValue());
+		ops.clear();
+	}
+	else if (match(*this, m_Sub(m_ConstantInt(c1), m_ConstantInt(c2))))
+	{
+		value = ConstantInt::get(
+				c1->getType(),
+				c1->getSExtValue() - c2->getSExtValue());
+		ops.clear();
+	}
+	else if (match(*this, m_Or(m_ConstantInt(c1), m_ConstantInt(c2))))
+	{
+		value = ConstantInt::get(
+				c1->getType(),
+				c1->getSExtValue() | c2->getSExtValue());
+		ops.clear();
+	}
+	else if (match(*this, m_And(m_ConstantInt(c1), m_ConstantInt(c2))))
+	{
+		value = ConstantInt::get(
+				c1->getType(),
+				c1->getSExtValue() & c2->getSExtValue());
+		ops.clear();
+	}
+	else if (match(*this, m_Add(m_GlobalVariable(global), m_ConstantInt(c1)))
+			&& ops[0].user && !isa<LoadInst>(ops[0].user)
+			&& config)
+	{
+		if (auto addr = config->getGlobalAddress(global))
+		{
+			value = ConstantInt::get(c1->getType(), addr + c1->getSExtValue());
+			ops.clear();
+		}
+	}
+	else if (match(*this, m_Add(m_Value(), m_Zero()))
+			|| match(*this, m_Sub(m_Value(), m_Zero())))
+	{
+		*this = std::move(ops[0]);
+	}
+	else if (match(*this, m_Add(m_Zero(), m_Value()))
+			|| match(*this, m_Sub(m_Zero(), m_Value())))
+	{
+		*this = std::move(ops[1]);
+	}
+	else if (match(*this, m_Add(
+			m_Add(m_Value(), m_ConstantInt(c1)),
+			m_ConstantInt(c2))))
+	{
+		ops[0] = std::move(ops[0].ops[0]);
+		ops[1].value = ConstantInt::get(
+				c1->getType(),
+				c1->getSExtValue() + c2->getSExtValue());
 	}
 
 	// Move Constants from ops[0] to ops[1].

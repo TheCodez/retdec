@@ -815,6 +815,11 @@ inline bind_ty<llvm::ConstantFP> m_ConstantFP(llvm::ConstantFP*& C)
 	return C;
 }
 
+inline bind_ty<llvm::GlobalVariable> m_GlobalVariable(llvm::GlobalVariable*& G)
+{
+	return G;
+}
+
 inline bind_ty<llvm::Instruction> m_Instruction(llvm::Instruction*& I)
 {
 	return I;
