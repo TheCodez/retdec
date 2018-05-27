@@ -98,6 +98,8 @@ bool Decoder::run()
 		return false;
 	}
 
+	_RDA._abi = _abi;
+
 	initTranslator();
 	initDryRunCsInstruction();
 	initEnvironment();
@@ -715,11 +717,6 @@ bool Decoder::getJumpTargetsFromInstruction(
 			if (auto* l = dyn_cast<LoadInst>(&i))
 			{
 				SymbolicTree st(_RDA, l->getPointerOperand(), nullptr, 8);
-
-				// TODO: THIS SHOUDL BE DONE FOR ALL ST TREES EVERYWHERE.
-				// Without this, it uses default register zeroes.
-				st.removeRegisterValues(_config);
-
 				st.simplifyNode(_config);
 
 				if (auto* ci = dyn_cast<ConstantInt>(st.value))
@@ -774,13 +771,10 @@ utils::Address Decoder::getJumpTarget(
 			auto gotpltAddr = gotplt->getAddress();
 			for (auto* n : st.getPostOrder())
 			{
-				if (_config->isGeneralPurposeRegister(n->value)
-						&& n->ops.size() == 1
-						&& isa<ConstantInt>(n->ops[0].value))
+				if (_config->isGeneralPurposeRegister(n->value))
 				{
-					auto* ci = cast<ConstantInt>(n->ops[0].value);
-					n->ops[0].value = ConstantInt::get(
-							ci->getType(),
+					n->value = ConstantInt::get(
+							_abi->getDefaultType(),
 							gotpltAddr);
 				}
 			}

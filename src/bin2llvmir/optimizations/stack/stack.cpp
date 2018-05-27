@@ -15,7 +15,6 @@
 
 #include "retdec/bin2llvmir/analyses/reaching_definitions.h"
 #include "retdec/bin2llvmir/optimizations/stack/stack.h"
-#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/ir_modifier.h"
 #define debug_enabled false
@@ -45,6 +44,7 @@ bool StackAnalysis::runOnModule(llvm::Module& m)
 {
 	_module = &m;
 	_config = ConfigProvider::getConfig(_module);
+	_abi = AbiProvider::getAbi(_module);
 	_dbgf = DebugFormatProvider::getDebugFormat(_module);
 	return run();
 }
@@ -52,10 +52,12 @@ bool StackAnalysis::runOnModule(llvm::Module& m)
 bool StackAnalysis::runOnModuleCustom(
 		llvm::Module& m,
 		Config* c,
+		Abi* abi,
 		DebugFormat* dbgf)
 {
 	_module = &m;
 	_config = c;
+	_abi = abi;
 	_dbgf = dbgf;
 	return run();
 }
@@ -68,7 +70,7 @@ bool StackAnalysis::run()
 	}
 
 	ReachingDefinitionsAnalysis RDA;
-	RDA.runOnModule(*_module, AbiProvider::getAbi(_module));
+	RDA.runOnModule(*_module, _abi);
 
 	for (auto& f : *_module)
 	{

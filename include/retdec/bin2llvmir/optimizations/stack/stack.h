@@ -11,6 +11,7 @@
 #include <llvm/Pass.h>
 
 #include "retdec/bin2llvmir/analyses/symbolic_tree.h"
+#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/providers/debugformat.h"
 
@@ -26,6 +27,7 @@ class StackAnalysis : public llvm::ModulePass
 		bool runOnModuleCustom(
 				llvm::Module& m,
 				Config* c,
+				Abi* abi,
 				DebugFormat* dbgf = nullptr);
 
 	private:
@@ -43,6 +45,7 @@ class StackAnalysis : public llvm::ModulePass
 	private:
 		llvm::Module* _module = nullptr;
 		Config* _config = nullptr;
+		Abi* _abi = nullptr;
 		DebugFormat* _dbgf = nullptr;
 };
 

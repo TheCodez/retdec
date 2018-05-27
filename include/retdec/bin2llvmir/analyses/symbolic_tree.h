@@ -56,7 +56,6 @@ class SymbolicTree
 
 		bool isConstructedSuccessfully() const;
 		bool isVal2ValMapUsed() const;
-		void removeRegisterValues(Config* config);
 		void removeGeneralRegisterLoads(Config* config);
 		void removeStackLoads(Config* config);
 

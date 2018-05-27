@@ -242,7 +242,14 @@ void SymbolicTree::expandNode(
 					maxNodeLevel,
 					val2val);
 		}
-		else if (isa<AllocaInst>(value) || isa<CallInst>(value))
+		else if (isa<AllocaInst>(value)
+				|| isa<CallInst>(value)
+				|| (RDA->_abi->isRegister(value)
+						&& !RDA->_abi->isStackPointerRegister(value)
+						&& !(RDA->_abi->isMips() && value == RDA->_abi->getRegister(MIPS_REG_ZERO))
+						&& !(RDA->_abi->isMips() && value == RDA->_abi->getRegister(MIPS_REG_GP))
+						&& !(RDA->_abi->isMips() && value == RDA->_abi->getRegister(MIPS_REG_T9)))
+				)
 		{
 			// nothing
 		}
@@ -281,19 +288,6 @@ bool SymbolicTree::isConstructedSuccessfully() const
 bool SymbolicTree::isVal2ValMapUsed() const
 {
 	return _val2valUsed;
-}
-
-void SymbolicTree::removeRegisterValues(Config* config)
-{
-	for (auto &o : ops)
-	{
-		o.removeRegisterValues(config);
-	}
-
-	if (config->isRegister(value))
-	{
-		ops.clear();
-	}
 }
 
 /**

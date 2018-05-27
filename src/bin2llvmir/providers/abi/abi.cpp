@@ -150,6 +150,26 @@ llvm::PointerType* Abi::getDefaultPointerType(llvm::Module* m)
 	return PointerType::get(Abi::getDefaultType(m), 0);
 }
 
+bool Abi::isMips() const
+{
+	return _config->getConfig().architecture.isMipsOrPic32();
+}
+
+bool Abi::isArm() const
+{
+	return _config->getConfig().architecture.isArmOrThumb();
+}
+
+bool Abi::isX86() const
+{
+	return _config->getConfig().architecture.isX86();
+}
+
+bool Abi::isPowerPC() const
+{
+	return _config->getConfig().architecture.isPpc();
+}
+
 //
 //==============================================================================
 // AbiProvider

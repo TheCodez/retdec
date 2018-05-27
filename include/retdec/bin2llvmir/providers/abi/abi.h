@@ -73,6 +73,14 @@ class Abi
 		static llvm::IntegerType* getDefaultType(llvm::Module* m);
 		static llvm::PointerType* getDefaultPointerType(llvm::Module* m);
 
+	// Architectures.
+	//
+	public:
+		bool isMips() const;
+		bool isArm() const;
+		bool isX86() const;
+		bool isPowerPC() const;
+
 	// Private data - misc.
 	//
 	protected:
