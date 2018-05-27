@@ -42,12 +42,14 @@ class Abi
 		bool isRegister(const llvm::Value* val);
 		bool isFlagRegister(const llvm::Value* val);
 		bool isStackPointerRegister(const llvm::Value* val);
+		bool isZeroRegister(const llvm::Value* val);
 		virtual bool isGeneralPurposeRegister(const llvm::Value* val) = 0;
 
-		llvm::GlobalVariable* getRegister(uint32_t r);
+		llvm::GlobalVariable* getRegister(uint32_t r, bool use = true);
 		uint32_t getRegisterId(const llvm::Value* r);
 		const std::vector<llvm::GlobalVariable*>& getRegisters() const;
 		llvm::GlobalVariable* getStackPointerRegister();
+		llvm::GlobalVariable* getZeroRegister();
 
 		void addRegister(uint32_t id, llvm::GlobalVariable* reg);
 
@@ -111,6 +113,8 @@ class Abi
 		uint32_t _regSyscallReturn = REG_INVALID;
 		/// Register used to pass system call ID.
 		uint32_t _regSyscallId = REG_INVALID;
+		/// Register that is always equal to zero - not every arch have this.
+		uint32_t _regZeroReg = REG_INVALID;
 };
 
 class AbiProvider

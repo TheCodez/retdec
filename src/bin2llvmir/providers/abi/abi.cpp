@@ -52,7 +52,20 @@ bool Abi::isStackPointerRegister(const llvm::Value* val)
 	return getStackPointerRegister() == val;
 }
 
-llvm::GlobalVariable* Abi::getRegister(uint32_t r)
+bool Abi::isZeroRegister(const llvm::Value* val)
+{
+	return getZeroRegister() == val;
+}
+
+/**
+ * \param r   Register ID to get.
+ *            Warning! We are using Capstone register IDs which overlaps.
+ *            E.g. MIPS_REG_0 has the same ID as X86_REG_AL.
+ * \param use Should the register be really got.
+ *            This solves the problem with overlapping IDs when used like this:
+ *            Abi::getRegister(MIPS_REG_GP, Abi::isMips())
+ */
+llvm::GlobalVariable* Abi::getRegister(uint32_t r, bool use)
 {
 	assert(r < _id2regs.size());
 	return _id2regs[r];
@@ -72,6 +85,11 @@ const std::vector<llvm::GlobalVariable*>& Abi::getRegisters() const
 llvm::GlobalVariable* Abi::getStackPointerRegister()
 {
 	return getRegister(_regStackPointerId);
+}
+
+llvm::GlobalVariable* Abi::getZeroRegister()
+{
+	return getRegister(_regZeroReg);
 }
 
 void Abi::addRegister(uint32_t id, llvm::GlobalVariable* reg)

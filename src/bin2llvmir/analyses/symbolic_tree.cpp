@@ -277,8 +277,8 @@ void SymbolicTree::expandNode(
 			|| (_abi
 					&& _abi->isRegister(value)
 					&& !_abi->isStackPointerRegister(value)
-					&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_ZERO))
-					&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_GP))))
+					&& !_abi->isZeroRegister(value)
+					&& value != _abi->getRegister(MIPS_REG_GP, _abi->isMips())))
 	{
 		// nothing
 	}

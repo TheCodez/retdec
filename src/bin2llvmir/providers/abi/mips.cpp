@@ -17,6 +17,7 @@ AbiMips::AbiMips(llvm::Module* m, Config* c) :
 	_regs.reserve(MIPS_REG_ENDING);
 	_id2regs.resize(MIPS_REG_ENDING, nullptr);
 	_regStackPointerId = MIPS_REG_SP;
+	_regZeroReg = MIPS_REG_ZERO;
 
 	// system calls
 	_regSyscallId = MIPS_REG_V0;
