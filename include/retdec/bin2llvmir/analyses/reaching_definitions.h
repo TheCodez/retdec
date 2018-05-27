@@ -125,6 +125,8 @@ class ReachingDefinitionsAnalysis
 		void clear();
 		bool wasRun() const;
 
+	// Full instance interface.
+	//
 	public:
 		const DefSet& defsFromUse(const llvm::Instruction* I) const;
 		const UseSet& usesFromDef(const llvm::Instruction* I) const;
@@ -135,25 +137,13 @@ class ReachingDefinitionsAnalysis
 				std::ostream& out,
 				const ReachingDefinitionsAnalysis& rda);
 
-	// TODO: experimental, light, on-demand methods that work without full RDA.
-	// TODO: unit tests.
-	// TODO: merge with defsFromUse()/usesFromDef() to common API.
+	// On-demand static interface.
 	//
 	public:
-		std::set<llvm::Instruction*> defsFromUse_onDemand(
-				llvm::Instruction* I) const;
-		std::set<llvm::Instruction*> usesFromDef_onDemand(
-				llvm::Instruction* I) const;
-	private:
-		llvm::Instruction* defInBasicBlock(
-				llvm::Value* v,
-				llvm::BasicBlock* bb,
-				llvm::Instruction* start = nullptr) const;
-		bool usesInBasicBlock(
-				llvm::Value* v,
-				llvm::BasicBlock* bb,
-				std::set<llvm::Instruction*>& uses,
-				llvm::Instruction* start = nullptr) const;
+		static std::set<llvm::Instruction*> defsFromUse_onDemand(
+				llvm::Instruction* I);
+		static std::set<llvm::Instruction*> usesFromDef_onDemand(
+				llvm::Instruction* I);
 
 	private:
 		void run();

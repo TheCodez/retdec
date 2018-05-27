@@ -26,18 +26,41 @@ using namespace llvm;
 namespace retdec {
 namespace bin2llvmir {
 
+/**
+ * No ReachingDefinitionsAnalysis -> on-demand UseDef/DefUse chains are used.
+ */
 SymbolicTree::SymbolicTree(
-		ReachingDefinitionsAnalysis& rda,
 		llvm::Value* v,
 		unsigned maxNodeLevel)
 		:
-		SymbolicTree(rda, v, nullptr, maxNodeLevel)
+		SymbolicTree(nullptr, v, nullptr, maxNodeLevel)
 {
 
 }
 
 SymbolicTree::SymbolicTree(
 		ReachingDefinitionsAnalysis& rda,
+		llvm::Value* v,
+		unsigned maxNodeLevel)
+		:
+		SymbolicTree(&rda, v, nullptr, maxNodeLevel)
+{
+
+}
+
+SymbolicTree::SymbolicTree(
+		ReachingDefinitionsAnalysis& rda,
+		llvm::Value* v,
+		std::map<llvm::Value*, llvm::Value*>* val2val,
+		unsigned maxNodeLevel)
+		:
+		SymbolicTree(&rda, v, val2val, maxNodeLevel)
+{
+
+}
+
+SymbolicTree::SymbolicTree(
+		ReachingDefinitionsAnalysis* rda,
 		llvm::Value* v,
 		std::map<llvm::Value*, llvm::Value*>* val2val,
 		unsigned maxNodeLevel)
@@ -61,7 +84,7 @@ SymbolicTree::SymbolicTree(
 	}
 
 	std::unordered_set<Value*> processed;
-	expandNode(&rda, val2val, maxNodeLevel, processed);
+	expandNode(rda, val2val, maxNodeLevel, processed);
 	propagateFlags();
 }
 
@@ -149,7 +172,7 @@ void SymbolicTree::expandNode(
 		unsigned maxNodeLevel,
 		std::unordered_set<llvm::Value*>& processed)
 {
-	if (RDA->wasRun())
+	if (RDA && RDA->wasRun())
 	{
 		auto fIt = processed.find(value);
 		if (fIt != processed.end())
@@ -165,7 +188,7 @@ void SymbolicTree::expandNode(
 
 		if (auto* l = dyn_cast<LoadInst>(value))
 		{
-			if (RDA->wasRun())
+			if (RDA && RDA->wasRun())
 			{
 				auto defs = RDA->defsFromUse(I);
 				for (auto* d : defs)
@@ -180,10 +203,9 @@ void SymbolicTree::expandNode(
 							val2val);
 				}
 			}
-			// TODO: use one common RDA interface.
 			else
 			{
-				auto defs = RDA->defsFromUse_onDemand(I);
+				auto defs = ReachingDefinitionsAnalysis::defsFromUse_onDemand(I);
 				for (auto* d : defs)
 				{
 					ops.emplace_back(

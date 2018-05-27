@@ -30,6 +30,9 @@ class SymbolicTree
 {
 	public:
 		SymbolicTree(
+				llvm::Value* v,
+				unsigned maxNodeLevel = 16);
+		SymbolicTree(
 				ReachingDefinitionsAnalysis& rda,
 				llvm::Value* v,
 				unsigned maxNodeLevel = 16);
@@ -79,13 +82,17 @@ class SymbolicTree
 		SymbolicTree(
 				ReachingDefinitionsAnalysis* rda,
 				llvm::Value* v,
+				std::map<llvm::Value*, llvm::Value*>* val2val,
+				unsigned maxNodeLevel = 14);
+		SymbolicTree(
+				ReachingDefinitionsAnalysis* rda,
+				llvm::Value* v,
 				llvm::Value* u,
 				std::unordered_set<llvm::Value*>& processed,
 				unsigned nodeLevel,
 				unsigned maxNodeLevel,
 				std::map<llvm::Value*, llvm::Value*>* v2v = nullptr);
 	private:
-
 		void expandNode(
 				ReachingDefinitionsAnalysis* RDA,
 				std::map<llvm::Value*, llvm::Value*>* val2val,

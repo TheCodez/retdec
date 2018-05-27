@@ -85,7 +85,7 @@ void ReachingDefinitionsAnalysis::run()
 
 void ReachingDefinitionsAnalysis::initializeBasicBlocks(llvm::Module& M)
 {
-	for (auto &F : M.getFunctionList())
+	for (Function& F : M)
 	{
 		initializeBasicBlocks(F);
 	}
@@ -93,11 +93,11 @@ void ReachingDefinitionsAnalysis::initializeBasicBlocks(llvm::Module& M)
 
 void ReachingDefinitionsAnalysis::initializeBasicBlocks(llvm::Function& F)
 {
-	for (auto &B : F)
+	for (BasicBlock& B : F)
 	{
 		BasicBlockEntry bbe(&B);
 
-		for (auto &I : B)
+		for (Instruction& I : B)
 		{
 			if (auto* l = dyn_cast<LoadInst>(&I))
 			{
@@ -534,12 +534,90 @@ bool Use::isUndef() const
 
 //
 //=============================================================================
-//  Experimental methods.
+//  On-demand methods.
 //=============================================================================
 //
 
+/**
+ * Find the last definition of value \p v in basic block \p bb.
+ * If \p start is defined (not \c nullptr), start the reverse iteration search
+ * from this instruction, otherwise start from the basic block's back.
+ * \return Instruction defining \p v (at most one definition is possible in BB),
+ *         or \c nullptr if definition not found.
+ */
+llvm::Instruction* defInBasicBlock(
+		llvm::Value* v,
+		llvm::BasicBlock* bb,
+		llvm::Instruction* start = nullptr)
+{
+	auto* prev = start;
+	if (prev == nullptr && !bb->empty())
+	{
+		prev = &bb->back();
+	}
+
+	while (prev)
+	{
+		if (auto* s = dyn_cast<StoreInst>(prev))
+		{
+			if (s->getPointerOperand() == v)
+			{
+				return s;
+			}
+		}
+		else if (prev == v) // AllocaInst
+		{
+			return prev;
+		}
+		prev = prev->getPrevNode();
+	}
+
+	return nullptr;
+}
+
+/**
+ * Find all uses of value \p v in basic block \p bb and add them to \p uses.
+ * If \p start is defined (not \c nullptr), start the iteration search from
+ * this instruction, otherwise start from the basic block's front.
+ * \return \c True if the basic block kills the value, \p false otherwise.
+ */
+bool usesInBasicBlock(
+		llvm::Value* v,
+		llvm::BasicBlock* bb,
+		std::set<llvm::Instruction*>& uses,
+		llvm::Instruction* start = nullptr)
+{
+	auto* next = start;
+	if (next == nullptr && !bb->empty())
+	{
+		next = &bb->front();
+	}
+
+	while (next)
+	{
+		if (auto* s = dyn_cast<StoreInst>(next))
+		{
+			if (s->getPointerOperand() == v)
+			{
+				return true;
+			}
+		}
+
+		for (auto& op : next->operands())
+		{
+			if (op == v)
+			{
+				uses.insert(next);
+			}
+		}
+		next = next->getNextNode();
+	}
+
+	return false;
+}
+
 std::set<llvm::Instruction*> ReachingDefinitionsAnalysis::defsFromUse_onDemand(
-		llvm::Instruction* I) const
+		llvm::Instruction* I)
 {
 	std::set<llvm::Instruction*> ret;
 
@@ -599,7 +677,7 @@ std::set<llvm::Instruction*> ReachingDefinitionsAnalysis::defsFromUse_onDemand(
 }
 
 std::set<llvm::Instruction*> ReachingDefinitionsAnalysis::usesFromDef_onDemand(
-		llvm::Instruction* I) const
+		llvm::Instruction* I)
 {
 	std::set<llvm::Instruction*> ret;
 
@@ -657,84 +735,6 @@ std::set<llvm::Instruction*> ReachingDefinitionsAnalysis::usesFromDef_onDemand(
 	}
 
 	return ret;
-}
-
-/**
- * Find the last definition of value \p v in basic block \p bb.
- * If \p start is defined (not \c nullptr), start the reverse iteration search
- * from this instruction, otherwise start from the basic block's back.
- * \return Instruction defining \p v (at most one definition is possible in BB),
- *         or \c nullptr if definition not found.
- */
-llvm::Instruction* ReachingDefinitionsAnalysis::defInBasicBlock(
-		llvm::Value* v,
-		llvm::BasicBlock* bb,
-		llvm::Instruction* start) const
-{
-	auto* prev = start;
-	if (prev == nullptr && !bb->empty())
-	{
-		prev = &bb->back();
-	}
-
-	while (prev)
-	{
-		if (auto* s = dyn_cast<StoreInst>(prev))
-		{
-			if (s->getPointerOperand() == v)
-			{
-				return s;
-			}
-		}
-		else if (prev == v) // AllocaInst
-		{
-			return prev;
-		}
-		prev = prev->getPrevNode();
-	}
-
-	return nullptr;
-}
-
-/**
- * Find all uses of value \p v in basic block \p bb and add them to \p uses.
- * If \p start is defined (not \c nullptr), start the iteration search from
- * this instruction, otherwise start from the basic block's front.
- * \return \c True if the basic block kills the value, \p false otherwise.
- */
-bool ReachingDefinitionsAnalysis::usesInBasicBlock(
-		llvm::Value* v,
-		llvm::BasicBlock* bb,
-		std::set<llvm::Instruction*>& uses,
-		llvm::Instruction* start) const
-{
-	auto* next = start;
-	if (next == nullptr && !bb->empty())
-	{
-		next = &bb->front();
-	}
-
-	while (next)
-	{
-		if (auto* s = dyn_cast<StoreInst>(next))
-		{
-			if (s->getPointerOperand() == v)
-			{
-				return true;
-			}
-		}
-
-		for (auto& op : next->operands())
-		{
-			if (op == v)
-			{
-				uses.insert(next);
-			}
-		}
-		next = next->getNextNode();
-	}
-
-	return false;
 }
 
 } // namespace bin2llvmir

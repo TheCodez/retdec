@@ -254,15 +254,14 @@ void IdiomsLibgccImpl::localize(llvm::Value* v)
 		return;
 	}
 
-	static ReachingDefinitionsAnalysis RDA;
-	auto defs = RDA.defsFromUse_onDemand(i);
+	auto defs = ReachingDefinitionsAnalysis::defsFromUse_onDemand(i);
 	if (defs.size() != 1)
 	{
 		return;
 	}
 	auto* def = dyn_cast<StoreInst>(*defs.begin());
 
-	auto uses = RDA.usesFromDef_onDemand(def);
+	auto uses = ReachingDefinitionsAnalysis::usesFromDef_onDemand(def);
 	IrModifier::localize(def, uses);
 }
 
