@@ -161,8 +161,6 @@ class ReachingDefinitionsAnalysis
 		bool _trackFlagRegs = false;
 		const llvm::GlobalVariable* _specialGlobal = nullptr;
 		bool _run = false;
-
-	public:
 		Abi* _abi = nullptr;
 };
 

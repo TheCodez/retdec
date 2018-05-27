@@ -35,6 +35,12 @@ AbiArm::~AbiArm()
 
 }
 
+bool AbiArm::isGeneralPurposeRegister(const llvm::Value* val)
+{
+	uint32_t rid = getRegisterId(val);
+	return ARM_REG_R0 <= rid && rid <= ARM_REG_R12;
+}
+
 bool AbiArm::isNopInstruction(cs_insn* insn)
 {
 	// True NOP variants.

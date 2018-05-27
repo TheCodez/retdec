@@ -98,8 +98,6 @@ bool Decoder::run()
 		return false;
 	}
 
-	_RDA._abi = _abi;
-
 	initTranslator();
 	initDryRunCsInstruction();
 	initEnvironment();

@@ -35,6 +35,19 @@ AbiX86::~AbiX86()
 
 }
 
+bool AbiX86::isGeneralPurposeRegister(const llvm::Value* val)
+{
+	uint32_t rid = getRegisterId(val);
+	return rid == X86_REG_EAX
+			|| rid == X86_REG_EBX
+			|| rid == X86_REG_ECX
+			|| rid == X86_REG_EDX
+			|| rid == X86_REG_ESP
+			|| rid == X86_REG_EBP
+			|| rid == X86_REG_ESI
+			|| rid == X86_REG_EDI;
+}
+
 bool AbiX86::isNopInstruction(cs_insn* insn)
 {
 	cs_x86& insn86 = insn->detail->x86;

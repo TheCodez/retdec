@@ -26,8 +26,23 @@
 namespace retdec {
 namespace bin2llvmir {
 
+/**
+ * Tracking values through load/store operations using reaching definition
+ * analysis.
+ *
+ * For optimization reasons, some data members of this structure are static,
+ * i.e. common for all instances.
+ * The typical usage of this class is: creation -> simplification -> pattern
+ * detection -> action based on pattern -> throwing away the current instance
+ * before creating and processing the new one.
+ * In such a case, global data members and global behaviour configuration is
+ * not a problem. If you, for whatever reason, want to store instances, keep
+ * this in mind.
+ */
 class SymbolicTree
 {
+	// Ctors, dtors.
+	//
 	public:
 		SymbolicTree(
 				llvm::Value* v,
@@ -42,6 +57,9 @@ class SymbolicTree
 				std::map<llvm::Value*, llvm::Value*>* val2val,
 				unsigned maxNodeLevel = 14);
 
+	// Copy/move ctors, operators, etc.
+	//
+	public:
 		SymbolicTree(const SymbolicTree& other) = default;
 		SymbolicTree(SymbolicTree&& other) = default;
 		SymbolicTree& operator=(SymbolicTree&& other);
@@ -52,28 +70,30 @@ class SymbolicTree
 				const SymbolicTree& s);
 		std::string print(unsigned indent = 0) const;
 
-		unsigned getLevel() const;
-
-		bool isConstructedSuccessfully() const;
-		bool isVal2ValMapUsed() const;
-		void removeGeneralRegisterLoads(Config* config);
-		void removeStackLoads(Config* config);
-
-		void simplifyNode(Config* config);
-
-		void solveMemoryLoads(FileImage* image);
-		SymbolicTree* getMaxIntValue();
-
-		std::vector<SymbolicTree*> getPreOrder() const;
-		std::vector<SymbolicTree*> getPostOrder() const;
-		std::vector<SymbolicTree*> getLevelOrder() const;
-
+	//
+	//
+	public:
 		bool isNullary() const;
 		bool isUnary() const;
 		bool isBinary() const;
 		bool isTernary() const;
 		bool isNary(unsigned N) const;
 
+		unsigned getLevel() const;
+
+		void simplifyNode(Config* config);
+
+		void solveMemoryLoads(FileImage* image);
+		SymbolicTree* getMaxIntValue();
+
+	// Tree linearization methods.
+	//
+	public:
+		std::vector<SymbolicTree*> getPreOrder() const;
+		std::vector<SymbolicTree*> getPostOrder() const;
+		std::vector<SymbolicTree*> getLevelOrder() const;
+
+	// Private ctors, dtors.
 	// This is a private constructor, do not use it. It is made public only
 	// so it can be used in std::vector<>::emplace_back().
 	//
@@ -91,13 +111,32 @@ class SymbolicTree
 				unsigned nodeLevel,
 				unsigned maxNodeLevel,
 				std::map<llvm::Value*, llvm::Value*>* v2v = nullptr);
+
+	// Global SymbolicTree configuration methods and data.
+	//
+	public:
+		static bool isVal2ValMapUsed();
+		static void setAbi(Abi* abi);
+		static void setToDefaultConfiguration();
+		static void setTrackThroughAllocaLoads(bool b);
+		static void setTrackThroughGeneralRegisterLoads(bool b);
+		static void setTrackOnlyFlagRegisters(bool b);
+
+	private:
+		static Abi* _abi;
+		static bool _val2valUsed;
+		static bool _trackThroughAllocaLoads;
+		static bool _trackThroughGeneralRegisterLoads;
+		static bool _trackOnlyFlagRegisters;
+
+	// Private methods.
+	//
 	private:
 		void expandNode(
 				ReachingDefinitionsAnalysis* RDA,
 				std::map<llvm::Value*, llvm::Value*>* val2val,
 				unsigned maxNodeLevel,
 				std::unordered_set<llvm::Value*>& processed);
-		void propagateFlags();
 
 		void _simplifyNode(Config* config);
 		void fixLevel(unsigned level = 0);
@@ -111,8 +150,6 @@ class SymbolicTree
 		std::vector<SymbolicTree> ops;
 
 	private:
-		bool _failed = false;
-		bool _val2valUsed = false;
 		unsigned _level = 1;
 };
 

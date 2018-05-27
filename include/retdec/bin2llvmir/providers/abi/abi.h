@@ -42,9 +42,10 @@ class Abi
 		bool isRegister(const llvm::Value* val);
 		bool isFlagRegister(const llvm::Value* val);
 		bool isStackPointerRegister(const llvm::Value* val);
+		virtual bool isGeneralPurposeRegister(const llvm::Value* val) = 0;
 
 		llvm::GlobalVariable* getRegister(uint32_t r);
-		uint32_t getRegisterId(llvm::Value* r);
+		uint32_t getRegisterId(const llvm::Value* r);
 		const std::vector<llvm::GlobalVariable*>& getRegisters() const;
 		llvm::GlobalVariable* getStackPointerRegister();
 

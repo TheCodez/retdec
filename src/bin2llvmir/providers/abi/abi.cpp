@@ -58,7 +58,7 @@ llvm::GlobalVariable* Abi::getRegister(uint32_t r)
 	return _id2regs[r];
 }
 
-uint32_t Abi::getRegisterId(llvm::Value* r)
+uint32_t Abi::getRegisterId(const llvm::Value* r)
 {
 	auto it = _regs2id.find(r);
 	return it != _regs2id.end() ? it->second : Abi::REG_INVALID;

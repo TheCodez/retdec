@@ -33,6 +33,12 @@ AbiMips::~AbiMips()
 
 }
 
+bool AbiMips::isGeneralPurposeRegister(const llvm::Value* val)
+{
+	uint32_t rid = getRegisterId(val);
+	return MIPS_REG_0 <= rid && rid <= MIPS_REG_31;
+}
+
 bool AbiMips::isNopInstruction(cs_insn* insn)
 {
 	// True NOP variants.

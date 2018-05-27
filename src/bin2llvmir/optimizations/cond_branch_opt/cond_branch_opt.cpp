@@ -66,6 +66,9 @@ bool CondBranchOpt::run()
 	ReachingDefinitionsAnalysis RDA;
 	RDA.runOnModule(*_module, _abi, true);
 
+	SymbolicTree::setTrackThroughAllocaLoads(false);
+	SymbolicTree::setTrackOnlyFlagRegisters(true);
+
 	for (Function& f : *_module)
 	for (auto it = inst_begin(&f), eIt = inst_end(&f); it != eIt;)
 	{
@@ -74,6 +77,8 @@ bool CondBranchOpt::run()
 
 		changed |= runOnInstruction(RDA, insn);
 	}
+
+	SymbolicTree::setToDefaultConfiguration();
 
 	return changed;
 }
@@ -92,10 +97,6 @@ bool CondBranchOpt::runOnInstruction(
 	LOG << llvmObjToString(br) << std::endl;
 
 	SymbolicTree root(RDA, cond);
-	LOG << root << std::endl;
-
-	root.removeGeneralRegisterLoads(_config);
-	root.removeStackLoads(_config);
 	LOG << root << std::endl;
 
 	root.simplifyNode(_config);

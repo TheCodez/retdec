@@ -24,6 +24,12 @@ AbiPowerpc::~AbiPowerpc()
 
 }
 
+bool AbiPowerpc::isGeneralPurposeRegister(const llvm::Value* val)
+{
+	uint32_t rid = getRegisterId(val);
+	return PPC_REG_R0 <= rid && rid <= PPC_REG_R31;
+}
+
 bool AbiPowerpc::isNopInstruction(cs_insn* insn)
 {
 	// True NOP variants.

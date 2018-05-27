@@ -26,6 +26,12 @@ using namespace llvm;
 namespace retdec {
 namespace bin2llvmir {
 
+Abi* SymbolicTree::_abi = nullptr;
+bool SymbolicTree::_val2valUsed = false;
+bool SymbolicTree::_trackThroughAllocaLoads = true;
+bool SymbolicTree::_trackThroughGeneralRegisterLoads = true;
+bool SymbolicTree::_trackOnlyFlagRegisters = false;
+
 /**
  * No ReachingDefinitionsAnalysis -> on-demand UseDef/DefUse chains are used.
  */
@@ -67,6 +73,8 @@ SymbolicTree::SymbolicTree(
 		:
 		value(v)
 {
+	_val2valUsed = false;
+
 	if (val2val)
 	{
 		auto fIt = val2val->find(value);
@@ -85,7 +93,6 @@ SymbolicTree::SymbolicTree(
 
 	std::unordered_set<Value*> processed;
 	expandNode(rda, val2val, maxNodeLevel, processed);
-	propagateFlags();
 }
 
 SymbolicTree::SymbolicTree(
@@ -134,7 +141,6 @@ SymbolicTree& SymbolicTree::operator=(SymbolicTree&& other)
 		// Do NOT use `ops = std::move(other.ops);` to allow use like
 		// `*this = ops[0];`. Use std::swap() instead.
 		std::swap(ops, other.ops);
-		_failed = other._failed;
 	}
 	return *this;
 }
@@ -188,6 +194,27 @@ void SymbolicTree::expandNode(
 
 		if (auto* l = dyn_cast<LoadInst>(value))
 		{
+			if (!_trackThroughAllocaLoads
+					&& isa<AllocaInst>(l->getPointerOperand()))
+			{
+				return;
+			}
+
+			if (_trackOnlyFlagRegisters
+					&& _abi
+					&& _abi->isRegister(l->getPointerOperand())
+					&& !_abi->isFlagRegister(l->getPointerOperand()))
+			{
+				return;
+			}
+
+			if (!_trackThroughGeneralRegisterLoads
+					&& _abi
+					&& _abi->isGeneralPurposeRegister(l->getPointerOperand()))
+			{
+				return;
+			}
+
 			if (RDA && RDA->wasRun())
 			{
 				auto defs = RDA->defsFromUse(I);
@@ -244,11 +271,12 @@ void SymbolicTree::expandNode(
 		}
 		else if (isa<AllocaInst>(value)
 				|| isa<CallInst>(value)
-				|| (RDA->_abi->isRegister(value)
-						&& !RDA->_abi->isStackPointerRegister(value)
-						&& !(RDA->_abi->isMips() && value == RDA->_abi->getRegister(MIPS_REG_ZERO))
-						&& !(RDA->_abi->isMips() && value == RDA->_abi->getRegister(MIPS_REG_GP))
-						&& !(RDA->_abi->isMips() && value == RDA->_abi->getRegister(MIPS_REG_T9)))
+				|| (_abi
+						&& _abi->isRegister(value)
+						&& !_abi->isStackPointerRegister(value)
+						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_ZERO))
+						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_GP))
+						&& !(_abi->isMips() && value == _abi->getRegister(MIPS_REG_T9)))
 				)
 		{
 			// nothing
@@ -266,76 +294,6 @@ void SymbolicTree::expandNode(
 						maxNodeLevel,
 						val2val);
 			}
-		}
-	}
-}
-
-void SymbolicTree::propagateFlags()
-{
-	for (auto &o : ops)
-	{
-		o.propagateFlags();
-		_failed |= o._failed;
-		_val2valUsed |= o._val2valUsed;
-	}
-}
-
-bool SymbolicTree::isConstructedSuccessfully() const
-{
-	return !_failed;
-}
-
-bool SymbolicTree::isVal2ValMapUsed() const
-{
-	return _val2valUsed;
-}
-
-/**
- * Transform:
- * >|   %u2_80483ca = load i32, i32* eax, align 4
- *     >|   X
- *     >|   ...
- * into:
- * >|   %u2_80483ca = load i32, i32* eax, align 4
- */
-void SymbolicTree::removeGeneralRegisterLoads(Config* config)
-{
-	for (auto &o : ops)
-	{
-		o.removeGeneralRegisterLoads(config);
-	}
-
-	if (auto* l = dyn_cast<LoadInst>(value))
-	{
-		auto* r = l->getPointerOperand();
-		if (config->isRegister(r) && !config->isFlagRegister(r))
-		{
-			ops.clear();
-		}
-	}
-}
-
-/**
- * Transform:
- * >|   %u2_80483ca = load i32, i32* %stack, align 4
- *     >|   X
- *     >|   ...
- * into:
- * >|   %u2_80483ca = load i32, i32* %stack, align 4
- */
-void SymbolicTree::removeStackLoads(Config* config)
-{
-	for (auto &o : ops)
-	{
-		o.removeStackLoads(config);
-	}
-
-	if (auto* l = dyn_cast<LoadInst>(value))
-	{
-		auto* s = l->getPointerOperand();
-		if (config->isStackVariable(s))
-		{
-			ops.clear();
 		}
 	}
 }
@@ -753,6 +711,44 @@ bool SymbolicTree::isTernary() const
 bool SymbolicTree::isNary(unsigned N) const
 {
 	return ops.size() == N;
+}
+
+//
+//==============================================================================
+// Static methods.
+//==============================================================================
+//
+
+bool SymbolicTree::isVal2ValMapUsed()
+{
+	return _val2valUsed;
+}
+
+void SymbolicTree::setAbi(Abi* abi)
+{
+	_abi = abi;
+}
+
+void SymbolicTree::setToDefaultConfiguration()
+{
+	_trackThroughAllocaLoads = true;
+	_trackThroughGeneralRegisterLoads = true;
+	_trackOnlyFlagRegisters = false;
+}
+
+void SymbolicTree::setTrackThroughAllocaLoads(bool b)
+{
+	_trackThroughAllocaLoads = b;
+}
+
+void SymbolicTree::setTrackThroughGeneralRegisterLoads(bool b)
+{
+	_trackThroughGeneralRegisterLoads = b;
+}
+
+void SymbolicTree::setTrackOnlyFlagRegisters(bool b)
+{
+	_trackOnlyFlagRegisters = b;
 }
 
 } // namespace bin2llvmir

@@ -9,6 +9,7 @@
 #include <llvm/Support/CommandLine.h>
 
 #include "retdec/bin2llvmir/optimizations/provider_init/provider_init.h"
+#include "retdec/bin2llvmir/analyses/symbolic_tree.h"
 #include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/providers/config.h"
@@ -62,7 +63,8 @@ bool ProviderInitialization::runOnModule(Module& m)
 		return false;
 	}
 
-	AbiProvider::addAbi(&m, c);
+	auto* abi = AbiProvider::addAbi(&m, c);
+	SymbolicTree::setAbi(abi);
 
 	auto* d = DemanglerProvider::addDemangler(&m, c->getConfig().tools);
 	if (d == nullptr)
