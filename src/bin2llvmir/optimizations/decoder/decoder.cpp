@@ -307,7 +307,6 @@ void Decoder::decodeJumpTarget(const JumpTarget& jt)
 			}
 			break;
 		}
-
 		_somethingDecoded = true;
 
 		_llvm2capstone->emplace(res.llvmInsn, res.capstoneInsn);
@@ -526,9 +525,10 @@ bool Decoder::getJumpTargetsFromInstruction(
 			auto nextAddr = addr + tr.size;
 			auto* nextBb = cond->getSuccessor(1);
 
-			if (auto* nBb = getBasicBlockAtAddress(nextAddr))
+			auto* nBb = getBasicBlockAtAddress(nextAddr);
+			auto* oldSucc = cond->getSuccessor(1);
+			if (nBb && oldSucc->getParent() == nBb->getParent())
 			{
-				auto* oldSucc = cond->getSuccessor(1);
 				oldSucc->replaceAllUsesWith(nBb);
 				oldSucc->eraseFromParent();
 			}
