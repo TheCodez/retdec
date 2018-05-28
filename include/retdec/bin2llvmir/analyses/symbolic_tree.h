@@ -46,16 +46,16 @@ class SymbolicTree
 	public:
 		SymbolicTree(
 				llvm::Value* v,
-				unsigned maxNodeLevel = 14);
+				unsigned maxNodeLevel = 10);
 		SymbolicTree(
 				ReachingDefinitionsAnalysis& rda,
 				llvm::Value* v,
-				unsigned maxNodeLevel = 14);
+				unsigned maxNodeLevel = 10);
 		SymbolicTree(
 				ReachingDefinitionsAnalysis& rda,
 				llvm::Value* v,
 				std::map<llvm::Value*, llvm::Value*>* val2val,
-				unsigned maxNodeLevel = 14);
+				unsigned maxNodeLevel = 10);
 
 	// Copy/move ctors, operators, etc.
 	//
@@ -110,6 +110,8 @@ class SymbolicTree
 		static void setTrackThroughAllocaLoads(bool b);
 		static void setTrackThroughGeneralRegisterLoads(bool b);
 		static void setTrackOnlyFlagRegisters(bool b);
+		static void setSimplifyAtCreation(bool b);
+		static void setNaryLimit(unsigned n);
 
 	private:
 		static Abi* _abi;
@@ -118,6 +120,8 @@ class SymbolicTree
 		static bool _trackThroughAllocaLoads;
 		static bool _trackThroughGeneralRegisterLoads;
 		static bool _trackOnlyFlagRegisters;
+		static bool _simplifyAtCreation;
+		static unsigned _naryLimit;
 
 	// Private methods.
 	//

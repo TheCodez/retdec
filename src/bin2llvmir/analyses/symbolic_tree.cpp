@@ -28,13 +28,6 @@ using namespace retdec::bin2llvmir::st_match;
 namespace retdec {
 namespace bin2llvmir {
 
-Abi* SymbolicTree::_abi = nullptr;
-Config* SymbolicTree::_config = nullptr;
-bool SymbolicTree::_val2valUsed = false;
-bool SymbolicTree::_trackThroughAllocaLoads = true;
-bool SymbolicTree::_trackThroughGeneralRegisterLoads = true;
-bool SymbolicTree::_trackOnlyFlagRegisters = false;
-
 /**
  * No ReachingDefinitionsAnalysis -> on-demand UseDef/DefUse chains are used.
  */
@@ -80,6 +73,12 @@ SymbolicTree::SymbolicTree(
 		:
 		value(v)
 {
+	ops.reserve(_naryLimit);
+
+	if (!_simplifyAtCreation)
+	{
+		maxNodeLevel += maxNodeLevel;
+	}
 	_val2valUsed = false;
 
 	if (val2val)
@@ -221,6 +220,12 @@ void SymbolicTree::expandNode(
 		if (RDA && RDA->wasRun())
 		{
 			auto defs = RDA->defsFromUse(l);
+			if (defs.size() > _naryLimit)
+			{
+				ops.emplace_back(UndefValue::get(l->getType()));
+				return;
+			}
+			else
 			for (auto* d : defs)
 			{
 				ops.emplace_back(
@@ -236,6 +241,12 @@ void SymbolicTree::expandNode(
 		else
 		{
 			auto defs = ReachingDefinitionsAnalysis::defsFromUse_onDemand(l);
+			if (defs.size() > _naryLimit)
+			{
+				ops.emplace_back(UndefValue::get(l->getType()));
+				return;
+			}
+
 			for (auto* d : defs)
 			{
 				ops.emplace_back(
@@ -263,14 +274,28 @@ void SymbolicTree::expandNode(
 	}
 	else if (auto* s = dyn_cast<StoreInst>(value))
 	{
-		ops.emplace_back(
-				RDA,
-				s->getValueOperand(),
-				s,
-				processed,
-				getLevel() + 1,
-				maxNodeLevel,
-				val2val);
+		if (_simplifyAtCreation)
+		{
+			*this = SymbolicTree(
+					RDA,
+					s->getValueOperand(),
+					s,
+					processed,
+					getLevel(),
+					maxNodeLevel,
+					val2val);
+		}
+		else
+		{
+			ops.emplace_back(
+					RDA,
+					s->getValueOperand(),
+					s,
+					processed,
+					getLevel() + 1,
+					maxNodeLevel,
+					val2val);
+		}
 	}
 	else if (isa<AllocaInst>(value)
 			|| isa<CallInst>(value)
@@ -281,6 +306,19 @@ void SymbolicTree::expandNode(
 					&& value != _abi->getRegister(MIPS_REG_GP, _abi->isMips())))
 	{
 		// nothing
+	}
+	else if (_simplifyAtCreation
+			&& (isa<CastInst>(value) || isa<ConstantExpr>(value)))
+	{
+		auto* U = cast<User>(value);
+		*this = SymbolicTree(
+				RDA,
+				U->getOperand(0),
+				U,
+				processed,
+				getLevel(),
+				maxNodeLevel,
+				val2val);
 	}
 	else if (User* U = dyn_cast<User>(value))
 	{
@@ -659,6 +697,24 @@ bool SymbolicTree::isNary(unsigned N) const
 //==============================================================================
 //
 
+Abi* SymbolicTree::_abi = nullptr;
+Config* SymbolicTree::_config = nullptr;
+bool SymbolicTree::_val2valUsed = false;
+bool SymbolicTree::_trackThroughAllocaLoads = true;
+bool SymbolicTree::_trackThroughGeneralRegisterLoads = true;
+bool SymbolicTree::_trackOnlyFlagRegisters = false;
+bool SymbolicTree::_simplifyAtCreation = true;
+unsigned SymbolicTree::_naryLimit = 3;
+
+void SymbolicTree::setToDefaultConfiguration()
+{
+	_trackThroughAllocaLoads = true;
+	_trackThroughGeneralRegisterLoads = true;
+	_trackOnlyFlagRegisters = false;
+	_simplifyAtCreation = true;
+	_naryLimit = 3;
+}
+
 bool SymbolicTree::isVal2ValMapUsed()
 {
 	return _val2valUsed;
@@ -674,13 +730,6 @@ void SymbolicTree::setConfig(Config* config)
 	_config = config;
 }
 
-void SymbolicTree::setToDefaultConfiguration()
-{
-	_trackThroughAllocaLoads = true;
-	_trackThroughGeneralRegisterLoads = true;
-	_trackOnlyFlagRegisters = false;
-}
-
 void SymbolicTree::setTrackThroughAllocaLoads(bool b)
 {
 	_trackThroughAllocaLoads = b;
@@ -694,6 +743,16 @@ void SymbolicTree::setTrackThroughGeneralRegisterLoads(bool b)
 void SymbolicTree::setTrackOnlyFlagRegisters(bool b)
 {
 	_trackOnlyFlagRegisters = b;
+}
+
+void SymbolicTree::setSimplifyAtCreation(bool b)
+{
+	_simplifyAtCreation = b;
+}
+
+void SymbolicTree::setNaryLimit(unsigned n)
+{
+	_naryLimit = n;
 }
 
 } // namespace bin2llvmir
