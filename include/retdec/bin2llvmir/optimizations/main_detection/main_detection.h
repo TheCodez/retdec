@@ -35,6 +35,7 @@ class MainDetection : public llvm::ModulePass
 	private:
 		bool run();
 		bool skipAnalysis();
+		void removeStaticallyLinked();
 		retdec::utils::Address getFromFunctionNames();
 		retdec::utils::Address getFromContext();
 		retdec::utils::Address getFromEntryPointOffset(int offset);

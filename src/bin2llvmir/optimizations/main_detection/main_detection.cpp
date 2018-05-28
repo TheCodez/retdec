@@ -66,6 +66,7 @@ bool MainDetection::run()
 	}
 	if (skipAnalysis())
 	{
+		removeStaticallyLinked();
 		return false;
 	}
 
@@ -93,17 +94,7 @@ bool MainDetection::run()
 		changed = applyResult(mainAddr);
 	}
 
-	// Delete statically linked functions bodies only after main detection run.
-	// TODO: This is not ideal here, very random, move main detection to decoding?
-	// and delete linked bodies right after they have been found?
-	for (Function& f : _module->functions())
-	{
-		auto* cf = _config->getConfigFunction(&f);
-		if (cf && cf->isStaticallyLinked())
-		{
-			f.deleteBody();
-		}
-	}
+	removeStaticallyLinked();
 
 	return changed;
 }
@@ -112,6 +103,24 @@ bool MainDetection::skipAnalysis()
 {
 	return _config->getConfig().getMainAddress().isDefined()
 			|| _config->getConfig().fileType.isShared();
+}
+
+/**
+ * Delete statically linked functions bodies only after main detection run.
+ * TODO: This is not ideal here, very random, move main detection to decoding?
+ * and delete linked bodies right after they have been found?
+ * TODO: do this when shared?
+ */
+void MainDetection::removeStaticallyLinked()
+{
+	for (Function& f : _module->functions())
+	{
+		auto* cf = _config->getConfigFunction(&f);
+		if (cf && cf->isStaticallyLinked())
+		{
+			f.deleteBody();
+		}
+	}
 }
 
 retdec::utils::Address MainDetection::getFromFunctionNames()
