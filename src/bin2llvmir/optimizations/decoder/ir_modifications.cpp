@@ -108,6 +108,23 @@ llvm::SwitchInst* Decoder::transformToSwitch(
 		}
 	}
 
+	// If we do not do this, this can happen:
+	// "Instruction does not dominate all uses"
+	auto* insn = dyn_cast<Instruction>(val);
+	if (insn && insn->getType())
+	{
+		auto* gv = new GlobalVariable(
+				*insn->getModule(),
+				insn->getType(),
+				false,
+				GlobalValue::ExternalLinkage,
+				nullptr);
+		auto* s = new StoreInst(insn, gv);
+		s->insertAfter(insn);
+
+		val = new LoadInst(gv, "", pseudo);
+	}
+
 	auto* term = pseudo->getParent()->getTerminator();
 	assert(pseudo->getNextNode() == term);
 	auto* intType = cast<IntegerType>(val->getType());
