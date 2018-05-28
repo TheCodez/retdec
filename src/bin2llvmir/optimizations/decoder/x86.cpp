@@ -24,8 +24,11 @@ std::size_t Decoder::decodeJumpTargetDryRun_x86(
 	uint64_t addr = jt.getAddress();
 	std::size_t nops = 0;
 	bool first = true;
+	bool storeOneToEax = false;
 	while (cs_disasm_iter(ce, &bytes.first, &bytes.second, &addr, _dryCsInsn))
 	{
+		auto& detail = _dryCsInsn->detail->x86;
+
 		if (jt.getType() == JumpTarget::eType::LEFTOVER
 				&& (first || nops > 0)
 				&& _abi->isNopInstruction(_dryCsInsn))
@@ -40,6 +43,25 @@ std::size_t Decoder::decodeJumpTargetDryRun_x86(
 
 		if (_c2l->isReturnInstruction(*_dryCsInsn)
 				|| _c2l->isBranchInstruction(*_dryCsInsn))
+		{
+			return false;
+		}
+
+		// TODO: not very strict - not checking that eax is not overwritten.
+		if (_dryCsInsn->id == X86_INS_MOV
+				&& detail.op_count == 2
+				&& detail.operands[0].type == X86_OP_REG
+				&& detail.operands[0].reg == X86_REG_EAX
+				&& detail.operands[1].type == X86_OP_IMM
+				&& detail.operands[1].imm == 1)
+		{
+			storeOneToEax = true;
+		}
+		if (_dryCsInsn->id == X86_INS_INT
+				&& storeOneToEax
+				&& detail.op_count == 1
+				&& detail.operands[0].type == X86_OP_IMM
+				&& detail.operands[0].imm == 0x80)
 		{
 			return false;
 		}

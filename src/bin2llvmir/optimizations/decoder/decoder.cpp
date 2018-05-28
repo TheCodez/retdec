@@ -422,6 +422,7 @@ bool Decoder::instructionBreaksBasicBlock(
 		_irb->SetInsertPoint(ui);
 		return true;
 	}
+	// TODO: terminating syscalls.
 
 	return false;
 }
