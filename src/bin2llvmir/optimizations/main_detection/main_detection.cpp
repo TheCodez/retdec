@@ -8,7 +8,6 @@
 
 #include <llvm/IR/Operator.h>
 
-#include "retdec/utils/string.h"
 #include "retdec/bin2llvmir/optimizations/main_detection/main_detection.h"
 #include "retdec/bin2llvmir/providers/asm_instruction.h"
 #include "retdec/bin2llvmir/utils/debug.h"
@@ -61,12 +60,10 @@ bool MainDetection::runOnModuleCustom(
 
 bool MainDetection::run()
 {
-	if (_config == nullptr)
+	if (_config == nullptr || _image == nullptr || _names == nullptr)
 	{
-		LOG << "[ABORT] config file is not available\n";
 		return false;
 	}
-
 	if (skipAnalysis())
 	{
 		return false;
@@ -99,7 +96,7 @@ bool MainDetection::run()
 	// Delete statically linked functions bodies only after main detection run.
 	// TODO: This is not ideal here, very random, move main detection to decoding?
 	// and delete linked bodies right after they have been found?
-	for (auto& f : _module->functions())
+	for (Function& f : _module->functions())
 	{
 		auto* cf = _config->getConfigFunction(&f);
 		if (cf && cf->isStaticallyLinked())
