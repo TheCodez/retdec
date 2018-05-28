@@ -438,6 +438,8 @@ bool Decoder::getJumpTargetsFromInstruction(
 	BasicBlock* tBb = nullptr;
 	Function* tFnc = nullptr;
 
+	_switchGenerated = false;
+
 	// Function call -> insert target (if computed).
 	//
 	if (_c2l->isCallFunctionCall(pCall))
@@ -549,8 +551,6 @@ bool Decoder::getJumpTargetsFromInstruction(
 	//
 	else if (_c2l->isBranchFunctionCall(pCall))
 	{
-		_switchGenerated = false;
-
 		if (auto t = getJumpTarget(addr, pCall, pCall->getArgOperand(0)))
 		{
 			auto m = determineMode(tr.capstoneInsn, t);
@@ -735,6 +735,11 @@ bool Decoder::getJumpTargetsFromInstruction(
 				}
 			}
 		}
+	}
+
+	if (_switchGenerated)
+	{
+		return true;
 	}
 
 	return false;
