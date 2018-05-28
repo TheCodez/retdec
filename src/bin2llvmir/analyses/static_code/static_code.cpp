@@ -1088,7 +1088,7 @@ void StaticCodeAnalysis::checkRef(StaticCodeFunction::Reference& ref)
 	//
 	auto secNameIt = _sectionNames.find(ref.name);
 	if (secNameIt != _sectionNames.end()
-			&& seg->getName() != ref.name)
+			&& seg && seg->getName() != ref.name)
 	{
 		return;
 	}
