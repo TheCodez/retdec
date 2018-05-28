@@ -83,11 +83,12 @@ bool canHaveAddressTaken(GlobalVariable &glob) {
 * 3. Address of global variable can be taken.
 * 4. Global variable that doesn't have private or internal linkage.
 */
-bool globalVarCanBeOptimized(GlobalVariable &glob, Abi* abi = nullptr) {
+bool globalVarCanBeOptimized(GlobalVariable &glob) {
 	// TODO: use only this? localize all registers, do not localize anything
 	// else.
 	//
-	if (abi && abi->isRegister(&glob)) {
+	auto* config = ConfigProvider::getConfig(glob.getParent());
+	if (config && config->isRegister(&glob)) {
 		return true;
 	}
 
@@ -127,11 +128,10 @@ bool globalVarCanBeOptimized(GlobalVariable &glob, Abi* abi = nullptr) {
 *
 * @return Global variables that can be optimized.
 */
-std::set<llvm::GlobalVariable*> getGlobsToOptimize(
-		Module::GlobalListType &globs, Abi* abi = nullptr) {
+std::set<llvm::GlobalVariable*> getGlobsToOptimize(Module::GlobalListType &globs) {
 	std::set<llvm::GlobalVariable*> globsToOptimize;
 	for (GlobalVariable &glob : globs) {
-		if (globalVarCanBeOptimized(glob, abi)) {
+		if (globalVarCanBeOptimized(glob)) {
 			globsToOptimize.insert(&glob);
 		}
 	}
@@ -199,9 +199,7 @@ void addMappingOfLocalVarToGlobalVarInConfig(Config* config, const llvm::Functio
 		return;
 	}
 
-	retdec::config::Object localVar(
-			localVarName,
-			retdec::config::Storage::inRegister(globalVarName));
+	retdec::config::Object localVar(localVarName, retdec::config::Storage::inRegister(globalVarName));
 	f->locals.insert(localVar);
 }
 
@@ -275,19 +273,13 @@ void GlobalToLocalAndDeadGlobalAssign::getAnalysisUsage(
 }
 
 bool GlobalToLocalAndDeadGlobalAssign::runOnModule(Module &module) {
-
-	_config = ConfigProvider::getConfig(&module);
-	_abi = AbiProvider::getAbi(&module);
-
 	// Subclasses should set either globalToLocal or deadGlobalAssign to true,
 	// but not both of the same time (both optimizations cannot be run at the
 	// same time because the result may be incorrect).
 	assert(globalToLocal ^ deadGlobalAssign &&
 		"Both -global-to-local and -dead-global-assign cannot run as one optimization.");
 
-	std::set<llvm::GlobalVariable*> globsToOptimize(getGlobsToOptimize(
-			module.getGlobalList(),
-			_abi));
+	std::set<llvm::GlobalVariable*> globsToOptimize(getGlobsToOptimize(module.getGlobalList()));
 	if (globsToOptimize.empty()) {
 		// Try to optimize variables without use.
 		removeGlobsWithoutUse(module.getGlobalList());
@@ -317,7 +309,7 @@ bool GlobalToLocalAndDeadGlobalAssign::runOnModule(Module &module) {
 */
 void GlobalToLocalAndDeadGlobalAssign::createInfoForAllFuncs(Module &module) {
 	for (auto &item : module) {
-		FuncInfo *funcInfo = new FuncInfo(item, storeLoadAnalysis, _config);
+		FuncInfo *funcInfo = new FuncInfo(item, storeLoadAnalysis);
 		funcInfoMap[&item] = funcInfo;
 	}
 }
@@ -662,8 +654,8 @@ GlobalToLocalAndDeadGlobalAssign::FuncInfo &GlobalToLocalAndDeadGlobalAssign::
 * @param[in] storeLoadAnalysis Analysis for which store can reach some loads.
 */
 GlobalToLocalAndDeadGlobalAssign::FuncInfo::FuncInfo(Function &func,
-	StoreLoadAnalysis &storeLoadAnalysis, Config* c): func(func),
-		storeLoadAnalysis(storeLoadAnalysis), _config(c) {}
+	StoreLoadAnalysis &storeLoadAnalysis): func(func),
+		storeLoadAnalysis(storeLoadAnalysis) {}
 
 /**
 * @brief Destructs a function info;
@@ -1093,7 +1085,7 @@ Value *GlobalToLocalAndDeadGlobalAssign::FuncInfo::getLocVarFor(
 		);
 	}
 	addMappingOfLocalVarToGlobalVarInConfig(
-		_config,
+		ConfigProvider::getConfig(func.getParent()),
 		&func,
 		newVarName,
 		globValue.getName()

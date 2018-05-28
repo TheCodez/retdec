@@ -12,8 +12,8 @@
 #include <llvm/Pass.h>
 
 #include "retdec/bin2llvmir/analyses/store_load_analysis.h"
-#include "retdec/bin2llvmir/providers/abi/abi.h"
 #include "retdec/bin2llvmir/providers/config.h"
+#include "retdec/bin2llvmir/utils/debug.h"
 
 namespace retdec {
 namespace bin2llvmir {
@@ -60,7 +60,7 @@ private:
 	*/
 	class FuncInfo {
 	public:
-		FuncInfo(llvm::Function &func, StoreLoadAnalysis &storeLoadAnalysis, Config* c);
+		FuncInfo(llvm::Function &func, StoreLoadAnalysis &storeLoadAnalysis);
 		~FuncInfo();
 
 		llvm::Function &getFunc();
@@ -118,8 +118,6 @@ private:
 
 		/// Saves filtered right uses in function.
 		AnalysisInfo::ValInstSetMap filteredRUses;
-
-		Config* _config = nullptr;
 	};
 
 	/// Mapping of a function to function info.
@@ -161,9 +159,6 @@ private:
 
 	/// Mapping of a function to its info.
 	FuncFuncInfoMap funcInfoMap;
-
-	Config* _config = nullptr;
-	Abi* _abi = nullptr;
 };
 
 } // namespace bin2llvmir
