@@ -233,7 +233,8 @@ void Decoder::decodeJumpTarget(const JumpTarget& jt)
 
 	if (jt.getType() == JumpTarget::eType::LEFTOVER
 			|| (alternative
-			&& jt.getType() > JumpTarget::eType::CONTROL_FLOW_RETURN_TARGET))
+			&& jt.getType() > JumpTarget::eType::CONTROL_FLOW_RETURN_TARGET
+			&& jt.getType() != JumpTarget::eType::ENTRY_POINT))
 	{
 		if (auto skipSz = decodeJumpTargetDryRun(jt, bytes))
 		{
