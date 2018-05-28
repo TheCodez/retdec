@@ -82,6 +82,7 @@ bool fillVtable(
 
 	std::set<retdec::utils::Address> items;
 
+	bool isThumb = false;
 	auto bpw = ff->getBytesPerWord();
 	std::uint64_t ptr = 0;
 	auto isPtr = ff->isPointer(a, &ptr);
@@ -95,6 +96,7 @@ bool fillVtable(
 		if (ff->isArm() && ptr % 2)
 		{
 			--ptr;
+			isThumb = true;
 		}
 		if (processedAddresses.find(a) != processedAddresses.end())
 		{
@@ -117,7 +119,7 @@ bool fillVtable(
 		}
 
 		LOG << "\t\t\t" << a << " @ OK" << std::endl;
-		vt.virtualFncAddresses.emplace_back(VtableItem(ptr));
+		vt.virtualFncAddresses.emplace_back(VtableItem(ptr, isThumb));
 		items.insert(ptr);
 		processedAddresses.insert(a);
 

@@ -25,10 +25,14 @@ namespace fileformat {
 class VtableItem
 {
 	public:
-		VtableItem(retdec::utils::Address a) : address(a) {}
+		VtableItem(retdec::utils::Address a, bool thumb = false) :
+			address(a),
+			isThumb(thumb)
+		{}
 
 	public:
 		retdec::utils::Address address;
+		bool isThumb = false;
 };
 
 /**
