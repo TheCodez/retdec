@@ -11,11 +11,9 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 
-#include "retdec/utils/container.h"
 #include "retdec/bin2llvmir/optimizations/select_functions/select_functions.h"
 #include "retdec/bin2llvmir/utils/debug.h"
 #define debug_enabled false
-#include "retdec/bin2llvmir/utils/llvm.h"
 
 using namespace llvm;
 
@@ -53,10 +51,8 @@ bool SelectFunctions::run(Module& M)
 {
 	if (_config == nullptr)
 	{
-		LOG << "[ABORT] config file is not available\n";
 		return false;
 	}
-
 	if (!_config->getConfig().parameters.isSomethingSelected())
 	{
 		return false;
