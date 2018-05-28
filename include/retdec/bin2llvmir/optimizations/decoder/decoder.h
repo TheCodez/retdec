@@ -80,6 +80,7 @@ class Decoder : public llvm::ModulePass
 		void initJumpTargetsSymbols();
 		void initConfigFunctions();
 		void initStaticCode();
+		void initVtables();
 
 	private:
 		void decode();
@@ -295,6 +296,7 @@ class Decoder : public llvm::ModulePass
 		std::set<utils::Address> _symbols;
 		std::map<utils::Address, const config::Function*> _debugFncs;
 		std::set<utils::Address> _staticFncs;
+		std::set<utils::Address> _vtableFncs;
 		std::set<llvm::Function*> _terminatingFncs;
 		llvm::Function* _entryPointFunction = nullptr;
 		/// Start of all recognized jump tables.

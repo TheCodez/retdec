@@ -143,6 +143,9 @@ std::ostream& operator<<(std::ostream &out, const JumpTarget& jt)
 		case JumpTarget::eType::STATIC_CODE:
 			t = "STATIC_CODE";
 			break;
+		case JumpTarget::eType::VTABLE:
+			t = "VTABLE";
+			break;
 		case JumpTarget::eType::LEFTOVER:
 			t = "LEFTOVER";
 			break;

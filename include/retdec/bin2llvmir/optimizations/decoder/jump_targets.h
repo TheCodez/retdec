@@ -47,6 +47,7 @@ class JumpTarget
 			SYMBOL,
 			EXPORT,
 			STATIC_CODE,
+			VTABLE,
 			LEFTOVER,
 			// Default jump target.
 			UNKNOWN,

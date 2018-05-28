@@ -543,6 +543,7 @@ void Decoder::initJumpTargets()
 	initJumpTargetsDebug();
 	initJumpTargetsSymbols(); // MUST be before exports
 	initJumpTargetsExports();
+	initVtables();
 }
 
 void Decoder::initJumpTargetsConfig()
@@ -917,6 +918,45 @@ void Decoder::initStaticCode()
 		else
 		{
 			LOG << "\t" << "[-] " << sf->address << " (no JT)" << std::endl;
+		}
+	}
+}
+
+void Decoder::initVtables()
+{
+	LOG << "\n" << "initVtables():" << std::endl;
+
+	std::vector<const fileformat::Vtable*> vtable;
+	for (auto& p : _image->getFileFormat()->getCppVtablesGcc())
+	{
+		vtable.push_back(&p.second);
+	}
+	for (auto& p : _image->getFileFormat()->getCppVtablesMsvc())
+	{
+		vtable.push_back(&p.second);
+	}
+
+	for (auto* p : vtable)
+	{
+		auto& vt = *p;
+		for (auto& item : vt.virtualFncAddresses)
+		{
+			if (auto* jt = _jumpTargets.push(
+					item.address,
+					JumpTarget::eType::VTABLE,
+					item.isThumb ? CS_MODE_THUMB : _c2l->getBasicMode(),
+					Address::getUndef))
+			{
+				auto* nf = createFunction(jt->getAddress());
+				_vtableFncs.insert(jt->getAddress());
+
+				LOG << "\t" << "[+] " << item.address << " @ "
+						<< nf->getName().str() << std::endl;
+			}
+			else
+			{
+				LOG << "\t" << "[-] " << item.address << " (no JT)" << std::endl;
+			}
 		}
 	}
 }
