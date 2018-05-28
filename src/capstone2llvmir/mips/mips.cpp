@@ -1824,6 +1824,16 @@ void Capstone2LlvmIrTranslatorMips_impl::translateMul(cs_insn* i, cs_mips* mi, l
  */
 void Capstone2LlvmIrTranslatorMips_impl::translateMult(cs_insn* i, cs_mips* mi, llvm::IRBuilder<>& irb)
 {
+	// TODO: quick fix until better exceptions are thrown and handled.
+	// 18 18 62 00:
+	// IDA     : mult    $v1, $v0
+	// CApstone: mult $ac3, $v1, $v0 (DSP group)
+	//
+	if (mi->op_count != 2)
+	{
+		return;
+	}
+
 	std::tie(op0, op1) = loadOpBinary(mi, irb, eOpConv::THROW);
 	auto* ty = irb.getIntNTy(getArchBitSize() * 2);
 	if (i->id == MIPS_INS_MULT)
