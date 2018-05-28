@@ -364,7 +364,6 @@ llvm::Value* IdiomsLibgccImpl::getRes0<double>(
 		llvm::CallInst* call,
 		llvm::Value* res)
 {
-	auto* m = call->getModule();
 	auto* resType = res0Double->getType()->getElementType();
 	auto* c = IrModifier::convertValueToType(res, resType, call);
 	return new llvm::StoreInst(c, res0Double, call);

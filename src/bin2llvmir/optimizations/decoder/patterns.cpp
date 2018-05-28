@@ -137,7 +137,6 @@ bool Decoder::patternTerminatingCalls()
 	LOG << "\tsplit BBs after terminating calls:" << std::endl;
 	for (auto* call : termCalls)
 	{
-		auto* f = call->getFunction();
 		auto* bb = call->getParent();
 		AsmInstruction callAi(call);
 		AsmInstruction nextAi = callAi.getNext();

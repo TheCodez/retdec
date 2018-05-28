@@ -342,7 +342,7 @@ void Decoder::initAllowedRangesWithConfig()
 				_c2l->getBasicMode(),
 				Address::getUndef))
 		{
-			auto* nf = createFunction(jt->getAddress());
+			createFunction(jt->getAddress());
 			LOG << "\t" << "[+] " << p.getStart() << std::endl;
 		}
 		else

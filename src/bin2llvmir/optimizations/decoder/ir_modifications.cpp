@@ -480,7 +480,7 @@ llvm::Function* Decoder::splitFunctionOn(utils::Address addr)
 		LOG << "\t\t\t\t" << "S: ASM @ " << addr << std::endl;
 		return nullptr;
 	}
-	else if (auto* f = getFunctionContainingAddress(addr))
+	else if (getFunctionContainingAddress(addr))
 	{
 		LOG << "\t\t\t\t" << "S: getFunctionContainingAddress() @ " << addr << std::endl;
 		auto* before = getBasicBlockBeforeAddress(addr);

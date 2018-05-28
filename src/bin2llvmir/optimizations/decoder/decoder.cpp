@@ -926,7 +926,8 @@ bool Decoder::getJumpTargetSwitch(
 	bool usesShl = isa<ShlOperator>(st.ops[0].ops[0].value);
 	auto* mulShlCi = cast<ConstantInt>(st.ops[0].ops[0].ops[1].value);
 	if (!((usesMul && mulShlCi->getZExtValue() == archByteSz)
-			|| (usesShl && (1 << mulShlCi->getZExtValue()) == archByteSz)))
+			|| (usesShl
+					&& static_cast<uint64_t>(1 << mulShlCi->getZExtValue()) == archByteSz)))
 	{
 		return false;
 	}
