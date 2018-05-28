@@ -344,45 +344,7 @@ void Capstone2LlvmIrTranslatorX86_impl::translateInstruction(
 	}
 	else
 	{
-		bool silentSkip = true;
-		for (unsigned j = 0; j < d->groups_count; ++j)
-		{
-			static std::set<uint8_t> ignoredGroups =
-			{
-					X86_GRP_3DNOW,
-					X86_GRP_AES,
-					X86_GRP_ADX,
-					X86_GRP_AVX,
-					X86_GRP_AVX2,
-					X86_GRP_AVX512,
-					X86_GRP_MMX,
-					X86_GRP_SHA,
-					X86_GRP_SSE1,
-					X86_GRP_SSE2,
-					X86_GRP_SSE3,
-					X86_GRP_SSE41,
-					X86_GRP_SSE42,
-					X86_GRP_SSE4A,
-					X86_GRP_SSSE3,
-			};
-			uint32_t g = d->groups[j];
-			if (ignoredGroups.count(g))
-			{
-				silentSkip = true;
-				break;
-			}
-		}
-
-		if (!silentSkip)
-		{
-			std::stringstream msg;
-			msg << "Translation of unhandled instruction: " << i->id << " ("
-					<< i->mnemonic << " " << i->op_str << ") @ " << std::hex
-					<< i->address << "\n";
-//std::cout << msg.str() << std::endl;
-//exit(1);
-			throw Capstone2LlvmIrError(msg.str());
-		}
+		// TODO: Automatically generate pseudo asm call.
 	}
 }
 

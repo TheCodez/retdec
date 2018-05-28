@@ -917,7 +917,9 @@ Capstone2LlvmIrTranslatorMips_impl::_i2fm =
 		{MIPS_INS_SYNC, nullptr},
 		{MIPS_INS_SYNCI, nullptr},
 		{MIPS_INS_SYSCALL, &Capstone2LlvmIrTranslatorMips_impl::translateSyscall},
-		{MIPS_INS_TEQ, nullptr},
+		// Not really a NOP, but often in places (e.g. main) where generating
+		// pseudo asm call would break regression tests.
+		{MIPS_INS_TEQ, &Capstone2LlvmIrTranslatorMips_impl::translateNop},
 		{MIPS_INS_TEQI, nullptr},
 		{MIPS_INS_TGE, nullptr},
 		{MIPS_INS_TGEI, nullptr},
