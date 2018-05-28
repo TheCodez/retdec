@@ -79,6 +79,12 @@ bool Decoder::runOnModuleCustom(
 
 bool Decoder::runCatcher()
 {
+	// TODO: here, we shoudl catch only the most severe capstone2llvmir
+	// problems which prevents us from using it.
+	// Other problems (e.g. throws in instruction translating like unxpected
+	// number of operands) should get their own special exception types
+	// and should be catched lower and possibly ignored.
+	//
 	try
 	{
 		return run();

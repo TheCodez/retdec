@@ -124,7 +124,7 @@ const char* Capstone2LlvmIrModeError::what() const noexcept
 Capstone2LlvmIrError::Capstone2LlvmIrError(const std::string& message) :
 		_whatMessage(message)
 {
-	assert(false);
+
 }
 
 Capstone2LlvmIrError::~Capstone2LlvmIrError()
