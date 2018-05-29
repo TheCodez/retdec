@@ -294,6 +294,7 @@ void Decoder::decodeJumpTarget(const JumpTarget& jt)
 
 		Address oldAddr = addr;
 		auto res = translate(bytes, addr, irb);
+
 		if (res.failed() || res.llvmInsn == nullptr)
 		{
 			if (auto* bb = getBasicBlockAtAddress(addr))
@@ -466,6 +467,12 @@ bool Decoder::getJumpTargetsFromInstruction(
 			{
 				return false;
 			}
+			//.text:08001EE1    call    near ptr loc_8001EE1+1
+			//.text:08001EE6    cmp     ebx, esi
+			if (addr <= t && t < nextAddr)
+			{
+				return false;
+			}
 
 			auto m = determineMode(tr.capstoneInsn, t);
 			getOrCreateCallTarget(t, tFnc, tBb);
@@ -559,6 +566,12 @@ bool Decoder::getJumpTargetsFromInstruction(
 	{
 		if (auto t = getJumpTarget(addr, pCall, pCall->getArgOperand(0)))
 		{
+			//.text:08001EE1    call    near ptr loc_8001EE1+1
+			//.text:08001EE6    cmp     ebx, esi
+			if (addr <= t && t < nextAddr)
+			{
+				return false;
+			}
 			if (nextAddr <= t && t < nextAddr + rangeSize)
 			{
 				rangeSize = t - nextAddr;
@@ -654,6 +667,13 @@ bool Decoder::getJumpTargetsFromInstruction(
 
 		if (auto t = getJumpTarget(addr, pCall, pCall->getArgOperand(1)))
 		{
+			//.text:08001EE1    call    near ptr loc_8001EE1+1
+			//.text:08001EE6    cmp     ebx, esi
+			if (addr <= t && t < nextAddr)
+			{
+				return false;
+			}
+
 			auto m = determineMode(tr.capstoneInsn, t);
 			getOrCreateBranchTarget(t, tBb, tFnc, pCall);
 
