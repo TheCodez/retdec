@@ -19,7 +19,7 @@ namespace bin2llvmir {
  * Patterns of branch instructions that does not make sense and should not
  * be accepted.
  */
-bool isBadBranch(cs_insn* br)
+bool isBadBranch(FileImage* img, cs_insn* br)
 {
 	auto& mips = br->detail->mips;
 
@@ -29,6 +29,15 @@ bool isBadBranch(cs_insn* br)
 			&& mips.op_count == 1
 			&& mips.operands[0].type == MIPS_OP_REG
 			&& mips.operands[0].reg == MIPS_REG_ZERO)
+	{
+		return true;
+	}
+	// j <bad_value>
+	//
+	if ((br->id == MIPS_INS_J || br->id == MIPS_INS_B)
+			&& mips.op_count == 1
+			&& mips.operands[0].type == MIPS_OP_IMM
+			&& !img->getImage()->hasDataInitializedOnAddress(mips.operands[0].imm))
 	{
 		return true;
 	}
@@ -92,7 +101,8 @@ std::size_t Decoder::decodeJumpTargetDryRun_mips(
 		{
 			return false;
 		}
-		if (_c2l->isBranchInstruction(*_dryCsInsn) && !isBadBranch(_dryCsInsn))
+		if (_c2l->isBranchInstruction(*_dryCsInsn)
+				&& !isBadBranch(_image, _dryCsInsn))
 		{
 			return false;
 		}
