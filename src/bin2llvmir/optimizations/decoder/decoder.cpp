@@ -473,7 +473,7 @@ bool Decoder::getJumpTargetsFromInstruction(
 			}
 			//.text:08001EE1    call    near ptr loc_8001EE1+1
 			//.text:08001EE6    cmp     ebx, esi
-			if (addr <= t && t < nextAddr)
+			if (addr < t && t < nextAddr)
 			{
 				return false;
 			}
@@ -572,7 +572,7 @@ bool Decoder::getJumpTargetsFromInstruction(
 		{
 			//.text:08001EE1    call    near ptr loc_8001EE1+1
 			//.text:08001EE6    cmp     ebx, esi
-			if (addr <= t && t < nextAddr)
+			if (addr < t && t < nextAddr)
 			{
 				return false;
 			}
@@ -673,7 +673,7 @@ bool Decoder::getJumpTargetsFromInstruction(
 		{
 			//.text:08001EE1    call    near ptr loc_8001EE1+1
 			//.text:08001EE6    cmp     ebx, esi
-			if (addr <= t && t < nextAddr)
+			if (addr < t && t < nextAddr)
 			{
 				return false;
 			}
