@@ -454,6 +454,10 @@ bool SyscallFixer::runX86_linux_32()
 	return changed;
 }
 
+/**
+ * TODO: X86_INS_SYSCALL???
+ * https://www.felixcloutier.com/x86/SYSCALL.html
+ */
 bool SyscallFixer::runX86_linux_32(AsmInstruction ai)
 {
 	auto* x86Asm = ai.getCapstoneInsn();

@@ -25,8 +25,11 @@ std::size_t Decoder::decodeJumpTargetDryRun_x86(
 	std::size_t nops = 0;
 	bool first = true;
 	bool storeOneToEax = false;
+	bool lastSyscall = false;
+	std::size_t decodedSz = 0;
 	while (cs_disasm_iter(ce, &bytes.first, &bytes.second, &addr, _dryCsInsn))
 	{
+		decodedSz += _dryCsInsn->size;
 		auto& detail = _dryCsInsn->detail->x86;
 
 		if (jt.getType() == JumpTarget::eType::LEFTOVER
@@ -58,12 +61,23 @@ std::size_t Decoder::decodeJumpTargetDryRun_x86(
 			storeOneToEax = true;
 		}
 		if (_dryCsInsn->id == X86_INS_INT
-				&& storeOneToEax
 				&& detail.op_count == 1
 				&& detail.operands[0].type == X86_OP_IMM
 				&& detail.operands[0].imm == 0x80)
 		{
-			return false;
+			if (storeOneToEax)
+			{
+				return false;
+			}
+			lastSyscall = true;
+		}
+		else if (_dryCsInsn->id == X86_INS_SYSCALL)
+		{
+			lastSyscall = true;
+		}
+		else
+		{
+			lastSyscall = false;
 		}
 
 		first = false;
@@ -72,6 +86,11 @@ std::size_t Decoder::decodeJumpTargetDryRun_x86(
 	if (nops > 0)
 	{
 		return nops;
+	}
+
+	if (lastSyscall && decodedSz >= 0x10)
+	{
+		return false;
 	}
 
 	// There is a BB right after, that is not a function start.
