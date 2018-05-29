@@ -436,6 +436,7 @@ bool Decoder::getJumpTargetsFromInstruction(
 		uint64_t& rangeSize)
 {
 	CallInst*& pCall = tr.branchCall;
+	auto nextAddr = addr + tr.size;
 
 	if (_config->getConfig().architecture.isArmOrThumb())
 	{
@@ -457,8 +458,6 @@ bool Decoder::getJumpTargetsFromInstruction(
 
 		if (t || (t == 0 && AsmInstruction(_module, 0)))
 		{
-			auto nextAddr = addr + tr.size;
-
 			// TODO: found in x86 macho:
 			//__text:00001EE6    sub     esp, 1Ch
 			//__text:00001EE9    call    $+5         (target = 0x1EEE)
@@ -532,7 +531,6 @@ bool Decoder::getJumpTargetsFromInstruction(
 		if (auto* cond = _c2l->isInConditionReturnFunctionCall(pCall))
 		{
 			// Name the block and assign an address to it -> keep up with IDA.
-			auto nextAddr = addr + tr.size;
 			auto* nextBb = cond->getSuccessor(1);
 
 			auto* nBb = getBasicBlockAtAddress(nextAddr);
@@ -561,6 +559,11 @@ bool Decoder::getJumpTargetsFromInstruction(
 	{
 		if (auto t = getJumpTarget(addr, pCall, pCall->getArgOperand(0)))
 		{
+			if (nextAddr <= t && t < nextAddr + rangeSize)
+			{
+				rangeSize = t - nextAddr;
+			}
+
 			auto m = determineMode(tr.capstoneInsn, t);
 
 			getOrCreateBranchTarget(t, tBb, tFnc, pCall);
