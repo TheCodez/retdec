@@ -12,6 +12,9 @@
 #include <vector>
 
 #include "retdec/utils/address.h"
+#include "retdec/utils/string.h"
+
+using namespace retdec::utils;
 
 namespace retdec {
 namespace loader {
@@ -21,11 +24,30 @@ namespace loader {
 namespace stacofin {
 
 /**
- * Data-type for offset-name relocation pairs.
+ * Forward declaration.
  */
-using References = std::vector<std::pair<std::size_t, std::string>>;
-using CoveredCode = retdec::utils::AddressRangeContainer;
+class DetectedFunction;
 
+class Reference
+{
+	public:
+		Reference(
+				std::size_t o,
+				const std::string& n,
+				utils::Address a = utils::Address::getUndef,
+				utils::Address t = utils::Address::getUndef,
+				DetectedFunction* tf = nullptr,
+				bool k = false);
+
+	public:
+		std::size_t offset = 0;
+		std::string name;
+
+		utils::Address address;
+		utils::Address target;
+		DetectedFunction* targetFnc = nullptr;
+		bool ok = false;
+};
 
 /**
  * Structure representing one detected function.
@@ -33,21 +55,40 @@ using CoveredCode = retdec::utils::AddressRangeContainer;
 struct DetectedFunction
 {
 	public:
-		std::size_t size;                ///< Original size of source.
-		std::size_t offset;              ///< File offset.
-		retdec::utils::Address address; ///< Virtual address.
+		bool operator<(const DetectedFunction& o) const;
 
-		std::vector<std::string> names; ///< Possible original names.
-		References references;          ///< Offset-name relocation pairs.
-
-		std::string signaturePath; ///< Source signature path.
+		bool allRefsOk() const;
+		std::size_t countRefsOk() const;
+		float refsOkShare() const;
+		std::string getName() const;
+		retdec::utils::Address getAddress() const;
+		bool isTerminating() const;
+		bool isThumb() const;
 
 		/// @name Setters.
 		/// @{
 		void setReferences(const std::string &refsString);
+		void setAddress(retdec::utils::Address a);
 		/// @}
-};
 
+	public:
+		/// Original size of source.
+		std::size_t size;
+		/// File offset.
+		std::size_t offset;
+
+		/// Possible original names.
+		std::vector<std::string> names;
+		/// Offset-name relocation pairs.
+		std::vector<Reference> references;
+
+		/// Source signature path.
+		std::string signaturePath;
+
+	private:
+		/// Virtual address.
+		retdec::utils::Address address;
+};
 
 /**
  * Finder implementation using Yara.
@@ -55,29 +96,39 @@ struct DetectedFunction
 class Finder
 {
 	public:
-		Finder();
-		~Finder();
+		using DetectedFunctionsPtrMap = typename std::map<
+				utils::Address,
+				stacofin::DetectedFunction*>;
+		using DetectedFunctionsMultimap = typename std::multimap<
+				utils::Address,
+				stacofin::DetectedFunction>;
+		using DetectedFunctionsPtrMultimap = typename std::multimap<
+				utils::Address,
+				stacofin::DetectedFunction*>;
 
+	public:
 		/// @name Actions.
 		/// @{
 		void clear();
 		void search(
 			const retdec::loader::Image &image,
 			const std::string &yaraFile);
+		std::string dumpDetectedFunctions() const;
 		/// @}
 
 		/// @name Getters.
 		/// @{
-		CoveredCode getCoveredCode();
-		std::vector<DetectedFunction> getDectedFunctions();
-		const std::vector<DetectedFunction>& accessDectedFunctions();
+		retdec::utils::AddressRangeContainer getCoveredCode();
+		DetectedFunctionsMultimap& getDectedFunctions();
+		const DetectedFunctionsMultimap& getDectedFunctions() const;
 		/// @}
 
 	private:
-		CoveredCode coveredCode;                         ///< Code coverage.
-		std::vector<DetectedFunction> detectedFunctions; ///< Functions.
+		/// Code coverage.
+		retdec::utils::AddressRangeContainer coveredCode;
+		/// Functions.
+		DetectedFunctionsMultimap detectedFunctions;
 
-		void sort();
 		bool isSorted = true; ///< @c true if detected functions are sorted.
 };
 

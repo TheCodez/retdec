@@ -4,7 +4,6 @@
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
-
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -20,6 +19,126 @@ using namespace retdec::loader;
 namespace retdec {
 namespace stacofin {
 
+//
+//==============================================================================
+// Reference.
+//==============================================================================
+//
+
+Reference::Reference(
+		std::size_t o,
+		const std::string& n,
+		utils::Address a,
+		utils::Address t,
+		DetectedFunction* tf,
+		bool k)
+		:
+		offset(o),
+		name(n),
+		address(a),
+		target(t),
+		targetFnc(tf),
+		ok(k)
+{
+
+}
+
+//
+//==============================================================================
+// DetectedFunction.
+//==============================================================================
+//
+
+bool DetectedFunction::operator<(const DetectedFunction& o) const
+{
+	if (address == o.address)
+	{
+		if (names.empty())
+		{
+			return true;
+		}
+		else if (o.names.empty())
+		{
+			return false;
+		}
+		else
+		{
+			return getName() < o.getName();
+		}
+	}
+	else
+	{
+		return address < o.address;
+	}
+}
+
+bool DetectedFunction::allRefsOk() const
+{
+	for (auto& ref : references)
+	{
+		if (!ref.ok)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+std::size_t DetectedFunction::countRefsOk() const
+{
+	std::size_t ret = 0;
+
+	for (auto& ref : references)
+	{
+		ret += ref.ok;
+	}
+
+	return ret;
+}
+
+float DetectedFunction::refsOkShare() const
+{
+	return references.empty()
+			? 1.0
+			: float(countRefsOk()) / float(references.size());
+}
+
+std::string DetectedFunction::getName() const
+{
+	return names.empty() ? "" : names.front();
+}
+
+retdec::utils::Address DetectedFunction::getAddress() const
+{
+	return address;
+}
+
+bool DetectedFunction::isTerminating() const
+{
+	// TODO: couple names with source signaturePath to make sure we do not
+	// hit wrong functions?
+	//
+	static std::set<std::string> termNames = {
+			"exit",
+			"_exit",
+	};
+
+	for (auto& n : names)
+	{
+		if (termNames.count(n))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DetectedFunction::isThumb() const
+{
+	return utils::containsCaseInsensitive(signaturePath, "thumb");
+}
 
 /**
  * Parse string with references from meta attribute.
@@ -39,26 +158,29 @@ void DetectedFunction::setReferences(const std::string &refsString)
 			break;
 		}
 
-		references.push_back({offset, name});
+		references.emplace_back(offset, name);
 	}
 }
 
-
 /**
- * Default constructor.
+ * Setting an address will also update addresses of all references.
+ *
+ * @param a Address to set.
  */
-Finder::Finder()
+void DetectedFunction::setAddress(retdec::utils::Address a)
 {
+	address = a;
+	for (auto r : references)
+	{
+		r.address = r.offset + address;
+	}
 }
 
-
-/**
- * Default destructor.
- */
-Finder::~Finder()
-{
-}
-
+//
+//==============================================================================
+// Finder.
+//==============================================================================
+//
 
 /**
  * Clear all previous results.
@@ -68,7 +190,6 @@ void Finder::clear()
 	coveredCode.clear();
 	detectedFunctions.clear();
 }
-
 
 /**
  * Search for static code in input file.
@@ -134,68 +255,60 @@ void Finder::search(
 			}
 
 			// Store data.
-			detectedFunction.address = address;
+			detectedFunction.setAddress(address);
 			coveredCode.insert(AddressRange(address,
 				address + detectedFunction.size));
-			detectedFunctions.push_back(detectedFunction);
+			detectedFunctions.emplace(address, detectedFunction);
 		}
 	}
 }
 
+std::string Finder::dumpDetectedFunctions() const
+{
+	std::stringstream ret;
+	ret << "\t Detected functions (bin2llvmir):" << "\n";
+	for (auto& p : detectedFunctions)
+	{
+		auto& f = p.second;
+
+		ret << "\t\t" << (p.second.allRefsOk() ? "[+] " : "[-] ")
+				<< f.getAddress() << " @ " << f.names.front()
+				<< ", sz = " << f.size << "\n";
+
+		for (auto& ref : f.references)
+		{
+			ret << "\t\t\t" << (ref.ok ? "[+] " : "[-] ")
+					<< ref.address << " @ " << ref.name
+					<< " -> " << ref.target << "\n";
+		}
+	}
+
+	return ret.str();
+}
 
 /**
  * Return detected code coverage.
  *
  * @return covered code
  */
-CoveredCode Finder::getCoveredCode()
+retdec::utils::AddressRangeContainer Finder::getCoveredCode()
 {
 	return coveredCode;
 }
 
-
 /**
  * Return detected functions sorted by their address.
  *
  * @return sorted detected functions
  */
-std::vector<DetectedFunction> Finder::getDectedFunctions()
+Finder::DetectedFunctionsMultimap& Finder::getDectedFunctions()
 {
-	sort();
 	return detectedFunctions;
 }
 
-
-/**
- * Return detected functions sorted by their address.
- *
- * @return sorted detected functions
- */
-const std::vector<DetectedFunction>& Finder::accessDectedFunctions()
+const Finder::DetectedFunctionsMultimap& Finder::getDectedFunctions() const
 {
-	sort();
 	return detectedFunctions;
-}
-
-
-/**
- * Sort detected functions.
- *
- * Functions are sorted by their address, if detection address is same bigger
- * detection is frist.
- */
-void Finder::sort()
-{
-	if (!isSorted) {
-		std::sort(detectedFunctions.begin(), detectedFunctions.end(),
-			[](DetectedFunction i, DetectedFunction j) {
-				if (i.address == j.address) {
-					return i.size > j.size;
-				}
-				return i.address < j.address;
-			});
-		isSorted = true;
-	}
 }
 
 } // namespace stacofin

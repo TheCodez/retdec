@@ -20,63 +20,8 @@
 namespace retdec {
 namespace bin2llvmir {
 
-class StaticCodeFunction
-{
-	public:
-		class Reference
-		{
-			public:
-				Reference(
-						std::size_t o,
-						utils::Address a,
-						const std::string& n,
-						utils::Address t = utils::Address::getUndef,
-						StaticCodeFunction* tf = nullptr,
-						bool k = false);
-
-			public:
-				std::size_t offset = 0;
-				utils::Address address;
-				std::string name;
-
-				utils::Address target;
-				StaticCodeFunction* targetFnc = nullptr;
-				bool ok = false;
-		};
-
-	public:
-		StaticCodeFunction(const stacofin::DetectedFunction& df);
-		bool operator<(const StaticCodeFunction& o) const;
-
-		bool allRefsOk() const;
-		std::size_t countRefsOk() const;
-		float refsOkShare() const;
-		std::string getName() const;
-		bool isTerminating() const;
-		bool isThumb() const;
-
-	public:
-		utils::Address address;
-		std::size_t size;
-		std::vector<std::string> names;
-		std::string signaturePath;
-
-		std::vector<Reference> references;
-};
-
 class StaticCodeAnalysis
 {
-	public:
-		using DetectedFunctionsPtrMap = typename std::map<
-				utils::Address,
-				StaticCodeFunction*>;
-		using DetectedFunctionsMultimap = typename std::multimap<
-				utils::Address,
-				StaticCodeFunction>;
-		using DetectedFunctionsPtrMultimap = typename std::multimap<
-				utils::Address,
-				StaticCodeFunction*>;
-
 	public:
 		StaticCodeAnalysis(
 				Config* c,
@@ -87,8 +32,8 @@ class StaticCodeAnalysis
 				bool debug = false);
 		~StaticCodeAnalysis();
 
-		const DetectedFunctionsMultimap& getAllDetections() const;
-		const DetectedFunctionsPtrMap& getConfirmedDetections() const;
+		const stacofin::Finder::DetectedFunctionsMultimap& getAllDetections() const;
+		const stacofin::Finder::DetectedFunctionsPtrMap& getConfirmedDetections() const;
 
 	private:
 		void solveReferences();
@@ -99,13 +44,13 @@ class StaticCodeAnalysis
 		utils::Address getAddressFromRef_arm(utils::Address ref);
 		utils::Address getAddressFromRef_ppc(utils::Address ref);
 
-		void checkRef(StaticCodeFunction::Reference& ref);
-		void checkRef_x86(StaticCodeFunction::Reference& ref);
+		void checkRef(stacofin::Reference& ref);
+		void checkRef_x86(stacofin::Reference& ref);
 
 		void confirmWithoutRefs();
 		void confirmAllRefsOk(std::size_t minFncSzWithoutRefs = 0x20);
 		void confirmPartialRefsOk(float okShare = 0.5);
-		void confirmFunction(StaticCodeFunction* f);
+		void confirmFunction(stacofin::DetectedFunction* f);
 
 	private:
 		Config* _config = nullptr;
@@ -122,19 +67,20 @@ class StaticCodeAnalysis
 		std::map<utils::Address, std::string> _imports;
 		std::set<std::string> _sectionNames;
 
-		DetectedFunctionsMultimap _allDetections;
-		DetectedFunctionsPtrMap _confirmedDetections;
-		DetectedFunctionsPtrMultimap _rejectedDetections;
+		stacofin::Finder::DetectedFunctionsPtrMap _confirmedDetections;
+		stacofin::Finder::DetectedFunctionsPtrMultimap _rejectedDetections;
 
 	private:
-		struct StaticCodeFunctionComp
+		struct DetectedFunctionComp
 		{
-			bool operator()(const StaticCodeFunction* a, const StaticCodeFunction* b) const
+			bool operator()(
+					const stacofin::DetectedFunction* a,
+					const stacofin::DetectedFunction* b) const
 			{
 				return *a < *b;
 			}
 		};
-		std::set<StaticCodeFunction*, StaticCodeFunctionComp> _worklistDetections;
+		std::set<stacofin::DetectedFunction*, DetectedFunctionComp> _worklistDetections;
 };
 
 } // namespace bin2llvmir
