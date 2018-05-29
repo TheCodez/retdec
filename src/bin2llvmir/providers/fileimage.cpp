@@ -79,11 +79,11 @@ FileImage::FileImage(
 
 	if (config->getConfig().tools.isMsvc())
 	{
-		_image->getFileFormat()->loadCppVtableMsvc();
+		_rtti.findMsvc(getImage());
 	}
 	else
 	{
-		_image->getFileFormat()->loadCppVtableGcc();
+		_rtti.findGcc(getImage());
 	}
 }
 
@@ -95,6 +95,11 @@ retdec::loader::Image* FileImage::getImage() const
 retdec::fileformat::FileFormat* FileImage::getFileFormat() const
 {
 	return _image->getFileFormat();
+}
+
+const retdec::rtti_finder::RttiFinder& FileImage::getRtti() const
+{
+	return _rtti;
 }
 
 ConstantInt* FileImage::getConstantInt(

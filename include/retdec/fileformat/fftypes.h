@@ -8,11 +8,6 @@
 #define RETDEC_FILEFORMAT_FFTYPES_H
 
 #include "retdec/fileformat/types/certificate_table/certificate_table.h"
-#include "retdec/fileformat/types/cpp_rtti/rtti_gcc.h"
-#include "retdec/fileformat/types/cpp_rtti/rtti_msvc.h"
-#include "retdec/fileformat/types/cpp_vtable/vtable_gcc.h"
-#include "retdec/fileformat/types/cpp_vtable/vtable_msvc.h"
-#include "retdec/fileformat/types/cpp_vtable/vtable.h"
 #include "retdec/fileformat/types/dotnet_headers/clr_header.h"
 #include "retdec/fileformat/types/dotnet_headers/metadata_header.h"
 #include "retdec/fileformat/types/dotnet_headers/stream.h"

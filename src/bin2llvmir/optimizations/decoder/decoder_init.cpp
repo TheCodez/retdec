@@ -926,12 +926,12 @@ void Decoder::initVtables()
 {
 	LOG << "\n" << "initVtables():" << std::endl;
 
-	std::vector<const fileformat::Vtable*> vtable;
-	for (auto& p : _image->getFileFormat()->getCppVtablesGcc())
+	std::vector<const rtti_finder::Vtable*> vtable;
+	for (auto& p : _image->getRtti().getVtablesGcc())
 	{
 		vtable.push_back(&p.second);
 	}
-	for (auto& p : _image->getFileFormat()->getCppVtablesMsvc())
+	for (auto& p : _image->getRtti().getVtablesMsvc())
 	{
 		vtable.push_back(&p.second);
 	}

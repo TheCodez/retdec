@@ -52,13 +52,13 @@ bool ClassHierarchyAnalysis::runOnModule(Module& M)
 
 IrModifier irModif(&M, config);
 
-std::vector<const fileformat::Vtable*> vtable;
+std::vector<const rtti_finder::Vtable*> vtable;
 
-for (auto& p : image->getFileFormat()->getCppVtablesGcc())
+for (auto& p : image->getRtti().getVtablesGcc())
 {
 	vtable.push_back(&p.second);
 }
-for (auto& p : image->getFileFormat()->getCppVtablesMsvc())
+for (auto& p : image->getRtti().getVtablesMsvc())
 {
 	vtable.push_back(&p.second);
 }
@@ -183,11 +183,10 @@ for (auto* p : vtable)
 
 void ClassHierarchyAnalysis::processRttiGcc()
 {
-	auto* ff = image->getFileFormat();
-	auto& rttiGcc = ff->getCppRttiGcc();
+	auto& rttiGcc = image->getRtti().getRttiGcc();
 
 	Class* c = nullptr;
-	std::map<const fileformat::ClassTypeInfo*, Class*> rtti2class;
+	std::map<const rtti_finder::ClassTypeInfo*, Class*> rtti2class;
 
 	for (auto& rtti : rttiGcc)
 	{
@@ -203,13 +202,13 @@ void ClassHierarchyAnalysis::processRttiGcc()
 		assert(fIt != rtti2class.end());
 		c = fIt->second;
 
-		if (auto* scti = dynamic_cast<fileformat::SiClassTypeInfo*>(rtti.second.get()))
+		if (auto* scti = dynamic_cast<rtti_finder::SiClassTypeInfo*>(rtti.second.get()))
 		{
 			auto fIt = rtti2class.find(scti->baseClass.get());
 			assert(fIt != rtti2class.end());
 			c->superClasses.insert(fIt->second);
 		}
-		else if (auto* vcti = dynamic_cast<fileformat::VmiClassTypeInfo*>(rtti.second.get()))
+		else if (auto* vcti = dynamic_cast<rtti_finder::VmiClassTypeInfo*>(rtti.second.get()))
 		{
 			for (auto& bi : vcti->baseInfo)
 			{
@@ -225,11 +224,10 @@ void ClassHierarchyAnalysis::processRttiGcc()
 
 void ClassHierarchyAnalysis::processRttiMsvc()
 {
-	auto* ff = image->getFileFormat();
-	auto& rttiA = ff->getCppRttiMsvc();
+	auto& rttiA = image->getRtti().getRttiMsvc();
 
 	Class* c = nullptr;
-	std::map<const fileformat::RTTITypeDescriptor*, Class*> rtti2class;
+	std::map<const rtti_finder::RTTITypeDescriptor*, Class*> rtti2class;
 
 	for (auto& rtti : rttiA.typeDescriptors)
 	{
@@ -261,15 +259,14 @@ void ClassHierarchyAnalysis::processRttiMsvc()
 }
 
 void ClassHierarchyAnalysis::processVtablesGcc(
-		std::map<const fileformat::ClassTypeInfo*, Class*> &rtti2class)
+		std::map<const rtti_finder::ClassTypeInfo*, Class*> &rtti2class)
 {
-	auto* ff = image->getFileFormat();
-	auto& vtables = ff->getCppVtablesGcc();
+	auto& vtables = image->getRtti().getVtablesGcc();
 	auto& cdtor = ctorDtor.getResults();
 
 	for (auto& vt : vtables)
 	{
-		const fileformat::VtableGcc* gcc = &vt.second;
+		const rtti_finder::VtableGcc* gcc = &vt.second;
 		auto fIt = rtti2class.find(gcc->rtti.get());
 		assert(fIt != rtti2class.end());
 		auto* c = fIt->second;
@@ -295,15 +292,14 @@ void ClassHierarchyAnalysis::processVtablesGcc(
 }
 
 void ClassHierarchyAnalysis::processVtablesMsvc(
-		std::map<const fileformat::RTTITypeDescriptor*, Class*> &rtti2class)
+		std::map<const rtti_finder::RTTITypeDescriptor*, Class*> &rtti2class)
 {
-	auto* ff = image->getFileFormat();
-	auto& vtables = ff->getCppVtablesMsvc();
+	auto& vtables = image->getRtti().getVtablesMsvc();
 	auto& cdtor = ctorDtor.getResults();
 
 	for (auto& vt : vtables)
 	{
-		const fileformat::VtableMsvc* msvc = &vt.second;
+		const rtti_finder::VtableMsvc* msvc = &vt.second;
 		auto fIt = rtti2class.find(msvc->rtti->typeDescriptor);
 		assert(fIt != rtti2class.end());
 		auto* c = fIt->second;

@@ -1,22 +1,22 @@
 /**
- * @file include/retdec/fileformat/types/cpp_vtable/vtable_gcc.h
+ * @file include/retdec/rtti-finder/vtable/vtable_gcc.h
  * @brief MSVC C++ virtual table structures.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
-#ifndef RETDEC_FILEFORMAT_TYPES_CPP_VTABLE_VTABLE_MSVC_H
-#define RETDEC_FILEFORMAT_TYPES_CPP_VTABLE_VTABLE_MSVC_H
+#ifndef RETDEC_RTTI_FINDER_VTABLE_VTABLE_MSVC_H
+#define RETDEC_RTTI_FINDER_VTABLE_VTABLE_MSVC_H
 
 #include <cstdint>
 #include <map>
 #include <vector>
 
-#include "retdec/fileformat/types/cpp_rtti/rtti_msvc.h"
-#include "retdec/fileformat/types/cpp_vtable/vtable.h"
+#include "retdec/rtti-finder/rtti/rtti_msvc.h"
+#include "retdec/rtti-finder/vtable/vtable.h"
 #include "retdec/utils/address.h"
 
 namespace retdec {
-namespace fileformat {
+namespace rtti_finder {
 
 /**
  * MSVC virtual table sturcture ( [] means array of entries ):
@@ -37,9 +37,9 @@ class VtableMsvc : public Vtable
 		RTTICompleteObjectLocator* rtti = nullptr;
 };
 
-using CppVtablesMsvc = std::map<retdec::utils::Address, VtableMsvc>;
+using VtablesMsvc = std::map<retdec::utils::Address, VtableMsvc>;
 
-} // namespace fileformat
+} // namespace rtti_finder
 } // namespace retdec
 
 #endif

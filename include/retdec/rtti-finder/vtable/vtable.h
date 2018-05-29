@@ -1,5 +1,5 @@
 /**
- * @file include/retdec/fileformat/types/cpp_vtable/vtable.h
+ * @file include/retdec/rtti-finder/vtable/vtable.h
  * @brief General C++ virtual table structures.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
@@ -13,7 +13,7 @@
 #include "retdec/utils/address.h"
 
 namespace retdec {
-namespace fileformat {
+namespace rtti_finder {
 
 /**
  * One item in virtual table.
@@ -50,7 +50,7 @@ class Vtable
 		std::vector<VtableItem> virtualFncAddresses;
 };
 
-} // namespace fileformat
+} // namespace rtti_finder
 } // namespace retdec
 
 #endif

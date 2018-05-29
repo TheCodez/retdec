@@ -410,7 +410,7 @@ bool Image::setXBytes(std::uint64_t address, const std::vector<std::uint8_t>& va
  *                set the pointer value to where this parameter points.
  * @return @c True if pointer on address, @c false otherwise
  */
-bool Image::isPointer(std::uint64_t address, std::uint64_t* pointer)
+bool Image::isPointer(std::uint64_t address, std::uint64_t* pointer) const
 {
 	std::uint64_t val = 0;
 	if (getWord(address, val) && hasDataOnAddress(val))

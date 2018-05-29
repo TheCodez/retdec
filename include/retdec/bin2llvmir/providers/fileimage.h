@@ -16,6 +16,7 @@
 #include "retdec/bin2llvmir/providers/config.h"
 #include "retdec/bin2llvmir/providers/debugformat.h"
 #include "retdec/loader/loader/image.h"
+#include "retdec/rtti-finder/rtti_finder.h"
 
 namespace retdec {
 namespace bin2llvmir {
@@ -89,11 +90,17 @@ class FileImage
 	public:
 		retdec::fileformat::FileFormat* getFileFormat() const;
 
+	// Other getters.
+	//
+	public:
+		const retdec::rtti_finder::RttiFinder& getRtti() const;
+
 	// Private data.
 	//
 	private:
 		llvm::Module* _module = nullptr;
 		std::unique_ptr<retdec::loader::Image> _image;
+		retdec::rtti_finder::RttiFinder _rtti;
 };
 
 /**

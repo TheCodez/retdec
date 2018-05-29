@@ -33,12 +33,12 @@ class Class
 		std::set<const llvm::Function*> destructors;
 		std::set<const llvm::Function*> methods;
 		std::set<const llvm::Function*> virtualFunctions;
-		std::set<const fileformat::Vtable*> virtualFunctionTables;
+		std::set<const rtti_finder::Vtable*> virtualFunctionTables;
 		std::set<Class*> superClasses;
 		llvm::Value* structure;
 
-		const fileformat::ClassTypeInfo* gccRtti = nullptr;
-		const fileformat::RTTITypeDescriptor* msvcRtti = nullptr;
+		const rtti_finder::ClassTypeInfo* gccRtti = nullptr;
+		const rtti_finder::RTTITypeDescriptor* msvcRtti = nullptr;
 };
 
 class ClassHierarchy

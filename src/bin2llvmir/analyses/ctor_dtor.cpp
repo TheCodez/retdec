@@ -72,7 +72,7 @@ void CtorDtor::findPossibleCtorsDtors()
 				addr = config->getGlobalAddress(gv);
 			}
 
-			auto* vt = image->getFileFormat()->getVtable(addr);
+			auto* vt = image->getRtti().getVtable(addr);
 			if (vt)
 			{
 				LOG << "\t" << llvmObjToString(store)

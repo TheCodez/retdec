@@ -1,5 +1,5 @@
 /**
- * @file include/retdec/fileformat/types/cpp_rtti/rtti_msvc.h
+ * @file include/retdec/rtti-finder/rtti/rtti_msvc.h
  * @brief MSVC C++ RTTI structures.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  *
@@ -7,8 +7,8 @@
  * http://www.openrce.org/articles/full_view/23
  */
 
-#ifndef RETDEC_FILEFORMAT_TYPES_CPP_RTTI_RTTI_MSVC_H
-#define RETDEC_FILEFORMAT_TYPES_CPP_RTTI_RTTI_MSVC_H
+#ifndef RETDEC_RTTI_FINDER_RTTI_RTTI_MSVC_H
+#define RETDEC_RTTI_FINDER_RTTI_RTTI_MSVC_H
 
 #include <cstdint>
 #include <map>
@@ -17,7 +17,7 @@
 #include "retdec/utils/address.h"
 
 namespace retdec {
-namespace fileformat {
+namespace rtti_finder {
 
 class RTTICompleteObjectLocator;
 class RTTITypeDescriptor;
@@ -154,7 +154,7 @@ class RTTICompleteObjectLocator
 /**
  * RTTI container.
  */
-class CppRttiMsvc
+class RttiMsvc
 {
 	public:
 		std::map<retdec::utils::Address, RTTICompleteObjectLocator> objLocators;
@@ -163,7 +163,7 @@ class CppRttiMsvc
 		std::map<retdec::utils::Address, RTTIClassHierarchyDescriptor> classDescriptors;
 };
 
-} // namespace fileformat
+} // namespace rtti_finder
 } // namespace retdec
 
 #endif

@@ -27,8 +27,8 @@ class ClassHierarchyAnalysis : public llvm::ModulePass
 
 		void processRttiGcc();
 		void processRttiMsvc();
-		void processVtablesGcc(std::map<const fileformat::ClassTypeInfo*, Class*> &rtti2class);
-		void processVtablesMsvc(std::map<const fileformat::RTTITypeDescriptor*, Class*> &rtti2class);
+		void processVtablesGcc(std::map<const rtti_finder::ClassTypeInfo*, Class*> &rtti2class);
+		void processVtablesMsvc(std::map<const rtti_finder::RTTITypeDescriptor*, Class*> &rtti2class);
 		void processCtorsDtors();
 
 		void setToConfig(llvm::Module* m) const;

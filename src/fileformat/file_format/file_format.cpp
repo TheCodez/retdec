@@ -22,7 +22,6 @@
 #include "retdec/fileformat/file_format/file_format.h"
 #include "retdec/fileformat/file_format/intel_hex/intel_hex_format.h"
 #include "retdec/fileformat/file_format/raw_data/raw_data_format.h"
-#include "retdec/fileformat/types/cpp_vtable/vtable_finder.h"
 #include "retdec/fileformat/types/strings/character_iterator.h"
 #include "retdec/fileformat/utils/conversions.h"
 #include "retdec/fileformat/utils/file_io.h"
@@ -476,30 +475,6 @@ bool FileFormat::isInValidState() const
 LoadFlags FileFormat::getLoadFlags() const
 {
 	return loadFlags;
-}
-
-/**
- * Load GCC/Clang C++ vtables and RTTI from file.
- * Fill @c vtablesGcc and @c rttiGcc;
- *
- * @c vtablesGcc is not filled by default, @c FileFormat user must call this
- * method if access to this information is desired.
- */
-void FileFormat::loadCppVtableGcc()
-{
-	findGccVtables(this, vtablesGcc, rttiGcc);
-}
-
-/**
- * Load MSVC C++ vtables and RTTI from file.
- * Fill @c vtablesMsvc and @c rttiMsvc.
- *
- * @c vtablesMsvc is not filled by default, @c FileFormat user must call this
- * method if access to this information is desired.
- */
-void FileFormat::loadCppVtableMsvc()
-{
-	findMsvcVtables(this, vtablesMsvc, rttiMsvc);
 }
 
 /**
@@ -1683,29 +1658,6 @@ const Export* FileFormat::getExport(unsigned long long address) const
 }
 
 /**
- * Get vtable on address @a address.
- * This tries to get vtable from both GCC and MSVC vtable containers
- * and expect that only one of them was loaded -> there should not be a vtable
- * at the address in both of them.
- */
-const Vtable* FileFormat::getVtable(unsigned long long address) const
-{
-	auto gccIt = vtablesGcc.find(address);
-	if (gccIt != vtablesGcc.end())
-	{
-		return &gccIt->second;
-	}
-
-	auto msvcIt = vtablesMsvc.find(address);
-	if (msvcIt != vtablesMsvc.end())
-	{
-		return &msvcIt->second;
-	}
-
-	return nullptr;
-}
-
-/**
  * Get resource that represents side-by-side assembly manifest
  * @return Pointer to manifest resource or @c nullptr if such resource is not found
  */
@@ -1902,50 +1854,6 @@ const std::vector<ElfNoteSecSeg>&FileFormat::getElfNoteSecSegs() const
 const std::set<std::uint64_t> &FileFormat::getUnknownRelocations() const
 {
 	return unknownRelocs;
-}
-
-/**
- * @return C++ GCC/Clang virtual tables, including RTTI information.
- *
- * These information are not parsed by default, @c FileFormat user must
- * initialize it by calling @c loadCppVtableGcc() method first.
- */
-const CppVtablesGcc& FileFormat::getCppVtablesGcc() const
-{
-	return vtablesGcc;
-}
-
-/**
- * @return C++ MSVC virtual tables, including RTTI information.
- *
- * These information are not parsed by default, @c FileFormat user must
- * initialize it by calling @c loadCppVtableMsvc() method first.
- */
-const CppVtablesMsvc& FileFormat::getCppVtablesMsvc() const
-{
-	return vtablesMsvc;
-}
-
-/**
- * @return C++ GCC/Clang RTTI information.
- *
- * These information are not parsed by default, @c FileFormat user must
- * initialize it by calling @c loadCppVtableGcc() method first.
- */
-const CppRttiGcc& FileFormat::getCppRttiGcc() const
-{
-	return rttiGcc;
-}
-
-/**
- * @return C++ MSVC RTTI information.
- *
- * These information are not parsed by default, @c FileFormat user must
- * initialize it by calling @c loadCppVtableMsvc() method first.
- */
-const CppRttiMsvc& FileFormat::getCppRttiMsvc() const
-{
-	return rttiMsvc;
 }
 
 /**

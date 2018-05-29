@@ -1,13 +1,13 @@
 /**
- * @file src/fileformat/types/cpp_rtti/rtti_gcc_parser.cpp
+ * @file src/rtti-finder/rtti/rtti_gcc_parser.cpp
  * @brief Parse C++ GCC/Clang RTTI structures.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  */
 
 #include <iostream>
 
-#include "retdec/fileformat/file_format/file_format.h"
-#include "retdec/fileformat/types/cpp_rtti/rtti_gcc_parser.h"
+#include "retdec/loader/loader/image.h"
+#include "retdec/rtti-finder/rtti/rtti_gcc_parser.h"
 #include "retdec/utils/string.h"
 
 #define LOG \
@@ -18,14 +18,14 @@ const bool debug_enabled = false;
 using namespace retdec::utils;
 
 namespace retdec {
-namespace fileformat {
+namespace rtti_finder {
 
 /**
  * Pointer to RTTI entry if parsed ok, @c nullptr otherwise.
  */
 std::shared_ptr<ClassTypeInfo> parseGccRtti(
-		FileFormat* ff,
-		CppRttiGcc& rttis,
+		const retdec::loader::Image* img,
+		RttiGcc& rttis,
 		retdec::utils::Address rttiAddr)
 {
 	LOG << "\n\t" << "parseGccRtti() @ " << rttiAddr << std::endl;
@@ -37,16 +37,16 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 		return findRtti->second;
 	}
 
-	size_t wordSize = ff->getBytesPerWord();
+	size_t wordSize = img->getBytesPerWord();
 
 	Address addr = rttiAddr;
 	std::uint64_t vptrAddr = 0;
-	if (!ff->getWord(addr, vptrAddr))
+	if (!img->getWord(addr, vptrAddr))
 	{
 		LOG << "\t[FAILED] vptrAddr @ " << addr <<  std::endl << std::endl;
 		return nullptr;
 	}
-	if (vptrAddr != 0 && !ff->getSectionFromAddress(vptrAddr))
+	if (vptrAddr != 0 && !img->getSegmentFromAddress(vptrAddr))
 	{
 		LOG << "\t[FAILED] vptrAddr not valid = " << vptrAddr
 			 << " @ " << addr << std::endl << std::endl;
@@ -56,14 +56,14 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 	addr += wordSize;
 
 	std::uint64_t nameAddr = 0;
-	if (!ff->getWord(addr, nameAddr))
+	if (!img->getWord(addr, nameAddr))
 	{
 		LOG << "\t[FAILED] nameAddr @ " << addr <<  std::endl << std::endl;
 		return nullptr;
 	}
 	LOG << "\t\tname = " << nameAddr << "\n";
 	std::string name;
-	if (!ff->getNTBS(nameAddr, name))
+	if (!img->getNTBS(nameAddr, name))
 	{
 		LOG << "\t[FAILED] name @ " << nameAddr <<  std::endl << std::endl;
 		return nullptr;
@@ -80,7 +80,7 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 	Address baseAddr;
 	Address addrOfBaseAddr = addr;
 	std::uint64_t ba = 0;
-	if (!ff->getWord(addrOfBaseAddr, ba))
+	if (!img->getWord(addrOfBaseAddr, ba))
 	{
 		LOG << "\t[NON-CRITICAL FAIL] baseAddr @ " << addrOfBaseAddr
 			<< std::endl << std::endl;
@@ -92,7 +92,7 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 	}
 	Address flags;
 	std::uint64_t f = 0;
-	if (!ff->get4Byte(addr, f))
+	if (!img->get4Byte(addr, f))
 	{
 		LOG << "\t[NON-CRITICAL FAIL] flags @ " << addr
 			<< std::endl << std::endl;
@@ -106,7 +106,7 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 
 	Address baseCount;
 	std::uint64_t bc = 0;
-	if (!ff->get4Byte(addr, bc))
+	if (!img->get4Byte(addr, bc))
 	{
 		LOG << "\t[NON-CRITICAL FAIL] baseCount @ " << addr
 			<< std::endl << std::endl;
@@ -121,10 +121,10 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 	std::shared_ptr<ClassTypeInfo> cti;
 
 	std::shared_ptr<ClassTypeInfo> baseRtti;
-	if (baseAddr.isDefined() && ff->isPointer(addrOfBaseAddr)
+	if (baseAddr.isDefined() && img->isPointer(addrOfBaseAddr)
 			&& baseAddr != rttiAddr)
 	{
-		baseRtti = parseGccRtti(ff, rttis, baseAddr);
+		baseRtti = parseGccRtti(img, rttis, baseAddr);
 		if (baseRtti == nullptr)
 		{
 			LOG << "\t[FAILED] parsing base rtti @ " << baseAddr << "\n";
@@ -157,7 +157,7 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 			BaseClassTypeInfo bcti;
 
 			std::uint64_t mbaseAddr = 0;
-			if (!ff->getWord(addr, mbaseAddr))
+			if (!img->getWord(addr, mbaseAddr))
 			{
 				LOG << "\t\t[NON-CRITICAL FAIL] mbaseAddr @ " << addr
 					<< std::endl << std::endl;
@@ -168,9 +168,9 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 			bcti.baseClassAddr = mbaseAddr;
 
 			baseRtti = nullptr;
-			if (ff->isPointer(addr) && mbaseAddr != rttiAddr)
+			if (img->isPointer(addr) && mbaseAddr != rttiAddr)
 			{
-				baseRtti = parseGccRtti(ff, rttis, mbaseAddr);
+				baseRtti = parseGccRtti(img, rttis, mbaseAddr);
 			}
 			if (baseRtti == nullptr)
 			{
@@ -182,7 +182,7 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 
 			addr += wordSize;
 			std::uint64_t oflags = 0;
-			if (!ff->get4Byte(addr, oflags))
+			if (!img->get4Byte(addr, oflags))
 			{
 				LOG << "\t\t[NON-CRITICAL FAIL] oflags @ " << addr
 					<< std::endl << std::endl;
@@ -222,7 +222,7 @@ std::shared_ptr<ClassTypeInfo> parseGccRtti(
 	return rttis.emplace(rttiAddr, cti).first->second;
 }
 
-void finalizeGccRtti(CppRttiGcc& rttis)
+void finalizeGccRtti(RttiGcc& rttis)
 {
 	for (auto &rtti : rttis)
 	{
@@ -248,5 +248,5 @@ void finalizeGccRtti(CppRttiGcc& rttis)
 	}
 }
 
-} // namespace fileformat
+} // namespace rtti_finder
 } // namespace retdec

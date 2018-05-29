@@ -1,5 +1,5 @@
 /**
- * @file include/retdec/fileformat/types/cpp_rtti/rtti_gcc.h
+ * @file include/retdec/rtti-finder/rtti/rtti_gcc.h
  * @brief GCC/Clang C++ RTTI structures.
  * @copyright (c) 2017 Avast Software, licensed under the MIT license
  *
@@ -15,8 +15,8 @@
  * but I do not know how.
  */
 
-#ifndef RETDEC_FILEFORMAT_TYPES_CPP_RTTI_RTTI_GCC_H
-#define RETDEC_FILEFORMAT_TYPES_CPP_RTTI_RTTI_GCC_H
+#ifndef RETDEC_RTTI_FINDER_RTTI_RTTI_GCC_H
+#define RETDEC_RTTI_FINDER_RTTI_RTTI_GCC_H
 
 #include <cstdint>
 #include <map>
@@ -26,7 +26,7 @@
 #include "retdec/utils/address.h"
 
 namespace retdec {
-namespace fileformat {
+namespace rtti_finder {
 
 class TypeInfo;
 class ClassTypeInfo;
@@ -161,11 +161,11 @@ class BaseClassTypeInfo
 /**
  * RTTI container.
  */
-using CppRttiGcc = std::map<
+using RttiGcc = std::map<
 		retdec::utils::Address,
 		std::shared_ptr<ClassTypeInfo>>;
 
-} // namespace fileformat
+} // namespace rtti_finder
 } // namespace retdec
 
 #endif
