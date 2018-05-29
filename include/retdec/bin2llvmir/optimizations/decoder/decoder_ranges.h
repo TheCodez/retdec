@@ -22,11 +22,13 @@ class RangesToDecode
 		void addPrimary(const utils::AddressRange& r);
 		void addAlternative(utils::Address s, utils::Address e);
 		void addAlternative(const utils::AddressRange& r);
+		void promoteAlternativeToPrimary();
 
 		void remove(utils::Address s, utils::Address e);
 		void remove(const utils::AddressRange& r);
 		void removeZeroSequences(FileImage* image);
 
+		bool isStrict() const;
 		bool primaryEmpty() const;
 		bool alternativeEmpty() const;
 
@@ -50,6 +52,7 @@ class RangesToDecode
 		utils::AddressRangeContainer _primaryRanges;
 		utils::AddressRangeContainer _alternativeRanges;
 		unsigned archInsnAlign = 0;
+		bool _strict = false;
 };
 
 } // namespace bin2llvmir

@@ -88,7 +88,8 @@ class Decoder : public llvm::ModulePass
 		void decodeJumpTarget(const JumpTarget& jt);
 		std::size_t decodeJumpTargetDryRun(
 				const JumpTarget& jt,
-				ByteData bytes);
+				ByteData bytes,
+				bool strict = false);
 		cs_mode determineMode(cs_insn* insn, utils::Address& target);
 		capstone2llvmir::Capstone2LlvmIrTranslator::TranslationResultOne
 				translate(
@@ -187,19 +188,22 @@ class Decoder : public llvm::ModulePass
 	private:
 		std::size_t decodeJumpTargetDryRun_x86(
 				const JumpTarget& jt,
-				ByteData bytes);
+				ByteData bytes,
+				bool strict = false);
 
 	// ARM specific.
 	//
 	private:
 		std::size_t decodeJumpTargetDryRun_arm(
 				const JumpTarget& jt,
-				ByteData bytes);
+				ByteData bytes,
+				bool strict = false);
 		std::size_t decodeJumpTargetDryRun_arm(
 				const JumpTarget& jt,
 				ByteData bytes,
 				cs_mode mode,
-				std::size_t &decodedSz);
+				std::size_t &decodedSz,
+				bool strict = false);
 		void patternsPseudoCall_arm(llvm::CallInst*& call, AsmInstruction& pAi);
 		cs_mode determineMode_arm(cs_insn* insn, utils::Address& target);
 
@@ -214,7 +218,8 @@ class Decoder : public llvm::ModulePass
 				cs_insn* i);
 		std::size_t decodeJumpTargetDryRun_mips(
 				const JumpTarget& jt,
-				ByteData bytes);
+				ByteData bytes,
+				bool strict = false);
 		void initializeGpReg_mips();
 
 	// PowerPC specific.
@@ -222,7 +227,8 @@ class Decoder : public llvm::ModulePass
 	private:
 		std::size_t decodeJumpTargetDryRun_ppc(
 				const JumpTarget& jt,
-				ByteData bytes);
+				ByteData bytes,
+				bool strict = false);
 
 	// IR modifications.
 	//

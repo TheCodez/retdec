@@ -57,8 +57,14 @@ bool Decoder::disasm_mips(
 
 std::size_t Decoder::decodeJumpTargetDryRun_mips(
 		const JumpTarget& jt,
-		ByteData bytes)
+		ByteData bytes,
+		bool strict)
 {
+	if (strict)
+	{
+		return true;
+	}
+
 	static csh ce = _c2l->getCapstoneEngine();
 
 	uint64_t addr = jt.getAddress();

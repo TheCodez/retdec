@@ -199,6 +199,11 @@ void Decoder::initRanges()
 	}
 
 	_ranges.removeZeroSequences(_image);
+
+	if (_ranges.primaryEmpty())
+	{
+		_ranges.promoteAlternativeToPrimary();
+	}
 }
 
 /**

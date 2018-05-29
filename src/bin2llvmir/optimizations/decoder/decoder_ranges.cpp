@@ -50,6 +50,12 @@ void RangesToDecode::addAlternative(const utils::AddressRange& r)
 	addAlternative(r.getStart(), r.getEnd());
 }
 
+void RangesToDecode::promoteAlternativeToPrimary()
+{
+	_primaryRanges = std::move(_alternativeRanges);
+	_strict = true;
+}
+
 void RangesToDecode::remove(utils::Address s, utils::Address e)
 {
 	e = align(e, archInsnAlign);
@@ -142,6 +148,11 @@ void RangesToDecode::removeZeroSequences(
 	{
 		rs.remove(range);
 	}
+}
+
+bool RangesToDecode::isStrict() const
+{
+	return _strict;
 }
 
 bool RangesToDecode::primaryEmpty() const

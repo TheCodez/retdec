@@ -44,13 +44,24 @@ bool insnWrittesPc(csh& ce, cs_insn* insn)
 
 std::size_t Decoder::decodeJumpTargetDryRun_arm(
 		const JumpTarget& jt,
-		ByteData bytes)
+		ByteData bytes,
+		bool strict)
 {
 	std::size_t decodedSzArm = 0;
-	auto skipArm = decodeJumpTargetDryRun_arm(jt, bytes, CS_MODE_ARM, decodedSzArm);
+	auto skipArm = decodeJumpTargetDryRun_arm(
+			jt,
+			bytes,
+			CS_MODE_ARM,
+			decodedSzArm,
+			strict);
 
 	std::size_t decodedSzThumb = 0;
-	auto skipThumb = decodeJumpTargetDryRun_arm(jt, bytes, CS_MODE_THUMB, decodedSzThumb);
+	auto skipThumb = decodeJumpTargetDryRun_arm(
+			jt,
+			bytes,
+			CS_MODE_THUMB,
+			decodedSzThumb,
+			strict);
 
 	// ARM ok.
 	//
@@ -82,11 +93,17 @@ std::size_t Decoder::decodeJumpTargetDryRun_arm(
 	}
 }
 
+bool looksLikeArmFunctionStart(cs_insn* insn)
+{
+	return insn->id == ARM_INS_PUSH;
+}
+
 std::size_t Decoder::decodeJumpTargetDryRun_arm(
 		const JumpTarget& jt,
 		ByteData bytes,
 		cs_mode mode,
-		std::size_t &decodedSz)
+		std::size_t &decodedSz,
+		bool strict)
 {
 
 	auto basicMode = _c2l->getBasicMode();
@@ -101,6 +118,11 @@ std::size_t Decoder::decodeJumpTargetDryRun_arm(
 	while (cs_disasm_iter(ce, &bytes.first, &bytes.second, &addr, _dryCsInsn))
 	{
 		decodedSz += _dryCsInsn->size;
+
+		if (strict && first && !looksLikeArmFunctionStart(_dryCsInsn))
+		{
+			return true;
+		}
 
 		if (jt.getType() == JumpTarget::eType::LEFTOVER
 				&& (first || nops > 0)

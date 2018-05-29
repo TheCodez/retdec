@@ -231,12 +231,15 @@ void Decoder::decodeJumpTarget(const JumpTarget& jt)
 		bytes.second = sz < bytes.second ? sz : bytes.second;
 	}
 
-	if (jt.getType() == JumpTarget::eType::LEFTOVER
-			|| (alternative
+	bool useAlt = alternative
 			&& jt.getType() > JumpTarget::eType::CONTROL_FLOW_RETURN_TARGET
-			&& jt.getType() != JumpTarget::eType::ENTRY_POINT))
+			&& jt.getType() != JumpTarget::eType::ENTRY_POINT;
+	bool useStrict = _ranges.isStrict() && !useAlt;
+
+	if (jt.getType() == JumpTarget::eType::LEFTOVER
+			|| useAlt)
 	{
-		if (auto skipSz = decodeJumpTargetDryRun(jt, bytes))
+		if (auto skipSz = decodeJumpTargetDryRun(jt, bytes, useStrict))
 		{
 			AddressRange sr(start, start+skipSz);
 			LOG << "\t\t" << "dry run failed -> skip range = " << sr
@@ -364,25 +367,26 @@ Decoder::translate(ByteData& bytes, utils::Address& addr, llvm::IRBuilder<>& irb
  */
 std::size_t Decoder::decodeJumpTargetDryRun(
 		const JumpTarget& jt,
-		std::pair<const std::uint8_t*, std::uint64_t> bytes)
+		std::pair<const std::uint8_t*, std::uint64_t> bytes,
+		bool strict)
 {
 	// Architecture-specific dry runs.
 	//
 	if (_config->getConfig().architecture.isX86())
 	{
-		return decodeJumpTargetDryRun_x86(jt, bytes);
+		return decodeJumpTargetDryRun_x86(jt, bytes, strict);
 	}
 	else if (_config->getConfig().architecture.isArmOrThumb())
 	{
-		return decodeJumpTargetDryRun_arm(jt, bytes);
+		return decodeJumpTargetDryRun_arm(jt, bytes, strict);
 	}
 	else if (_config->getConfig().architecture.isMipsOrPic32())
 	{
-		return decodeJumpTargetDryRun_mips(jt, bytes);
+		return decodeJumpTargetDryRun_mips(jt, bytes, strict);
 	}
 	else if (_config->getConfig().architecture.isPpc())
 	{
-		return decodeJumpTargetDryRun_ppc(jt, bytes);
+		return decodeJumpTargetDryRun_ppc(jt, bytes, strict);
 	}
 	else
 	{
