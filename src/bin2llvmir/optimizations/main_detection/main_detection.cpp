@@ -89,7 +89,8 @@ bool MainDetection::run()
 		mainAddr = getFromFunctionNames();
 	}
 
-	if (!_config->getConfig().isIda())
+	if (!(_config->getConfig().isIda()
+			&& _config->getConfig().parameters.isSomethingSelected()))
 	{
 		changed = applyResult(mainAddr);
 	}
