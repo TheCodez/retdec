@@ -2,20 +2,12 @@
 """Compilation and decompilation utility functions.
 """
 
-from __future__ import print_function
-
-import os
 import pathlib
 import re
 import subprocess
 import sys
 
-SCRIPT_DIR = os.popen("dirname \"" + os.popen("gnureadlink -e \"" + __file__ + "\"").read().rstrip("\n") + "\"").read() \
-    .rstrip("\n")
-if config.DECOMPILER_CONFIG == '':
-    DECOMPILER_CONFIG = SCRIPT_DIR + "/retdec-config.sh"
-
-_rc0 = subprocess.call([".", config.DECOMPILER_CONFIG], shell=True)
+import retdec_config as config
 
 
 def get_realpath(path):
@@ -78,7 +70,7 @@ def is_valid_archive(path):
               1 if file is invalid archive
     """
     # We use our own messages so throw original output away.
-    _rc0 = subprocess.call(config.AR + " " + path + " " + "--valid", shell=True, stderr=subprocess.STDOUT,
+    return subprocess.call(config.AR + " " + path + " " + "--valid", shell=True, stderr=subprocess.STDOUT,
                            stdout=None)
 
 
@@ -87,7 +79,7 @@ def archive_object_count(path):
     1 argument is needed - file path
     Returns - 1 if error occurred
     """
-    _rc0 = subprocess.call([config.AR, path, "--object-count"], shell=True)
+    return subprocess.call([config.AR, path, "--object-count"], shell=True)
 
 
 def archive_list_content(path):
@@ -95,7 +87,7 @@ def archive_list_content(path):
     1 argument is needed - file path
     Returns - 1 if number of arguments is incorrect
     """
-    _rc0 = subprocess.call([config.AR, path, "--list", "--no-numbers"], shell=True)
+    return subprocess.call([config.AR, path, "--list", "--no-numbers"], shell=True)
 
 
 def archive_list_numbered_content(path):
@@ -104,7 +96,7 @@ def archive_list_numbered_content(path):
     Returns - 1 if number of arguments is incorrect
     """
     print("Index\tName")
-    _rc0 = subprocess.call([config.AR, path, "--list"], shell=True)
+    return subprocess.call([config.AR, path, "--list"], shell=True)
 
 
 def archive_list_numbered_content_json(path):
@@ -112,7 +104,7 @@ def archive_list_numbered_content_json(path):
     1 argument is needed - file path
     Returns - 1 if number of arguments is incorrect
     """
-    _rc0 = subprocess.call([config.AR, path, "--list", "--json"], shell=True)
+    return subprocess.call([config.AR, path, "--list", "--json"], shell=True)
 
 
 def archive_get_by_name(path, name, output):
@@ -123,8 +115,8 @@ def archive_get_by_name(path, name, output):
     Returns - 1 if number of arguments is incorrect
             - 2 if error occurred
     """
-    if (not subprocess.call(config.AR + " " + path + " " + "--name" + " " + name + " " + "--output" + " " + output,
-                            shell=True, stderr=subprocess.STDOUT, stdout=None)):
+    if not subprocess.call(config.AR + " " + path + " " + "--name" + " " + name + " " + "--output" + " " + output,
+                           shell=True, stderr=subprocess.STDOUT, stdout=None):
         return 2
 
     return 1
@@ -138,10 +130,9 @@ def archive_get_by_index(archive, index, output):
     Returns - 1 if number of arguments is incorrect
             - 2 if error occurred
     """
-    if (not subprocess.call(
-            config.AR + " " + archive + " " + "--index" + " " + index + " " + "--output" + " " + output,
-            shell=True, stderr=subprocess.STDOUT, stdout=None)):
-        return (2)
+    if not subprocess.call(config.AR + " " + archive + " " + "--index" + " " + index + " " + "--output" + " " + output,
+                           shell=True, stderr=subprocess.STDOUT, stdout=None):
+        return 2
 
 
 def is_macho_archive(path):
@@ -150,7 +141,7 @@ def is_macho_archive(path):
     Returns - 0 if file is archive
               1 if file is not archive
     """
-    _rc0 = subprocess.call(str(config.EXTRACT) + " " + "--check-archive" + " " + path, shell=True,
+    return subprocess.call(config.EXTRACT + " " + "--check-archive" + " " + path, shell=True,
                            stderr=subprocess.STDOUT, stdout=None)
 
 
