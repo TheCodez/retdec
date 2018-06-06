@@ -85,13 +85,13 @@ while len(sys.argv) > 1:
             utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
 
         LIST_MODE = 1
-        PLAIN_FORMAT = 1
+        PLAIN_FORMAT = True
         subprocess.call(['shift'], shell=True)
     elif sys.argv[1] == '--json':
         if PLAIN_FORMAT:
             utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
         LIST_MODE = 1
-        JSON_FORMAT = 1
+        JSON_FORMAT = True
         subprocess.call(['shift'], shell=True)
     elif sys.argv[1] == '--':
         # Skip -- and store arguments for decompilation.
