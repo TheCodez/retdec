@@ -244,24 +244,24 @@ def check_arguments():
         # No output file was given, so use the default one.
         if (str(IN  ##*.) == 'll' ):
                 # Suffix .ll
-                OUT').setValue(str(IN %.ll) + '.' + str(HLL))
+                OUT = str(IN %.ll) + '.' + str(HLL))
         elif (str(IN  ##*.) == 'exe' ):
         # Suffix .exe
-        OUT').setValue(str(IN %.exe) + '.' + str(HLL))
+        OUT = str(IN %.exe) + '.' + str(HLL)
         elif (str(IN  ##*.) == 'elf' ):
         # Suffix .elf
-        OUT').setValue(str(IN %.elf) + '.' + str(HLL))
+        OUT = str(IN %.elf) + '.' + str(HLL)
         elif (str(IN  ##*.) == 'ihex' ):
         # Suffix .ihex
-        OUT').setValue(str(IN %.ihex) + '.' + str(HLL))
+        OUT = str(IN %.ihex) + '.' + str(HLL)
         elif (str(IN  ##*.) == 'macho' ):
         # Suffix .macho
-        OUT').setValue(str(IN %.macho) + '.' + str(HLL))
+        OUT = str(IN %.macho) + '.' + str(HLL)
         else:
-            OUT').setValue(str(IN) + str(PICKED_FILE) + '.' + str(HLL))
+            OUT = str(IN) + str(PICKED_FILE) + '.' + str(HLL)
         # If the output file name matches the input file name, we have to change the
         # output file name. Otherwise, the input file gets overwritten.
-        if (str(IN) == str(OUT)):
+        if str(IN) == str(OUT):
             OUT = str(IN %. *) + '.out.' + str(HLL)
 
         # Convert to absolute paths.
