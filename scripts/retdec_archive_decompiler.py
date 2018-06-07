@@ -10,41 +10,52 @@ import subprocess
 import retdec_config as config
 import retdec_utils as utils
 
-"""Configuration.
-Timeout for the decompilation script.
-"""
-TIMEOUT = 300
-JSON_FORMAT = False
-PLAIN_FORMAT = False
-LIBRARY_PATH = ''
-TMP_ARCHIVE = ''
-DECOMPILER_SH_ARGS = ''
-LIST_MODE = ''
+time_out = 300
+use_json_format = False
+use_plain_format = False
+library_path = ''
+tmp_archive = ''
+decompiler_sh_args = ''
+enable_list_mode = False
+file_count = 0
 
 
-def print_help():
+def get_parser():
     parser = argparse.ArgumentParser(description='Runs the decompilation script with the given optional arguments over'
                                                  ' all files in the given static library or prints list of files in'
                                                  ' plain text with --plain argument or in JSON format with'
                                                  ' --json argument. You can pass arguments for decompilation after'
-                                                 ' double-dash ' - -' argument.')
+                                                 ' double-dash -- argument.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    """
-    print('Runs the decompilation script with the given optional arguments over all files',file=file(str(_p1),'wb'))
-    print('in the given static library or prints list of files in plain text',file=file(str(_p1),'wb'))
-    print('with --plain argument or in JSON format with --json argument. You',file=file(str(_p1),'wb'))
-    print('can pass arguments for decompilation after double-dash '--' argument.',file=file(str(_p1),'wb'))
-    print('Usage:',file=file(str(_p1),'wb'))
-    print('    ' + __file__ + ' ARCHIVE [-- ARGS]',file=file(str(_p1),'wb'))
-    print('    ' + __file__ + ' ARCHIVE --plain|--json',file=file(str(_p1),'wb'))
-    """
+    parser.add_argument("--plain",
+                        dest="plain_format",
+                        help="print list of files in plain text")
+
+    parser.add_argument("--json",
+                        dest="json_format",
+                        help="print list of files in json format")
+
+    parser.add_argument("--args",
+                        action="append",
+                        dest="arg_list",
+                        help="args passed to the decompiler")
+
+    parser.add_argument("--list",
+                        dest="list_mode",
+                        help="list")
+
+    parser.add_argument("file",
+                        help="path")
+
+    return parser
 
 
 def print_error_plain_or_json(error):
     """Prints error in either plain text or JSON format.
     One argument required: error message.
     """
-    if JSON_FORMAT != '':
+    if use_json_format != '':
         M = os.popen('echo \'' + error + '\' | sed \'s,\\\\,\\\\\\\\,g\'').read().rstrip('\n')
         M = os.popen('echo \'' + M + '\' | sed \'s,\\, \\\\,g\'').read().rstrip('\n')
         print('{')
@@ -56,162 +67,139 @@ def print_error_plain_or_json(error):
         utils.print_error_and_die(error)
 
 
-def cleanup(path):
+def cleanup():
     """Cleans up all temporary files.
     No arguments accepted.
     """
-    if path is '':
-        return
 
-    for n in os.listdir(path):
-        p = os.path.join(path, n)
+    for n in os.listdir(tmp_archive):
+        p = os.path.join(tmp_archive, n)
         if os.path.isdir(p):
             shutil.rmtree(p)
         else:
             os.unlink(p)
 
 
-"""Parse script arguments."""
-while len(sys.argv) > 1:
-
-    if str(sys.argv[1]) == '-h' or str(sys.argv[1]) == '--help':
-        print_help()
-        exit(0)
-    elif str(sys.argv[1]) == '--list':
-        LIST_MODE = 1
-        subprocess.call(['shift'], shell=True)
-    elif str(sys.argv[1]) == '--plain':
-        if JSON_FORMAT:
-            utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
-
-        LIST_MODE = 1
-        PLAIN_FORMAT = True
-        subprocess.call(['shift'], shell=True)
-    elif sys.argv[1] == '--json':
-        if PLAIN_FORMAT:
-            utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
-        LIST_MODE = 1
-        JSON_FORMAT = True
-        subprocess.call(['shift'], shell=True)
-    elif sys.argv[1] == '--':
-        # Skip -- and store arguments for decompilation.
-        subprocess.call(['shift'], shell=True)
-        DECOMPILER_SH_ARGS = " ".join(sys.argv[1:])  # Expand.star(0)
-        break
-    else:
-        if not (os.path.isfile(str(sys.argv[1]))):
-            utils.print_error_and_die('Input '' + str(sys.argv[1]) + '' is not a valid file.')
-
-        LIBRARY_PATH = sys.argv[1]
-        subprocess.call(['shift'], shell=True)
-
-# Check arguments
-if not LIBRARY_PATH != '':
-    print_error_plain_or_json('No input file.')
-
-# Check for archives packed in Mach-O Universal Binaries.
-if utils.is_macho_archive(LIBRARY_PATH):
-    if LIST_MODE != '':
-        if str(JSON_FORMAT) != '':
-            subprocess.call([str(config.EXTRACT), '--objects', '--json', str(LIBRARY_PATH)], shell=True)
-        else:
-            # Otherwise print in plain text.
-            subprocess.call([str(config.EXTRACT), '--objects', str(LIBRARY_PATH)], shell=True)
-        # Not sure why failure is used there.
-        exit(1)
-    TMP_ARCHIVE = str(LIBRARY_PATH) + '.a'
-    subprocess.call([str(config.EXTRACT), '--best', '--out', str(TMP_ARCHIVE), str(LIBRARY_PATH)], shell=True)
-    LIBRARY_PATH = TMP_ARCHIVE
-
-# Check for thin archives.
-if utils.has_thin_archive_signature(LIBRARY_PATH) == 0:
-    print_error_plain_or_json('File is a thin archive and cannot be decompiled.')
-
-# Check if file is archive
-if not utils.is_valid_archive(LIBRARY_PATH):
-    print_error_plain_or_json('File is not supported archive or is not readable.')
-
-# Check number of files.
-FILE_COUNT = utils.archive_object_count(LIBRARY_PATH)
-if FILE_COUNT <= 0:
-    print_error_plain_or_json('No files found in archive.')
-
-"""List only mode."""
-if LIST_MODE != '':
-    if JSON_FORMAT:
-        utils.archive_list_numbered_content_json(LIBRARY_PATH)
-    else:
-        # Otherwise print in plain text.
-        utils.archive_list_numbered_content(LIBRARY_PATH)
-    cleanup(TMP_ARCHIVE)
-    exit(0)
-
-"""Run the decompilation script over all the found files."""
-print('Running \`' + config.DECOMPILER_SH, end='')
-
-if DECOMPILER_SH_ARGS != '':
-    print(DECOMPILER_SH_ARGS, end='')
-
-print('\` over ' + str(FILE_COUNT) + ' files with timeout ' + str(TIMEOUT) + 's', '(run \`kill ' + str(os.getpid())
-      + '\` to terminate this script)...', file=sys.stderr)
-
-
 def decompile():
-    for i in range(FILE_COUNT):
+    global file_count
+
+    for i in range(file_count):
         file_index = (i + 1)
-        print('-ne', str(file_index) + '/' + str(FILE_COUNT) + '\t\t')
+        print('-ne', str(file_index) + '/' + str(file_count) + '\t\t')
 
         # We have to use indexes instead of names because archives can contain multiple files with same name.
-        log_file = LIBRARY_PATH + '.file_' + str(file_index) + '.log.verbose'
+        log_file = library_path + '.file_' + str(file_index) + '.log.verbose'
         # Do not escape!
-        subprocess.call(
-            config.DECOMPILER_SH + ' ' + '--ar-index=' + str(i) + ' ' + '-o' + ' ' + LIBRARY_PATH + '.file_' + str(
-                file_index) + '.c' + ' ' + LIBRARY_PATH + ' ' + DECOMPILER_SH_ARGS, shell=True,
-            stdout=open(log_file, 'wb'), stderr=subprocess.STDOUT)
+
+        subprocess.call('%s --ar-index=%d -o %s.file_%d.c %s %s' % (
+            config.DECOMPILER_SH, i, library_path, file_index, library_path, decompiler_sh_args), shell=True,
+                        stdout=open(log_file, 'wb'), stderr=subprocess.STDOUT)
 
 
-p = multiprocessing.Process(target=decompile())
-p.start()
+def parse_args(args):
+    global use_json_format
+    global use_plain_format
+    global enable_list_mode
+    global decompiler_sh_args
+    global library_path
 
-# Wait for 10 seconds or until process finishes
-p.join(TIMEOUT)
+    if args.list_mode:
+        enable_list_mode = True
 
-# If thread is still active
-if p.is_alive():
-    print('[TIMEOUT]')
+    if args.plain_format:
+        if use_json_format:
+            utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
 
-    # Terminate
-    p.terminate()
-    p.join()
-else:
-    print('[OK]')
+        enable_list_mode = True
+        use_plain_format = True
 
-'''
-while INDEX < FILE_COUNT:
-    FILE_INDEX = (INDEX  +  1)
-    print('-ne', str(FILE_INDEX) + '/' + str(FILE_COUNT) + '\t\t')
+    if args.json_format:
+        if use_plain_format:
+            utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
+        enable_list_mode = True
+        use_json_format = True
 
-    # We have to use indexes instead of names because archives can contain multiple files with same name.
-    LOG_FILE = str(LIBRARY_PATH) + '.file_' + str(FILE_INDEX) + '.log.verbose'
-    # Do not escape!
-    subprocess.call('gnutimeout'  +  ' '  +  str(TIMEOUT)  +  ' '  +  str(DECOMPILER_SH)  +  ' '  +  '--ar-index=' + 
-    str(INDEX) +  ' '  +  '-o'  +  ' '  +  str(LIBRARY_PATH) + '.file_' + str(FILE_INDEX) + '.c'  +  ' '
-      +  str(LIBRARY_PATH) +  ' '  +  str(DECOMPILER_SH_ARGS),shell=True,stdout=file(str(LOG_FILE),'wb'),
-      stderr=subprocess.STDOUT)
-    
-    RC = _rc0
-    # Print status.
-    
-    if str(RC) == '0':
-        print('[OK]')
-    elif str(RC) == '124':
+    if args.arg_list:
+        decompiler_sh_args = ' '.join(args.arg_list)  # Expand.star(0)
+
+    if args.file:
+        if not (os.path.isfile(args.file)):
+            utils.print_error_and_die('Input %s is not a valid file.' % args.file)
+
+        library_path = args.file
+
+
+def main(args):
+    global library_path
+    global tmp_archive
+    global file_count
+
+    parse_args(args)
+
+    # Check arguments
+    if library_path == '':
+        print_error_plain_or_json('No input file.')
+
+    # Check for archives packed in Mach-O Universal Binaries.
+    if utils.is_macho_archive(library_path):
+        if enable_list_mode:
+            if use_json_format:
+                subprocess.call([config.EXTRACT, '--objects', '--json', library_path], shell=True)
+            else:
+                subprocess.call([config.EXTRACT, '--objects', library_path], shell=True)
+            exit(1)
+
+        tmp_archive = library_path + '.a'
+        subprocess.call([config.EXTRACT, '--best', '--out', tmp_archive, library_path], shell=True)
+        library_path = tmp_archive
+
+    # Check for thin archives.
+    if utils.has_thin_archive_signature(library_path) == 0:
+        print_error_plain_or_json('File is a thin archive and cannot be decompiled.')
+
+    # Check if file is archive
+    if not utils.is_valid_archive(library_path):
+        print_error_plain_or_json('File is not supported archive or is not readable.')
+
+    # Check number of files.
+    file_count = utils.archive_object_count(library_path)
+    if file_count <= 0:
+        print_error_plain_or_json('No files found in archive.')
+
+    # List only mode.
+    if enable_list_mode:
+        if use_json_format:
+            utils.archive_list_numbered_content_json(library_path)
+        else:
+            utils.archive_list_numbered_content(library_path)
+        cleanup()
+        sys.exit(0)
+
+    # Run the decompilation script over all the found files.
+    print('Running \`%s' % config.DECOMPILER_SH, end='')
+
+    if decompiler_sh_args != '':
+        print(decompiler_sh_args, end='')
+
+    print('\` over %d files with timeout %d s. (run \`kill %d \` to terminate this script)...' % (
+        file_count, time_out, os.getpid()), file=sys.stderr)
+
+    p = multiprocessing.Process(target=decompile())
+    p.start()
+    p.join(time_out)
+
+    if p.is_alive():
         print('[TIMEOUT]')
+        p.terminate()
+        p.join()
     else:
-        print('[FAIL]')
-    INDEX + = 1
-'''
+        print('[OK]')
 
-# Cleanup
-cleanup(TMP_ARCHIVE)
-# Success!
-exit(0)
+    cleanup()
+    sys.exit(0)
+
+
+args = get_parser().parse_args()
+
+if __name__ == '__main__':
+    main(args)

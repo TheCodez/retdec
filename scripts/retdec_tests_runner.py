@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """Runs all the installed unit tests."""
 
@@ -75,7 +75,7 @@ def unit_tests_in_dir(path):
     else:
         os.close(_rcr2)
         os.dup2(_rcw2, 1)
-        subprocess.call(["find", str(path), "-name", "retdec-tests-*", "-type", "f", executable_flag], shell=True)
+        subprocess.call(["find", path, "-name", "retdec-tests-*", "-type", "f", executable_flag], shell=True)
         sys.exit(0)
 
 
@@ -98,15 +98,15 @@ def run_unit_tests_in_dir(path):
     global PIPESTATUS
 
     UNIT_TESTS_DIR = path
-    TESTS_FAILED = 0
-    TESTS_RUN = 0
-    for unit_test in os.popen("unit_tests_in_dir \"" + str(UNIT_TESTS_DIR) + "\"").read().rstrip("\n"):
+    TESTS_FAILED = False
+    TESTS_RUN = False
+    for unit_test in os.popen("unit_tests_in_dir \"" + UNIT_TESTS_DIR + "\"").read().rstrip("\n"):
         print()
-        unit_test_name = os.popen("sed 's/^.*/bin///' <<< \"" + str(unit_test) + "\"").read().rstrip("\n")
+        unit_test_name = os.popen("sed 's/^.*/bin///' <<< \"" + unit_test + "\"").read().rstrip("\n")
         print_colored(unit_test_name, "yellow")
         print()
         if not VERBOSE:
-            subprocess.call([str(unit_test), "--gtest_color=yes"], shell=True)
+            subprocess.call([unit_test, "--gtest_color=yes"], shell=True)
         else:
             _rcr7, _rcw7 = os.pipe()
             if os.fork():
@@ -136,17 +136,17 @@ def run_unit_tests_in_dir(path):
             else:
                 os.close(_rcr7)
                 os.dup2(_rcw7, 1)
-                subprocess.call([str(unit_test), "--gtest_color=yes"], shell=True)
+                subprocess.call([unit_test, "--gtest_color=yes"], shell=True)
                 sys.exit(0)
 
         RC = PIPESTATUS[0]
-        if str(RC) != "0":
-            TESTS_FAILED = 1
-            if int(RC) >= 127:
+        if RC != 0:
+            TESTS_FAILED = True
+            if RC >= 127:
                 # Segfault, floating-point exception, etc.
                 print_colored("FAILED (return code " + str(RC) + ")\n", "red")
-        TESTS_RUN = 1
-    if str(TESTS_FAILED) == "1" or str(TESTS_RUN) == "0":
+        TESTS_RUN = True
+    if TESTS_FAILED or not TESTS_RUN:
         return 1
     else:
         return 0
@@ -155,7 +155,8 @@ def run_unit_tests_in_dir(path):
 if not os.path.isdir(UNIT_TESTS_DIR):
     """Run all binaries in unit test dir."""
 
-    print("error: no unit tests found in " + UNIT_TESTS_DIR, file=sys.stderr)
-    exit(1)
-print("Running all unit tests in " + UNIT_TESTS_DIR + " ...")
+    print("error: no unit tests found in %s" % UNIT_TESTS_DIR, file=sys.stderr)
+    sys.exit(1)
+
+print("Running all unit tests in %s..." % UNIT_TESTS_DIR)
 run_unit_tests_in_dir(UNIT_TESTS_DIR)

@@ -26,8 +26,8 @@ def print_error_and_die(error):
     if error is None:
         exit(1)
 
-    print("Error: " + error, file=sys.stderr)
-    exit(1)
+    sys.stderr.write("Error: %s" % error)
+    sys.exit(1)
 
 
 def print_warning(warning):
@@ -36,7 +36,7 @@ def print_warning(warning):
     if warning is None:
         return
 
-    print("Warning: " + warning, file=sys.stderr)
+    sys.stderr.write("Warning: %s" % warning)
 
 
 def has_archive_signature(path):
