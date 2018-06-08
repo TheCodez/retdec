@@ -37,7 +37,7 @@ def get_parser():
                         help="print list of files in json format")
 
     parser.add_argument("--args",
-                        action="append",
+                        nargs='+',
                         dest="arg_list",
                         help="args passed to the decompiler")
 
