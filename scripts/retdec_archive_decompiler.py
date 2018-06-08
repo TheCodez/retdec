@@ -2,10 +2,9 @@
 
 import argparse
 import multiprocessing
-import shutil
-import sys
 import os
 import subprocess
+import sys
 
 import retdec_config as config
 import retdec_utils as utils
@@ -56,10 +55,10 @@ def print_error_plain_or_json(error):
     One argument required: error message.
     """
     if use_json_format != '':
-        M = os.popen('echo \'' + error + '\' | sed \'s,\\\\,\\\\\\\\,g\'').read().rstrip('\n')
-        M = os.popen('echo \'' + M + '\' | sed \'s,\\, \\\\,g\'').read().rstrip('\n')
+        message = os.popen('echo \'' + error + '\' | sed \'s,\\\\,\\\\\\\\,g\'').read().rstrip('\n')
+        message = os.popen('echo \'' + message + '\' | sed \'s,\\, \\\\,g\'').read().rstrip('\n')
         print('{')
-        print('    \'error\' : \'' + M + '\'')
+        print('    \'error\' : \'' + message + '\'')
         print('}')
         exit(1)
     else:

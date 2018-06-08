@@ -111,10 +111,10 @@ def check_arguments(_args):
     _args.output = utils.get_realpath(_args.output)
 
 
-#
-# Try to unpack the given file.
-#
 def try_to_unpack(_args, _output):
+    """Try to unpack the given file.
+    """
+
     if not (os.path.exists(_args.input) and os.stat(_args.input).st_size > 0) or _output == '':
         print('UNPACKER: wrong arguments')
         return RET_NOTHING_TO_DO

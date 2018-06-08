@@ -17,32 +17,6 @@ would be complex.
 """
 
 
-def main(_args):
-    if utils.has_archive_signature(_args.file):
-        # The input file is not an archive.
-
-        # The input file is an archive, so use the archive decompilation script
-        # instead of fileinfo.
-        archive_decompiler_args = _args.file + " --list"
-
-        res = subprocess.call([config.ARCHIVE_DECOMPILER_SH, archive_decompiler_args], shell=True)
-
-        sys.exit(res)
-
-    # We are not analyzing an archive, so proceed to fileinfo.
-
-    fileinfo_params = []
-
-    for par in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
-        fileinfo_params.append('--crypto ' + par)
-
-    if _args.external_patterns:
-        for par in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
-            fileinfo_params.append('--crypto ' + par)
-
-    subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
-
-
 def get_parser():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -65,7 +39,31 @@ def get_parser():
     return parser
 
 
-args = get_parser().parse_args()
+def main(_args):
+    if utils.has_archive_signature(_args.file):
+        # The input file is not an archive.
+
+        # The input file is an archive, so use the archive decompilation script
+        # instead of fileinfo.
+        archive_decompiler_args = _args.file + " --list"
+
+        res = subprocess.call([config.ARCHIVE_DECOMPILER_SH, archive_decompiler_args], shell=True)
+
+        sys.exit(res)
+
+    # We are not analyzing an archive, so proceed to fileinfo.
+    fileinfo_params = []
+
+    for par in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
+        fileinfo_params.append('--crypto ' + par)
+
+    if _args.external_patterns:
+        for par in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
+            fileinfo_params.append('--crypto ' + par)
+
+    subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
+
 
 if __name__ == "__main__":
+    args = get_parser().parse_args()
     main(args)

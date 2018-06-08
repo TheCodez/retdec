@@ -51,7 +51,6 @@ def unit_tests_in_dir(path):
     '-perm +111' on all systems because find on Linux/MSYS2 does not support
     +. It supports only /, but this is not supported by find on macOS...
     Hence, we need an if.
-    Note: $OSTYPE below is a Bash variable.
     """
 
     if sys.platform == 'darwin':
@@ -72,31 +71,31 @@ def unit_tests_in_dir(path):
             os.close(_rcr3)
             os.dup2(_rcw3, 1)
             subprocess.call(['grep', '-v', '\\.sh$'], shell=True)
-            sys.exit(0)
+            #sys.exit(0)
 
     else:
         os.close(_rcr2)
         os.dup2(_rcw2, 1)
-        subprocess.call(['find', path, '-name', 'retdec-tests-*', '-type', 'f', executable_flag], shell=True)
-        sys.exit(0)
+        return subprocess.check_output(['find', path, '-name', 'retdec-tests-*', '-type', 'f', executable_flag], shell=True)
+        #sys.exit(0)
 
 
-#
-# Runs all unit tests in the given directory.
-#
-# 1 string argument is needed:
-#     $1 path to the directory with unit tests
-#
-# Returns 0 if all tests passed, 1 otherwise.
-#
 def run_unit_tests_in_dir(path):
+    """Runs all unit tests in the given directory.
+    1 string argument is needed:
+
+        $1 path to the directory with unit tests
+
+    Returns 0 if all tests passed, 1 otherwise.
+    """
+
     global unit_tests_dir
 
     unit_tests_dir = path
     tests_failed = False
     tests_run = False
 
-    for unit_test in os.popen('unit_tests_in_dir \'' + unit_tests_dir + '\'').read().rstrip('\n'):
+    for unit_test in unit_tests_in_dir(unit_tests_dir):
         print()
         unit_test_name = os.popen('sed \'s/^.*/bin///' << '\'' + unit_test + '\'').read().rstrip('\n')
         print_colored(unit_test_name, 'yellow')
@@ -136,7 +135,7 @@ def run_unit_tests_in_dir(path):
                 subprocess.call([unit_test, '--gtest_color=yes'], shell=True)
                 sys.exit(0)
 
-        return_code = 0 # PIPESTATUS[0]
+        return_code = 0  # PIPESTATUS[0]
         if return_code != 0:
             tests_failed = True
             if return_code >= 127:
@@ -153,7 +152,7 @@ def run_unit_tests_in_dir(path):
 if not os.path.isdir(unit_tests_dir):
     '''Run all binaries in unit test dir.'''
 
-    print('error: no unit tests found in %s' % unit_tests_dir, file=sys.stderr)
+    sys.stderr.write('error: no unit tests found in %s' % unit_tests_dir)
     sys.exit(1)
 
 print('Running all unit tests in %s...' % unit_tests_dir)
