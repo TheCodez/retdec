@@ -69,7 +69,7 @@ def get_parser():
     parser.add_argument('-o', '--output',
                         dest='output',
                         default='file-unpacked',
-                        help='Output file (default: file-unpacked)')
+                        help='Output file')
 
     parser.add_argument('--max-memory',
                         dest='max_memory',
@@ -80,8 +80,7 @@ def get_parser():
                         action='store_true',
                         help='Limit the maximal memory of retdec-unpacker to half of system RAM.')
 
-    parser.add_argument('file',
-                        dest='input',
+    parser.add_argument('input',
                         help='The input file')
 
     return parser

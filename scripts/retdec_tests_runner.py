@@ -6,11 +6,13 @@ import sys
 import os
 import subprocess
 
+unit_tests_dir = ''
+
 """First argument can be verbose."""
-if sys.argv[1] == "-v" or sys.argv[1] == "--verbose":
-    VERBOSE = True
+if sys.argv[1] == '-v' or sys.argv[1] == '--verbose':
+    verbose = True
 else:
-    VERBOSE = False
+    verbose = False
 
 
 def print_colored(message, color):
@@ -24,16 +26,16 @@ def print_colored(message, color):
     """
 
     if color == 'red':
-        print("\033[22;31m" + message + "\033[0m")
+        print('\033[22;31m' + message + '\033[0m')
 
     elif color == 'green':
-        print("\033[22;32m" + message + "\033[0m")
+        print('\033[22;32m' + message + '\033[0m')
 
     elif color == 'yellow':
-        print("\033[01;33m" + message + "\033[0m")
+        print('\033[01;33m' + message + '\033[0m')
 
     else:
-        print(message + "\n")
+        print(message + '\n')
 
 
 def unit_tests_in_dir(path):
@@ -44,7 +46,7 @@ def unit_tests_in_dir(path):
 
     """On macOS, find does not support the '-executable' parameter (#238).
     Therefore, on macOS, we have to use '-perm +111'. To explain, + means
-    "any of these bits" and 111 is the octal representation for the
+    'any of these bits' and 111 is the octal representation for the
     executable bit on owner, group, and other. Unfortunately, we cannot use
     '-perm +111' on all systems because find on Linux/MSYS2 does not support
     +. It supports only /, but this is not supported by find on macOS...
@@ -53,9 +55,9 @@ def unit_tests_in_dir(path):
     """
 
     if sys.platform == 'darwin':
-        executable_flag = "-perm +111"
+        executable_flag = '-perm +111'
     else:
-        executable_flag = "-executable"
+        executable_flag = '-executable'
 
     _rc0 = _rcr2, _rcw2 = os.pipe()
     if os.fork():
@@ -65,17 +67,17 @@ def unit_tests_in_dir(path):
         if os.fork():
             os.close(_rcw3)
             os.dup2(_rcr3, 0)
-            subprocess.call(["sort"], shell=True)
+            subprocess.call(['sort'], shell=True)
         else:
             os.close(_rcr3)
             os.dup2(_rcw3, 1)
-            subprocess.call(["grep", "-v", "\\.sh$"], shell=True)
+            subprocess.call(['grep', '-v', '\\.sh$'], shell=True)
             sys.exit(0)
 
     else:
         os.close(_rcr2)
         os.dup2(_rcw2, 1)
-        subprocess.call(["find", path, "-name", "retdec-tests-*", "-type", "f", executable_flag], shell=True)
+        subprocess.call(['find', path, '-name', 'retdec-tests-*', '-type', 'f', executable_flag], shell=True)
         sys.exit(0)
 
 
@@ -88,25 +90,20 @@ def unit_tests_in_dir(path):
 # Returns 0 if all tests passed, 1 otherwise.
 #
 def run_unit_tests_in_dir(path):
-    global UNIT_TESTS_DIR
-    global TESTS_FAILED
-    global TESTS_RUN
-    global unit_test_name
-    global unit_test
-    global VERBOSE
-    global RC
-    global PIPESTATUS
+    global unit_tests_dir
 
-    UNIT_TESTS_DIR = path
-    TESTS_FAILED = False
-    TESTS_RUN = False
-    for unit_test in os.popen("unit_tests_in_dir \"" + UNIT_TESTS_DIR + "\"").read().rstrip("\n"):
+    unit_tests_dir = path
+    tests_failed = False
+    tests_run = False
+
+    for unit_test in os.popen('unit_tests_in_dir \'' + unit_tests_dir + '\'').read().rstrip('\n'):
         print()
-        unit_test_name = os.popen("sed 's/^.*/bin///' <<< \"" + unit_test + "\"").read().rstrip("\n")
-        print_colored(unit_test_name, "yellow")
+        unit_test_name = os.popen('sed \'s/^.*/bin///' << '\'' + unit_test + '\'').read().rstrip('\n')
+        print_colored(unit_test_name, 'yellow')
         print()
-        if not VERBOSE:
-            subprocess.call([unit_test, "--gtest_color=yes"], shell=True)
+
+        if not verbose:
+            subprocess.call([unit_test, '--gtest_color=yes'], shell=True)
         else:
             _rcr7, _rcw7 = os.pipe()
             if os.fork():
@@ -120,43 +117,44 @@ def run_unit_tests_in_dir(path):
                     if os.fork():
                         os.close(_rcw9)
                         os.dup2(_rcr9, 0)
-                        subprocess.call(["grep", "-v", "Running main() from gmock_main.cc"], shell=True)
+                        subprocess.call(['grep', '-v', 'Running main() from gmock_main.cc'], shell=True)
                     else:
                         os.close(_rcr9)
                         os.dup2(_rcw9, 1)
-                        subprocess.call(["grep", "-v", "^" + "$"], shell=True)
+                        subprocess.call(['grep', '-v', '^' + '$'], shell=True)
                         sys.exit(0)
 
                 else:
                     os.close(_rcr8)
                     os.dup2(_rcw8, 1)
-                    subprocess.call(["grep", "-v", "RUN\|OK\|----------\|=========="], shell=True)
+                    subprocess.call(['grep', '-v', 'RUN\|OK\|----------\|=========='], shell=True)
                     sys.exit(0)
 
             else:
                 os.close(_rcr7)
                 os.dup2(_rcw7, 1)
-                subprocess.call([unit_test, "--gtest_color=yes"], shell=True)
+                subprocess.call([unit_test, '--gtest_color=yes'], shell=True)
                 sys.exit(0)
 
-        RC = PIPESTATUS[0]
-        if RC != 0:
-            TESTS_FAILED = True
-            if RC >= 127:
+        return_code = 0 # PIPESTATUS[0]
+        if return_code != 0:
+            tests_failed = True
+            if return_code >= 127:
                 # Segfault, floating-point exception, etc.
-                print_colored("FAILED (return code " + str(RC) + ")\n", "red")
-        TESTS_RUN = True
-    if TESTS_FAILED or not TESTS_RUN:
+                print_colored('FAILED (return code %d)\n' % return_code, 'red')
+        tests_run = True
+
+    if tests_failed or not tests_run:
         return 1
     else:
         return 0
 
 
-if not os.path.isdir(UNIT_TESTS_DIR):
-    """Run all binaries in unit test dir."""
+if not os.path.isdir(unit_tests_dir):
+    '''Run all binaries in unit test dir.'''
 
-    print("error: no unit tests found in %s" % UNIT_TESTS_DIR, file=sys.stderr)
+    print('error: no unit tests found in %s' % unit_tests_dir, file=sys.stderr)
     sys.exit(1)
 
-print("Running all unit tests in %s..." % UNIT_TESTS_DIR)
-run_unit_tests_in_dir(UNIT_TESTS_DIR)
+print('Running all unit tests in %s...' % unit_tests_dir)
+run_unit_tests_in_dir(unit_tests_dir)

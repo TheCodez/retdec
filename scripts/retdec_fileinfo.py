@@ -1,13 +1,11 @@
 #! /usr/bin/env python3
 
-import sys
-import os
-import subprocess
 import argparse
+import subprocess
+import sys
 
 import retdec_config as config
 import retdec_utils as utils
-
 
 """When analyzing an archive, use the archive decompilation script `--list` instead of
 `fileinfo` because fileinfo is currently unable to analyze archives.
@@ -19,44 +17,33 @@ would be complex.
 """
 
 
-def main(args):
-    for arg in Expand.at():
-        if (str(arg:0:1) != "-" ):
-            IN = arg
-            if not utils.has_archive_signature(IN):
-                # The input file is not an archive.
-                break
-            # The input file is an archive, so use the archive decompilation script
-            # instead of fileinfo.
-            ARCHIVE_DECOMPILER_SH_PARAMS = "(" + IN + " --list)"
-            # When a JSON output was requested (any of the parameters is
-            # -j/--json), forward it to the archive decompilation script.
-            for arg in Expand.at():
-                if (if not str(arg) == "-j":
-                    str(arg) == "--json" ):
-                ARCHIVE_DECOMPILER_SH_PARAMS = "(--json)"
-        res = subprocess.call(
-            [config.ARCHIVE_DECOMPILER_SH, config.ARCHIVE_DECOMPILER_SH_PARAMS[ @]]], shell = True)
+def main(_args):
+    if utils.has_archive_signature(_args.file):
+        # The input file is not an archive.
 
-        exit(res)
+        # The input file is an archive, so use the archive decompilation script
+        # instead of fileinfo.
+        archive_decompiler_args = _args.file + " --list"
 
-        # We are not analyzing an archive, so proceed to fileinfo.
-        FILEINFO_PARAMS = "()"
-        for par in Array(config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
-            FILEINFO_PARAMS = "(--crypto " + par + ")"
+        res = subprocess.call([config.ARCHIVE_DECOMPILER_SH, archive_decompiler_args], shell=True)
 
-        for var in Expand.at():
-            if var == "--use-external-patterns":
-                for par in Array(config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
-                    FILEINFO_PARAMS = "(--crypto " + par + ")"
-                else:
-                    FILEINFO_PARAMS = "(" + ar + ")"
+        sys.exit(res)
 
-        _rc0 = subprocess.call([str(config.FILEINFO), str(config.FILEINFO_PARAMS[ @]])], shell = True)
+    # We are not analyzing an archive, so proceed to fileinfo.
+
+    fileinfo_params = []
+
+    for par in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
+        fileinfo_params.append('--crypto ' + par)
+
+    if _args.external_patterns:
+        for par in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
+            fileinfo_params.append('--crypto ' + par)
+
+    subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
 
 
 def get_parser():
-
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -64,10 +51,19 @@ def get_parser():
 
     parser.add_argument("-j", "--json",
                         dest="json",
-                        default=False,
-                        help="print list of files in plain text")
+                        action='store_true',
+                        help="Set to forward --json to the archive decompilation script.")
+
+    parser.add_argument("--use-external-patterns",
+                        dest="external_patterns",
+                        action='store_true',
+                        help="Should use external patterns")
+
+    parser.add_argument('file',
+                        help='The input file')
 
     return parser
+
 
 args = get_parser().parse_args()
 
