@@ -1,13 +1,23 @@
 #! /usr/bin/env python3
 """Compilation and decompilation utility functions.
 """
-
+import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
 import retdec_config as config
+
+
+def remove_forced(path):
+    for n in os.listdir(path):
+        p = os.path.join(path, n)
+        if os.path.isdir(p):
+            shutil.rmtree(p)
+        else:
+            os.unlink(p)
 
 
 def get_realpath(path):

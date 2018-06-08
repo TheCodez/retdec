@@ -72,12 +72,7 @@ def cleanup():
     No arguments accepted.
     """
 
-    for n in os.listdir(tmp_archive):
-        p = os.path.join(tmp_archive, n)
-        if os.path.isdir(p):
-            shutil.rmtree(p)
-        else:
-            os.unlink(p)
+    utils.remove_forced(tmp_archive)
 
 
 def decompile():
@@ -147,7 +142,7 @@ def main(args):
                 subprocess.call([config.EXTRACT, '--objects', '--json', library_path], shell=True)
             else:
                 subprocess.call([config.EXTRACT, '--objects', library_path], shell=True)
-            exit(1)
+            sys.exit(1)
 
         tmp_archive = library_path + '.a'
         subprocess.call([config.EXTRACT, '--best', '--out', tmp_archive, library_path], shell=True)
