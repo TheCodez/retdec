@@ -64,6 +64,5 @@ def main(_args):
     subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
 
 
-if __name__ == "__main__":
-    args = get_parser().parse_args()
-    main(args)
+args = get_parser().parse_args()
+main(args)

@@ -90,45 +90,45 @@ def decompile():
                         stdout=open(log_file, 'wb'), stderr=subprocess.STDOUT)
 
 
-def parse_args(args):
+def parse_args(_args):
     global use_json_format
     global use_plain_format
     global enable_list_mode
     global decompiler_sh_args
     global library_path
 
-    if args.list_mode:
+    if _args.list_mode:
         enable_list_mode = True
 
-    if args.plain_format:
+    if _args.plain_format:
         if use_json_format:
             utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
 
         enable_list_mode = True
         use_plain_format = True
 
-    if args.json_format:
+    if _args.json_format:
         if use_plain_format:
             utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
         enable_list_mode = True
         use_json_format = True
 
-    if args.arg_list:
-        decompiler_sh_args = ' '.join(args.arg_list)  # Expand.star(0)
+    if _args.arg_list:
+        decompiler_sh_args = ' '.join(_args.arg_list)  # Expand.star(0)
 
-    if args.file:
-        if not (os.path.isfile(args.file)):
-            utils.print_error_and_die('Input %s is not a valid file.' % args.file)
+    if _args.file:
+        if not (os.path.isfile(_args.file)):
+            utils.print_error_and_die('Input %s is not a valid file.' % _args.file)
 
-        library_path = args.file
+        library_path = _args.file
 
 
-def main(args):
+def main(_args):
     global library_path
     global tmp_archive
     global file_count
 
-    parse_args(args)
+    parse_args(_args)
 
     # Check arguments
     if library_path == '':
@@ -194,6 +194,4 @@ def main(args):
 
 
 args = get_parser().parse_args()
-
-if __name__ == '__main__':
-    main(args)
+main(args)

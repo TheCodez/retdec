@@ -175,34 +175,32 @@ def try_to_unpack(_args, _output):
         return RET_NOTHING_TO_DO
 
 
-if __name__ == '__main__':
+args = get_parser().parse_args()
 
-    args = get_parser().parse_args()
+# Check arguments and set default values for unset options.
+check_arguments(args)
 
-    # Check arguments and set default values for unset options.
-    check_arguments(args)
+should_continue = True
+res_rc = -1
+return_code = -1
 
-    should_continue = True
-    res_rc = -1
-    return_code = -1
+while should_continue:
+    return_code = try_to_unpack(args, args.output + '.tmp')
 
-    while should_continue:
-        return_code = try_to_unpack(args, args.output + '.tmp')
+    if return_code == RET_UNPACK_OK or return_code == RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK \
+            or return_code == RET_UNPACKER_FAILED_OTHERS_OK:
+        res_rc = return_code
 
-        if return_code == RET_UNPACK_OK or return_code == RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK \
-                or return_code == RET_UNPACKER_FAILED_OTHERS_OK:
-            res_rc = return_code
-
-            shutil.move(args.output + '.tmp', args.output)
-            args.input = args.output
-        else:
-            # Remove the temporary file, just in case some of the unpackers crashed
-            # during unpacking and left it on the disk (e.g. upx).
-            utils.remove_forced(args.output + '.tmp')
-
-            should_continue = False
-
-    if res_rc == -1:
-        sys.exit(return_code)
+        shutil.move(args.output + '.tmp', args.output)
+        args.input = args.output
     else:
-        sys.exit(res_rc)
+        # Remove the temporary file, just in case some of the unpackers crashed
+        # during unpacking and left it on the disk (e.g. upx).
+        utils.remove_forced(args.output + '.tmp')
+
+        should_continue = False
+
+if res_rc == -1:
+    sys.exit(return_code)
+else:
+    sys.exit(res_rc)
