@@ -1283,6 +1283,7 @@ if _args.mode == 'bin':
             subprocess.call(['print_warning', 'Option --ar-index can be used only with archives.'], shell=True)
         print('Not an archive, going to the next step.')
 
+
 if _args.mode == 'bin' or _args.mode == 'raw':
     # Assignment of other used variables.
     OUT_UNPACKED = str(OUT %. *) + '-unpacked'
@@ -1291,269 +1292,281 @@ if _args.mode == 'bin' or _args.mode == 'raw':
     OUT_FRONTEND_BC = str(OUT_FRONTEND) + '.bc'
     CONFIG = OUT + '.json'
 
-if str(CONFIG) != str(CONFIG_DB):
-    utils.remove_forced(CONFIG)
+    if str(CONFIG) != str(CONFIG_DB):
+        utils.remove_forced(CONFIG)
 
-if str(CONFIG_DB) != '':
-    shutil.copyfile(CONFIG_DB, CONFIG)
+    if str(CONFIG_DB) != '':
+        shutil.copyfile(CONFIG_DB, CONFIG)
 
-# Preprocess existing file or create a new, empty JSON file.
-if os.path.isfile(CONFIG):
-    subprocess.call([config.CONFIGTOOL, CONFIG, '--preprocess'], shell=True)
-else:
-    print('{}', file=file(str(CONFIG), 'wb'))
+    # Preprocess existing file or create a new, empty JSON file.
+    if os.path.isfile(CONFIG):
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--preprocess'], shell=True)
+    else:
+        print('{}', file=file(str(CONFIG), 'wb'))
 
 
-# Raw data needs architecture, endianess and optionaly sections's vma and entry point to be specified.
-if _args.mode == 'raw':
-    if not ARCH or ARCH '='  '-o' str(ARCH) == str():
-        subprocess.call(['print_error_and_die', 'Option -a|--arch must be used with mode ' + str(MODE)], shell=True)
-    if not str(ENDIAN) != '':
-        subprocess.call(['print_error_and_die', 'Option -e|--endian must be used with mode ' + str(MODE)], shell=True)
+    # Raw data needs architecture, endianess and optionaly sections's vma and entry point to be specified.
+    if _args.mode == 'raw':
+        if not ARCH or ARCH '='  '-o' str(ARCH) == str():
+            subprocess.call(['print_error_and_die', 'Option -a|--arch must be used with mode ' + str(MODE)], shell=True)
+        if not str(ENDIAN) != '':
+            subprocess.call(['print_error_and_die', 'Option -e|--endian must be used with mode ' + str(MODE)], shell=True)
 
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--format', 'raw'], shell=True)
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--bit-size', '32'], shell=True)
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--file-class', '32'], shell=True)
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--endian', str(ENDIAN)], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--format', 'raw'], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--bit-size', '32'], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--file-class', '32'], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--endian', str(ENDIAN)], shell=True)
 
-    if str(RAW_ENTRY_POINT) != '':
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--entry-point', str(RAW_ENTRY_POINT)], shell=True)
+        if str(RAW_ENTRY_POINT) != '':
+            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--entry-point', str(RAW_ENTRY_POINT)], shell=True)
 
-    if str(RAW_SECTION_VMA) != '':
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--section-vma', str(RAW_SECTION_VMA)], shell=True)
+        if str(RAW_SECTION_VMA) != '':
+            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--section-vma', str(RAW_SECTION_VMA)], shell=True)
 
-##
-## Call fileinfo to create an initial config file.
-##
-FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity ' + str(IN) + ' --no-hashes=all)'
+    ##
+    ## Call fileinfo to create an initial config file.
+    ##
+    FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity ' + str(IN) + ' --no-hashes=all)'
 
-if str(FILEINFO_VERBOSE) != '':
-    FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity --verbose ' + str(IN) + ')'
-for par in Array(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
-    FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
+    if str(FILEINFO_VERBOSE) != '':
+        FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity --verbose ' + str(IN) + ')'
+    for par in Array(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
+        FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
 
-if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
-    for par in Array(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
+    if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
+        for par in Array(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
+            FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
+            if (not str(MAX_MEMORY) == ''):
+                FILEINFO_PARAMS = '(--max-memory ' + str(MAX_MEMORY) + ')'
+            elif (str(NO_MEMORY_LIMIT) == ''):
+            # By default, we want to limit the memory of fileinfo into half of
+            # system RAM to prevent potential black screens on Windows (#270).
+                FILEINFO_PARAMS = '(--max-memory-half-ram)'
+
+    print()
+    print('##### Gathering file information...')
+    print('RUN: ' + str(FILEINFO) + ' ' + str(FILEINFO_PARAMS[ @]]))
+
+    if str(GENERATE_LOG) != '':
+        FILEINFO_AND_TIME_OUTPUT = os.popen(str(TIME) + ' \'' + str(FILEINFO) + '\' \''
+                                            + str(FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
+
+        FILEINFO_RC = _rc0
+        LOG_FILEINFO_RC = os.popen('get_tool_rc \'' + str(FILEINFO_RC) + '\' \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+
+        LOG_FILEINFO_RUNTIME = os.popen('get_tool_runtime \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_FILEINFO_MEMORY = os.popen('get_tool_memory_usage \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_FILEINFO_OUTPUT = os.popen('get_tool_output \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        print(LOG_FILEINFO_OUTPUT)
+    else:
+        _rc0 = subprocess.call([str(FILEINFO), str(FILEINFO_PARAMS[ @]])], shell = True)
+        FILEINFO_RC = _rc0
+
+    if int(FILEINFO_RC) != 0:
+        if
+        str(GENERATE_LOG) != '':
+
+        generate_log()
+        cleanup()
+        # The error message has been already reported by fileinfo in stderr.
+        subprocess.call(['print_error_and_die'], shell=True)
+
+    check_whether_decompilation_should_be_forcefully_stopped('fileinfo')
+
+    ##
+    ## Unpacking.
+    ##
+    UNPACK_PARAMS = ['--extended-exit-codes', '--output ', OUT_UNPACKED, IN]
+
+    if not str(MAX_MEMORY) == '':
+        UNPACK_PARAMS.append('--max-memory ' + MAX_MEMORY)
+    elif str(NO_MEMORY_LIMIT) == '':
+        # By default, we want to limit the memory of retdec-unpacker into half
+        # of system RAM to prevent potential black screens on Windows (#270).
+        UNPACK_PARAMS.append('--max-memory-half-ram')
+
+    if str(GENERATE_LOG) != '':
+        LOG_UNPACKER_OUTPUT = os.popen(str(UNPACK_SH) + ' \'' + str(UNPACK_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
+
+        UNPACKER_RC = _rc0
+        LOG_UNPACKER_RC = UNPACKER_RC
+    else:
+        _rc0 = subprocess.call([str(UNPACK_SH), str(UNPACK_PARAMS[ @]])], shell = True)
+        UNPACKER_RC = _rc0
+
+    check_whether_decompilation_should_be_forcefully_stopped('unpacker')
+
+    # RET_UNPACK_OK=0
+    # RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK=1
+    # RET_NOTHING_TO_DO=2
+    # RET_UNPACKER_FAILED_OTHERS_OK=3
+    # RET_UNPACKER_FAILED=4
+    if (if not if not int(UNPACKER_RC) == 0:
+        int(UNPACKER_RC) == 1:
+        int(UNPACKER_RC) == 3 ):
+        # Successfully unpacked -> re-run fileinfo to obtain fresh information.
+        IN = OUT_UNPACKED
+        FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity ' + str(IN) + ' --no-hashes=all)'
+        if (str(FILEINFO_VERBOSE) != ''):
+            FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity --verbose ' + str(IN) + ')'
+        for par in Array(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
+            FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
+        if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
+            for par in Array(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
         FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
         if (not str(MAX_MEMORY) == ''):
             FILEINFO_PARAMS = '(--max-memory ' + str(MAX_MEMORY) + ')'
-        elif (str(NO_MEMORY_LIMIT) == ''):
+        elif str(NO_MEMORY_LIMIT) == '':
         # By default, we want to limit the memory of fileinfo into half of
         # system RAM to prevent potential black screens on Windows (#270).
             FILEINFO_PARAMS = '(--max-memory-half-ram)'
 
-print()
-print('##### Gathering file information...')
-print('RUN: ' + str(FILEINFO) + ' ' + str(FILEINFO_PARAMS[ @]]))
+        print()
+        print('##### Gathering file information after unpacking...')
+        print('RUN: ' + str(FILEINFO) + ' ' + str(FILEINFO_PARAMS[ @]]))
 
-if str(GENERATE_LOG) != '':
-    FILEINFO_AND_TIME_OUTPUT = os.popen(str(TIME) + ' \'' + str(FILEINFO) + '\' \''
-                                        + str(FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
+        if str(GENERATE_LOG) != '':
+            FILEINFO_AND_TIME_OUTPUT = os.popen(str(TIME) + ' \'' + str(FILEINFO) + '\' \'' + str(FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip(
+            '\n')
 
-    FILEINFO_RC = _rc0
-    LOG_FILEINFO_RC = os.popen('get_tool_rc \'' + str(FILEINFO_RC) + '\' \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+            FILEINFO_RC = _rc0
+            LOG_FILEINFO_RC = get_tool_rc(FILEINFO_RC, FILEINFO_AND_TIME_OUTPUT)
+            FILEINFO_RUNTIME = get_tool_runtime(FILEINFO_AND_TIME_OUTPUT)
+            LOG_FILEINFO_RUNTIME = (LOG_FILEINFO_RUNTIME + FILEINFO_RUNTIME)
+            FILEINFO_MEMORY = get_tool_memory_usage(FILEINFO_AND_TIME_OUTPUT)
+            LOG_FILEINFO_MEMORY((LOG_FILEINFO_MEMORY + FILEINFO_MEMORY) // 2)
+            LOG_FILEINFO_OUTPUT = get_tool_output(FILEINFO_AND_TIME_OUTPUT)
+            print(LOG_FILEINFO_OUTPUT)
+        else:
+            _rc0 = subprocess.call([str(FILEINFO), str(FILEINFO_PARAMS[ @]])], shell = True)
+            FILEINFO_RC = _rc0
+        if int(FILEINFO_RC) != 0:
+            if
+            str(GENERATE_LOG) != '':
+            generate_log()
+            cleanup()
+            # The error message has been already reported by fileinfo in stderr.
+            subprocess.call(['print_error_and_die'], shell=True)
 
-    LOG_FILEINFO_RUNTIME = os.popen('get_tool_runtime \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-    LOG_FILEINFO_MEMORY = os.popen('get_tool_memory_usage \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-    LOG_FILEINFO_OUTPUT = os.popen('get_tool_output \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-    print(LOG_FILEINFO_OUTPUT)
-else:
-subprocess.call([str(FILEINFO), str(FILEINFO_PARAMS[ @]])], shell = True)
-FILEINFO_RC').setValue(_rc0)
-if (int(FILEINFO_RC) != 0):
-    if
-str(GENERATE_LOG) != '':
-generate_log()
-cleanup()
-# The error message has been already reported by fileinfo in stderr.
-subprocess.call(['print_error_and_die'], shell=True)
-check_whether_decompilation_should_be_forcefully_stopped('fileinfo')
-##
-## Unpacking.
-##
-UNPACK_PARAMS = '(--extended-exit-codes --output ' + str(OUT_UNPACKED) + ' ' + str(IN) + ')'
+        print_warning_if_decompiling_bytecode()
 
-if (not str(MAX_MEMORY) == ''):
-    UNPACK_PARAMS = '(--max-memory ' + str(MAX_MEMORY) + ')'
-elif (str(NO_MEMORY_LIMIT) == ''):
-    # By default, we want to limit the memory of retdec-unpacker into half
-    # of system RAM to prevent potential black screens on Windows (#270).
-    UNPACK_PARAMS = '(--max-memory-half-ram)'
-if (str(GENERATE_LOG) != ''):
-    LOG_UNPACKER_OUTPUT = os.popen(str(UNPACK_SH) + ' \'' + str(UNPACK_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
-UNPACKER_RC = _rc0
-LOG_UNPACKER_RC = UNPACKER_RC
-else:
-subprocess.call([str(UNPACK_SH), str(UNPACK_PARAMS[ @]])], shell = True)
-UNPACKER_RC = _rc0
-check_whether_decompilation_should_be_forcefully_stopped('unpacker')
-# RET_UNPACK_OK=0
-# RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK=1
-# RET_NOTHING_TO_DO=2
-# RET_UNPACKER_FAILED_OTHERS_OK=3
-# RET_UNPACKER_FAILED=4
-if (if not if not int(UNPACKER_RC) == 0:
-    int(UNPACKER_RC) == 1:
-    int(UNPACKER_RC) == 3 ):
-# Successfully unpacked -> re-run fileinfo to obtain fresh information.
-IN = OUT_UNPACKED
-FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity ' + str(IN) + ' --no-hashes=all)'
-if (str(FILEINFO_VERBOSE) != ''):
-    FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity --verbose ' + str(IN) + ')'
-for par in Array(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
-    FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
-if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
-    for par in Array(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
-FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
-if (not str(MAX_MEMORY) == ''):
-    FILEINFO_PARAMS = '(--max-memory ' + str(MAX_MEMORY) + ')'
-elif str(NO_MEMORY_LIMIT) == '':
-# By default, we want to limit the memory of fileinfo into half of
-# system RAM to prevent potential black screens on Windows (#270).
-    FILEINFO_PARAMS = '(--max-memory-half-ram)'
-
-print()
-print('##### Gathering file information after unpacking...')
-print('RUN: ' + str(FILEINFO) + ' ' + str(FILEINFO_PARAMS[ @]]))
-if str(GENERATE_LOG) != '':
-    FILEINFO_AND_TIME_OUTPUT = os.popen(str(TIME) + ' \'' + str(FILEINFO) + '\' \'' + str(FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip(
-    '\n')
-
-FILEINFO_RC = _rc0
-LOG_FILEINFO_RC = get_tool_rc(FILEINFO_RC, FILEINFO_AND_TIME_OUTPUT)
-FILEINFO_RUNTIME = get_tool_runtime(FILEINFO_AND_TIME_OUTPUT)
-LOG_FILEINFO_RUNTIME = (LOG_FILEINFO_RUNTIME + FILEINFO_RUNTIME)
-FILEINFO_MEMORY = get_tool_memory_usage(FILEINFO_AND_TIME_OUTPUT)
-LOG_FILEINFO_MEMORY((LOG_FILEINFO_MEMORY + FILEINFO_MEMORY) // 2)
-LOG_FILEINFO_OUTPUT = get_tool_output(FILEINFO_AND_TIME_OUTPUT)
-print(LOG_FILEINFO_OUTPUT)
-else:
-subprocess.call([str(FILEINFO), str(FILEINFO_PARAMS[ @]])], shell = True)
-FILEINFO_RC = _rc0
-if int(FILEINFO_RC) != 0:
-    if
-str(GENERATE_LOG) != '':
-generate_log()
-cleanup()
-# The error message has been already reported by fileinfo in stderr.
-subprocess.call(['print_error_and_die'], shell=True)
-print_warning_if_decompiling_bytecode()
-# Check whether the architecture was specified.
-if str(ARCH) != '':
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
-else:
-# Get full name of the target architecture including comments in parentheses
-    ARCH_FULL = os.popen(
-        '\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --arch | awk \'{print tolower($0').read().rstrip(
-        '\n') + '})')
-# Strip comments in parentheses and all trailing whitespace
-ARCH = os.popen('echo ' + str(ARCH_FULL % (*) + ' | sed -e '
-s / ^ [[: space:]] * // '').read().rstrip('\n')
-
-# Get object file format.
-FORMAT = os.popen(
-    '\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --format | awk \'{print tolower($1').read().rstrip(
-    '\n') + ';})'
-
-# Intel HEX needs architecture to be specified
-if str(FORMAT) == 'ihex':
-    if
-not ARCH or ARCH
-'='  '-o'
-str(ARCH) == str():
-subprocess.call(['print_error_and_die', 'Option -a|--arch must be used with format ' + str(FORMAT)], shell=True)
-if not str(ENDIAN) != '':
-    subprocess.call(['print_error_and_die', 'Option -e|--endian must be used with format ' + str(FORMAT)], shell=True)
-subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
-subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--bit-size', '32'], shell=True)
-subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--file-class', '32'], shell=True)
-subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--endian', str(ENDIAN)], shell=True)
-
-# Check whether the correct target architecture was specified.
-if (str(ARCH) == 'arm' - o str(ARCH)
-'=' != '' ):
-    ORDS_DIR = ARM_ORDS_DIR
-elif (str(ARCH) == 'x86'):
-    ORDS_DIR = X86_ORDS_DIR
-elif (str(ARCH) == 'powerpc' - o str(ARCH)
-'='  '-o'
-str(ARCH) == 'pic32' ):
-    pass
-else:
-# nothing
-if str(GENERATE_LOG) != '':
-    generate_log()
-cleanup()
-subprocess.call(['print_error_and_die',
-                 'Unsupported target architecture '' + str(ARCH^^) + ''. Supported architectures: Intel x86, ARM, ARM + Thumb, MIPS, PIC32, PowerPC.'],
-                shell=True)
-# Check file class (e.g. 'ELF32', 'ELF64'). At present, we can only decompile 32-bit files.
-# Note: we prefer to report the 'unsupported architecture' error (above) than this 'generic' error.
-FILECLASS = os.popen('\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --file-class').read().rstrip('\n')
-
-if (if str(FILECLASS) != '16':
-    str(FILECLASS) != '32' ):
-if str(GENERATE_LOG) != '':
-    generate_log()
-cleanup()
-subprocess.call(['print_error_and_die',
-                 'Unsupported target format '' + str(FORMAT^^) + str(FILECLASS) + ''. Supported formats: ELF32, PE32, Intel HEX 32, Mach-O 32.'],
-                shell=True)
-# Set path to statically linked code signatures.
-#
-# TODO: Useing ELF for IHEX is ok, but for raw, we probably should somehow decide between ELF and PE, or use both, for RAW.
-SIG_FORMAT = FORMAT
-
-if (if not str(SIG_FORMAT) == 'ihex':
-    str(SIG_FORMAT) == 'raw' ):
-    SIG_FORMAT = 'elf'
-
-ENDIAN = os.popen('\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --endian').read().rstrip('\n')
-
-if _args.endian == 'little':
-    SIG_ENDIAN = 'le'
-elif _args.endian == 'big'):
-    SIG_ENDIAN = 'be'
-else:
-    SIG_ENDIAN = ''
-
-SIG_ARCH = ARCH
-
-if str(SIG_ARCH) == 'pic32':
-    SIG_ARCH = 'mips'
-
-SIGNATURES_DIR = str(GENERIC_SIGNATURES_DIR) + '/' + str(SIG_FORMAT) + '/' + str(FILECLASS,, ) + '/' + str(SIG_ENDIAN,,) + '/' + str(
-    SIG_ARCH)
-
-print_warning_if_decompiling_bytecode()
-
-# Decompile unreachable functions.
-if KEEP_UNREACHABLE_FUNCS:
-    subprocess.call([CONFIGTOOL, CONFIG, '--write', '--keep-unreachable-funcs', 'true'], shell=True)
-
-# Get signatures from selected archives.
-if (Expand.hash()SIGNATURE_ARCHIVE_PATHS[@] != 0):
-    print()
-
-print('##### Extracting signatures from selected archives...')
-
-l = 0
-
-while (l < Expand.hash()SIGNATURE_ARCHIVE_PATHS[@]):
-    LIB = SIGNATURE_ARCHIVE_PATHS[l]]
-    print('Extracting signatures from file '' + str(LIB) + ''')
-    CROP_ARCH_PATH = os.popen('basename \'' + str(LIB) + '\' | LC_ALL=C sed -e \'s/[^A-Za-z0-9_.-]/_/g\'').read().rstrip('\n')
-    SIG_OUT = str(OUT) + '.' + str(CROP_ARCH_PATH) + '.' + str(l) + '.yara'
-
-    if (subprocess.call(str(SIG_FROM_LIB_SH) + ' ' + str(LIB) + ' ' + '--output' + ' ' + str(SIG_OUT), shell=True,
-                        stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))):
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--user-signature', str(SIG_OUT)], shell=True)
-        SIGNATURES_TO_REMOVE = '(' + str(SIG_OUT) + ')'
+    # Check whether the architecture was specified.
+    if str(ARCH) != '':
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
     else:
-        subprocess.call(['print_warning', 'Failed extracting signatures from file \'' + str(LIB) + '\''], shell=True)
+        # Get full name of the target architecture including comments in parentheses
+        ARCH_FULL = os.popen(
+            '\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --arch | awk \'{print tolower($0').read().rstrip(
+            '\n') + '})')
 
-    l += 1
+    # Strip comments in parentheses and all trailing whitespace
+    ARCH = os.popen('echo ' + str(ARCH_FULL % (*) + ' | sed -e '
+    s / ^ [[: space:]] * // '').read().rstrip('\n')
+
+    # Get object file format.
+    FORMAT = os.popen(
+        '\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --format | awk \'{print tolower($1').read().rstrip(
+        '\n') + ';})'
+
+    # Intel HEX needs architecture to be specified
+    if str(FORMAT) == 'ihex':
+        if
+        not ARCH or ARCH
+        '='  '-o'
+        str(ARCH) == str():
+        subprocess.call(['print_error_and_die', 'Option -a|--arch must be used with format ' + str(FORMAT)], shell=True)
+        if not str(ENDIAN) != '':
+            subprocess.call(['print_error_and_die', 'Option -e|--endian must be used with format ' + str(FORMAT)], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--bit-size', '32'], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--file-class', '32'], shell=True)
+        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--endian', str(ENDIAN)], shell=True)
+
+    # Check whether the correct target architecture was specified.
+    if (str(ARCH) == 'arm' - o str(ARCH)
+        '=' != '' ):
+        ORDS_DIR = ARM_ORDS_DIR
+    elif (str(ARCH) == 'x86'):
+        ORDS_DIR = X86_ORDS_DIR
+    elif (str(ARCH) == 'powerpc' - o str(ARCH)
+        '='  '-o'
+    str(ARCH) == 'pic32' ):
+        pass
+    else:
+    # nothing
+    if str(GENERATE_LOG) != '':
+        generate_log()
+        cleanup()
+        subprocess.call(['print_error_and_die',
+                         'Unsupported target architecture '' + str(ARCH^^) + ''. Supported architectures: Intel x86, ARM, ARM + Thumb, MIPS, PIC32, PowerPC.'],
+                        shell=True)
+
+    # Check file class (e.g. 'ELF32', 'ELF64'). At present, we can only decompile 32-bit files.
+    # Note: we prefer to report the 'unsupported architecture' error (above) than this 'generic' error.
+    FILECLASS = os.popen('\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --file-class').read().rstrip('\n')
+
+    if (if str(FILECLASS) != '16':
+        str(FILECLASS) != '32' ):
+        if str(GENERATE_LOG) != '':
+            generate_log()
+        cleanup()
+        subprocess.call(['print_error_and_die',
+                        'Unsupported target format '' + str(FORMAT^^) + str(FILECLASS) + ''. Supported formats: ELF32, PE32, Intel HEX 32, Mach-O 32.'],
+                        shell=True)
+
+    # Set path to statically linked code signatures.
+    #
+    # TODO: Useing ELF for IHEX is ok, but for raw, we probably should somehow decide between ELF and PE, or use both, for RAW.
+    SIG_FORMAT = FORMAT
+
+    if (if not str(SIG_FORMAT) == 'ihex':
+        str(SIG_FORMAT) == 'raw' ):
+        SIG_FORMAT = 'elf'
+
+    ENDIAN = os.popen('\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --endian').read().rstrip('\n')
+
+    if _args.endian == 'little':
+        SIG_ENDIAN = 'le'
+    elif _args.endian == 'big'):
+        SIG_ENDIAN = 'be'
+    else:
+        SIG_ENDIAN = ''
+
+    SIG_ARCH = ARCH
+
+    if str(SIG_ARCH) == 'pic32':
+        SIG_ARCH = 'mips'
+
+    SIGNATURES_DIR = str(GENERIC_SIGNATURES_DIR) + '/' + str(SIG_FORMAT) + '/' + str(FILECLASS,, ) + '/' + str(SIG_ENDIAN,,) + '/' + str(
+        SIG_ARCH)
+
+    print_warning_if_decompiling_bytecode()
+
+    # Decompile unreachable functions.
+    if KEEP_UNREACHABLE_FUNCS:
+        subprocess.call([CONFIGTOOL, CONFIG, '--write', '--keep-unreachable-funcs', 'true'], shell=True)
+
+    # Get signatures from selected archives.
+    if (Expand.hash()SIGNATURE_ARCHIVE_PATHS[@] != 0):
+        print()
+        print('##### Extracting signatures from selected archives...')
+
+    l = 0
+    while (l < Expand.hash()SIGNATURE_ARCHIVE_PATHS[@]):
+        LIB = SIGNATURE_ARCHIVE_PATHS[l]]
+        print('Extracting signatures from file '' + str(LIB) + ''')
+        CROP_ARCH_PATH = os.popen('basename \'' + str(LIB) + '\' | LC_ALL=C sed -e \'s/[^A-Za-z0-9_.-]/_/g\'').read().rstrip('\n')
+        SIG_OUT = str(OUT) + '.' + str(CROP_ARCH_PATH) + '.' + str(l) + '.yara'
+
+        if (subprocess.call(str(SIG_FROM_LIB_SH) + ' ' + str(LIB) + ' ' + '--output' + ' ' + str(SIG_OUT), shell=True,
+                            stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))):
+            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--user-signature', str(SIG_OUT)], shell=True)
+            SIGNATURES_TO_REMOVE = '(' + str(SIG_OUT) + ')'
+        else:
+            subprocess.call(['print_warning', 'Failed extracting signatures from file \'' + str(LIB) + '\''], shell=True)
+
+        l += 1
 
     # Store paths of signature files into config for frontend.
     if not DO_NOT_LOAD_STATIC_SIGNATURES:
@@ -1627,52 +1640,55 @@ while (l < Expand.hash()SIGNATURE_ARCHIVE_PATHS[@]):
         # By default, we want to limit the memory of bin2llvmir into half of
         # system RAM to prevent potential black screens on Windows (#270).
         BIN2LLVMIR_PARAMS = '(-max-memory-half-ram)'
+
     print()
     print('##### Decompiling ' + str(IN) + ' into ' + str(OUT_BACKEND_BC) + '...')
     print('RUN: ' + str(BIN2LLVMIR) + ' ' + str(BIN2LLVMIR_PARAMS[ @]]) + ' -o ' + str(OUT_BACKEND_BC))
-    if (str(GENERATE_LOG) != ''):
 
+    if str(GENERATE_LOG) != '':
+        def thread1():
+            subprocess.call(
+                str(TIME) + ' ' + str(BIN2LLVMIR) + ' ' + str(BIN2LLVMIR_PARAMS[ @]])  +  ' ' + '-o' + ' ' + str(
+                OUT_BACKEND_BC), shell = True, stdout = file(str(TOOL_LOG_FILE), 'wb'), stderr = subprocess.STDOUT)
 
-    def thread1():
-        subprocess.call(
-            str(TIME) + ' ' + str(BIN2LLVMIR) + ' ' + str(BIN2LLVMIR_PARAMS[ @]])  +  ' ' + '-o' + ' ' + str(
-            OUT_BACKEND_BC), shell = True, stdout = file(str(TOOL_LOG_FILE), 'wb'), stderr = subprocess.STDOUT)
+            threading.Thread(target=thread1).start()
 
-        threading.Thread(target=thread1).start()
-
-        PID = Expand.exclamation()
+            PID = Expand.exclamation()
 
         def thread2():
             timed_kill(PID)
 
-threading.Thread(target=thread2).start()
+        threading.Thread(target=thread2).start()
 
-subprocess.call('wait' + ' ' + str(PID), shell=True, stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))
+        subprocess.call('wait' + ' ' + str(PID), shell=True, stderr=subprocess.STDOUT, stdout=open(os.devnull, 'wb'))
 
-BIN2LLVMIR_RC = _rc2
-BIN2LLVMIR_AND_TIME_OUTPUT = os.popen('cat \'' + str(TOOL_LOG_FILE) + '\'').read().rstrip('\n')
-LOG_BIN2LLVMIR_RC = os.popen('get_tool_rc \'' + str(BIN2LLVMIR_RC) + '\' \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-LOG_BIN2LLVMIR_RUNTIME = os.popen('get_tool_runtime \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-LOG_BIN2LLVMIR_MEMORY = os.popen('get_tool_memory_usage \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-LOG_BIN2LLVMIR_OUTPUT = os.popen('get_tool_output \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-print(LOG_BIN2LLVMIR_OUTPUT, end='')
-else:
-subprocess.call([str(BIN2LLVMIR), str(BIN2LLVMIR_PARAMS[ @]]), '-o', str(OUT_BACKEND_BC)], shell = True)
-BIN2LLVMIR_RC = _rc2
-if int(BIN2LLVMIR_RC) != 0:
-    if
-str(GENERATE_LOG) != '':
-generate_log()
-cleanup()
-subprocess.call(['print_error_and_die', 'Decompilation to LLVM IR failed'], shell=True)
-check_whether_decompilation_should_be_forcefully_stopped('bin2llvmir')
+        BIN2LLVMIR_RC = _rc2
+        BIN2LLVMIR_AND_TIME_OUTPUT = os.popen('cat \'' + str(TOOL_LOG_FILE) + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_RC = os.popen('get_tool_rc \'' + str(BIN2LLVMIR_RC) + '\' \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_RUNTIME = os.popen('get_tool_runtime \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_MEMORY = os.popen('get_tool_memory_usage \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_OUTPUT = os.popen('get_tool_output \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        print(LOG_BIN2LLVMIR_OUTPUT, end='')
+    else:
+        subprocess.call([str(BIN2LLVMIR), str(BIN2LLVMIR_PARAMS[ @]]), '-o', str(OUT_BACKEND_BC)], shell = True)
+        BIN2LLVMIR_RC = _rc2
+
+    if int(BIN2LLVMIR_RC) != 0:
+        if
+        str(GENERATE_LOG) != '':
+        generate_log()
+        cleanup()
+        subprocess.call(['print_error_and_die', 'Decompilation to LLVM IR failed'], shell=True)
+
+    check_whether_decompilation_should_be_forcefully_stopped('bin2llvmir')
 
 # modes 'bin' || 'raw'
+
+
 # LL mode goes straight to backend.
 if _args.mode == 'll':
     OUT_BACKEND_BC = IN
-
-CONFIG = CONFIG_DB
+    CONFIG = CONFIG_DB
 
 # Conditional initialization.
 BACKEND_VAR_RENAMER = Expand.colonEq('BACKEND_VAR_RENAMER', 'readable')
@@ -1759,50 +1775,52 @@ elif str(NO_MEMORY_LIMIT) == '':
     LLVMIR2HLL_PARAMS = '(-max-memory-half-ram)'
     # Decompile the optimized IR code.
 
+
 print()
 print('##### Decompiling ' + str(OUT_BACKEND_BC) + ' into ' + str(OUT) + '...')
 print('RUN: ' + str(LLVMIR2HLL) + ' ' + str(LLVMIR2HLL_PARAMS[ @]]))
 
 if str(GENERATE_LOG) != '':
 
+    def thread3():
+        subprocess.call(
+            str(TIME) + ' ' + str(LLVMIR2HLL) + ' ' + str(LLVMIR2HLL_PARAMS[ @]]), shell = True, stdout = file(
+            str(TOOL_LOG_FILE), 'wb'), stderr = subprocess.STDOUT)
 
-def thread3():
-    subprocess.call(
-        str(TIME) + ' ' + str(LLVMIR2HLL) + ' ' + str(LLVMIR2HLL_PARAMS[ @]]), shell = True, stdout = file(
-        str(TOOL_LOG_FILE), 'wb'), stderr = subprocess.STDOUT)
+        threading.Thread(target=thread3).start()
 
-    threading.Thread(target=thread3).start()
+        PID = Expand.exclamation()
 
-    PID = Expand.exclamation()
-
-    def thread4():
-        timed_kill(PID)
+        def thread4():
+            timed_kill(PID)
 
 
-threading.Thread(target=thread4).start()
+    threading.Thread(target=thread4).start()
 
-subprocess.call('wait' + ' ' + str(PID), shell=True, stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))
+    subprocess.call('wait' + ' ' + str(PID), shell=True, stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))
 
-LLVMIR2HLL_RC = _rc4
-LLVMIR2HLL_AND_TIME_OUTPUT = os.popen('cat \'' + str(TOOL_LOG_FILE) + '\'').read().rstrip('\n')
-LOG_LLVMIR2HLL_RC = os.popen('get_tool_rc \'' + str(LLVMIR2HLL_RC) + '\' \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-LOG_LLVMIR2HLL_RUNTIME = os.popen('get_tool_runtime \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-LOG_LLVMIR2HLL_MEMORY = os.popen('get_tool_memory_usage \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-LOG_LLVMIR2HLL_OUTPUT = os.popen('get_tool_output \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+    LLVMIR2HLL_RC = _rc4
+    LLVMIR2HLL_AND_TIME_OUTPUT = os.popen('cat \'' + str(TOOL_LOG_FILE) + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_RC = os.popen('get_tool_rc \'' + str(LLVMIR2HLL_RC) + '\' \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_RUNTIME = os.popen('get_tool_runtime \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_MEMORY = os.popen('get_tool_memory_usage \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_OUTPUT = os.popen('get_tool_output \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
 
-print(LOG_LLVMIR2HLL_OUTPUT)
-# Wait a bit to ensure that all the memory that has been assigned to the tool was released.
-subprocess.call(['sleep', '0.1'], shell=True)
+    print(LOG_LLVMIR2HLL_OUTPUT)
+    # Wait a bit to ensure that all the memory that has been assigned to the tool was released.
+    subprocess.call(['sleep', '0.1'], shell=True)
 else:
-subprocess.call([str(LLVMIR2HLL), str(LLVMIR2HLL_PARAMS[ @]])], shell = True)
-LLVMIR2HLL_RC = _rc4
+    _rc4 = subprocess.call([str(LLVMIR2HLL), str(LLVMIR2HLL_PARAMS[ @]])], shell = True)
+    LLVMIR2HLL_RC = _rc4
+
 if int(LLVMIR2HLL_RC) != 0:
     if
-str(GENERATE_LOG) != '':
-generate_log()
-cleanup()
+    str(GENERATE_LOG) != '':
+    generate_log()
+    cleanup()
 
-subprocess.call(['print_error_and_die', 'Decompilation of file '' + str(OUT_BACKEND_BC) + '' failed'], shell=True)
+    subprocess.call(['print_error_and_die', 'Decompilation of file '' + str(OUT_BACKEND_BC) + '' failed'], shell=True)
+
 check_whether_decompilation_should_be_forcefully_stopped('llvmir2hll')
 
 # Conditional initialization.
@@ -1814,8 +1832,7 @@ BACKEND_CFG_CONVERSION = Expand.colonEq('BACKEND_CFG_CONVERSION', 'auto')
 if ((str(BACKEND_EMIT_CG) != '' and str(BACKEND_CG_CONVERSION) == 'auto') or (
         str(BACKEND_EMIT_CFG) != '' and str(BACKEND_CFG_CONVERSION) == 'auto')):
     print()
-
-print('##### Converting .dot files to the desired format...')
+    print('##### Converting .dot files to the desired format...')
 
 if (if str(BACKEND_EMIT_CG) != '':
     str(BACKEND_CG_CONVERSION) == 'auto' ):
@@ -1823,13 +1840,14 @@ if (if str(BACKEND_EMIT_CG) != '':
     subprocess.call('dot' + ' ' + '-T' + str(GRAPH_FORMAT) + ' ' + str(OUT) + '.cg.dot', shell=True,
     stdout = file(str(OUT) + '.cg.' + str(GRAPH_FORMAT), 'wb'))
 
-    if (if str(BACKEND_EMIT_CFG) != '':
-str(BACKEND_CFG_CONVERSION) == 'auto' ):
-for cfg in Glob(str(OUT) + '.cfg.*.dot'):
-    print('RUN: dot -T' + str(GRAPH_FORMAT) + ' ' + str(cfg) + ' > ' + str(cfg %. *) + '.' + str(GRAPH_FORMAT))
 
-subprocess.call('dot' + ' ' + '-T' + str(GRAPH_FORMAT) + ' ' + str(cfg), shell=True,
-stdout = file(str(cfg %. *) + '.' + str(GRAPH_FORMAT), 'wb'))
+if (if str(BACKEND_EMIT_CFG) != '':
+    str(BACKEND_CFG_CONVERSION) == 'auto' ):
+    for cfg in Glob(str(OUT) + '.cfg.*.dot'):
+        print('RUN: dot -T' + str(GRAPH_FORMAT) + ' ' + str(cfg) + ' > ' + str(cfg %. *) + '.' + str(GRAPH_FORMAT))
+        subprocess.call('dot' + ' ' + '-T' + str(GRAPH_FORMAT) + ' ' + str(cfg), shell=True,
+            stdout = file(str(cfg %. *) + '.' + str(GRAPH_FORMAT), 'wb'))
+
 
 # Remove trailing whitespace and the last redundant empty new line from the
 # generated output (if any). It is difficult to do this in the back-end, so we
