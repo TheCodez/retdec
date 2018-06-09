@@ -1,164 +1,178 @@
 #! /usr/bin/env python3
+
+"""Create Yara rules file from static libraries."""
+import argparse
 import shutil
 import sys
 import os
 import subprocess
+import tempfile
+from pathlib import Path
 
 import retdec_utils as utils
+import retdec_config as config
 
-##
-## Prints help to stream $1.
-##
-def print_help (_p1) :
-    print("Create Yara rules file from static libraries.",file=file(str(_p1),'wb'))
-    print("Usage: " + __file__ + " [OPTIONS] -o OUTPUT INPUT_1 [... INPUT_N]\n",file=file(str(_p1),'wb'))
-    print("Options:",file=file(str(_p1),'wb'))
-    print("    -n --no-cleanup",file=file(str(_p1),'wb'))
-    print("        Temporary .pat files will be kept.",file=file(str(_p1),'wb'))
-    print(,file=file(str(_p1),'wb'))
-    print("    -o --output path",file=file(str(_p1),'wb'))
-    print("        Where result(s) will be stored.",file=file(str(_p1),'wb'))
-    print(,file=file(str(_p1),'wb'))
-    print("    -m --min-pure unsigned",file=file(str(_p1),'wb'))
-    print("        Minimum pure information needed for patterns (default 16).",file=file(str(_p1),'wb'))
-    print(,file=file(str(_p1),'wb'))
-    print("    -i --ignore-nops opcode",file=file(str(_p1),'wb'))
-    print("        Ignore trailing NOPs when computing (pure) size.",file=file(str(_p1),'wb'))
-    print(,file=file(str(_p1),'wb'))
-    print("    -l --logfile",file=file(str(_p1),'wb'))
-    print("        Add log-file with '.log' suffix from pat2yara.",file=file(str(_p1),'wb'))
-    print(,file=file(str(_p1),'wb'))
-    print("    -b --bin2pat-only",file=file(str(_p1),'wb'))
-    print("        Stop after bin2pat.",file=file(str(_p1),'wb'))
-    print(,file=file(str(_p1),'wb'))
+ignore_nop = ''
+file_path = ''
+tmp_dir_path = ''
 
 
-def die_with_error_and_cleanup(message):
+def get_parser():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('-n', '--no-cleanup',
+                        dest='no_cleanup',
+                        action='store_true',
+                        help='Temporary .pat files will be kept.')
+
+    parser.add_argument('-o', '--output',
+                        dest='output',
+                        default='file-unpacked',
+                        help='Where result(s) will be stored.')
+
+    parser.add_argument('-m', '--min-pure',
+                        dest='min_pure',
+                        default=16,
+                        help='Minimum pure information needed for patterns.')
+
+    parser.add_argument('-i', '--ignore-nops',
+                        dest='ignore_nops',
+                        help='Ignore trailing NOPs when computing (pure) size.')
+
+    parser.add_argument('-l', '--logfile',
+                        dest='logfile',
+                        action='store_true',
+                        help='Add log-file with \'.log\' suffix from pat2yara.')
+
+    parser.add_argument('-b', '--bin2pat-only',
+                        dest='bin_to_pat_only',
+                        action='store_true',
+                        help='Stop after bin2pat.')
+
+    parser.add_argument('input',
+                        nargs='+',
+                        help='Input file(s)')
+
+    return parser
+
+
+def die_with_error_and_cleanup(_args, message):
     """Exit with error message $1 and clean up temporary files.
     """
-    global NO_CLEANUP
 
     # Cleanup.
-    if not NO_CLEANUP:
+    if not _args.no_cleanup:
         temporary_files_cleanup()
 
-    utils.print_error_and_die(message  +  '.')
-
+    utils.print_error_and_die(message + '.')
 
 
 def temporary_files_cleanup():
     """Removes temporary files.
     """
-    global DIR_PATH
 
-    for n in os.listdir(DIR_PATH):
-        p = os.path.join(DIR_PATH, n)
-        if os.path.isdir(p):
-            shutil.rmtree(p)
-        else:
-            os.unlink(p)
+    utils.remove_forced(tmp_dir_path)
 
 
-# Parse arguments.
-while (Expand.hash() > 0):
+def check_arguments(_args):
+    global ignore_nop
+    global file_path
+    global tmp_dir_path
 
-    if ( str(sys.argv[1]) == '-h' or str(sys.argv[1]) == '--help'):
-        print_help("/dev/stdout")
-        exit(0)
-    elif ( str(sys.argv[1]) == '-n' or str(sys.argv[1]) == '--no-cleanup'):
-        Make("NO_CLEANUP").setValue(1)
-        subprocess.call(["shift"],shell=True)
-    elif ( str(sys.argv[1]) == '-l' or str(sys.argv[1]) == '--logfile'):
-        Make("DO_LOGFILE").setValue(1)
-        subprocess.call(["shift"],shell=True)
-    elif ( str(sys.argv[1]) == '-b' or str(sys.argv[1]) == '--bin2pat-only'):
-        Make("BIN2PAT_ONLY").setValue(1)
-        subprocess.call(["shift"],shell=True)
-    elif ( str(sys.argv[1]) == '-m' or str(sys.argv[1]) == '--min-pure'):
-        if str(MIN_PURE) != '':
-            die_with_error_and_cleanup("duplicate option: --min-pure")
-        Make("MIN_PURE").setValue(sys.argv[2])
-        subprocess.call(["shift","2"],shell=True)
-    elif ( str(sys.argv[1]) == '-i' or str(sys.argv[1]) == '--ignore-nops'):
-        if str(IGNORE_NOP) != '':
-            die_with_error_and_cleanup("duplicate option: --ignore-nops")
-        Make("IGNORE_NOP").setValue("--ignore-nops")
-        Make("IGNORE_OPCODE").setValue(sys.argv[2])
-        subprocess.call(["shift","2"],shell=True)
-    elif ( str(sys.argv[1]) == '-o' or str(sys.argv[1]) == '--output'):
-        if str(OUT_PATH) != '':
-            die_with_error_and_cleanup("duplicate option: --output")
-        Make("OUT_PATH").setValue(sys.argv[2])
-        subprocess.call(["shift","2"],shell=True)
+    if not _args.input:
+        die_with_error_and_cleanup(_args, 'no input files')
+
+    for f in _args.input:
+        if not os.path.isfile(f):
+            die_with_error_and_cleanup(_args, 'input %s is not a valid file nor argument' % f)
+
+    # Output directory - compulsory argument.
+    if not _args.output:
+        die_with_error_and_cleanup(_args, 'option -o|--output is compulsory')
     else:
-        if  not (os.path.isfile(str(sys.argv[1]))):
-            die_with_error_and_cleanup("input '" + str(sys.argv[1]) + "' is not a valid file nor argument")
-        Make("INPUT_LIBS").setValue("(" + str(sys.argv[1]) + ")")
-        subprocess.call(["shift"],shell=True)
+        file_path = _args.output
+        dir_name = os.path.dirname(utils.get_realpath(file_path))
+        tmp_dir_path = tempfile.mktemp(dir_name + '/XXXXXXXXX\'')
 
-# Check inputs.
-if Expand.hash():
-    die_with_error_and_cleanup("no input files")
+    if _args.ignore_nops:
+        ignore_nop = '--ignore-nops'
 
-# Output directory - compulsory argument.
-if OUT_PATH == '':
-    die_with_error_and_cleanup("option -o|--output is compulsory")
-else:
-    FILE_PATH = OUT_PATH
-    DIR = os.popen("dirname \"" + os.popen("get_realpath \"" + str(FILE_PATH) + "\"").read().rstrip("\n") + "\"").read().rstrip("\n")
-    DIR_PATH = os.popen("mktemp -d \"" + str(DIR) + "/XXXXXXXXX\"").read().rstrip("\n")
 
-# Set default in argparser
-# Set default --min-pure information argument.
-if not (MIN_PURE != ''):
-    MIN_PURE = 16
+def main(_args):
+    check_arguments(_args)
 
-# Create .pat files for every library.
-for LIB_PATH in Array(INPUT_LIBS[@] ]):
-    # Check for invalid archives.
-    if (not subprocess.call(["is_valid_archive",str(LIB_PATH)],shell=True) ):
-        print("ignoring file '" + str(LIB_PATH) + "' - not valid archive")
-        continue
-    # Get library name for .pat file.
-    LIB_NAME_TMP = os.popen("basename \"" + str(LIB_PATH) + "\"").read().rstrip("\n")
-    LIB_NAME = LIB_NAME_TMP%%.*
-    # Create sub-directory for object files.
-    OBJECT_DIRECTORY = str(DIR_PATH) + "/" + str(LIB_NAME) + "-objects"
-    OBJECT_DIRECTORIES = "(" + str(OBJECT_DIRECTORY) + ")"
-    os.mkdir(OBJECT_DIRECTORY)
-    # Extract all files to temporary folder.
-    subprocess.call([str(AR),str(LIB_PATH),"--extract","--output",str(OBJECT_DIRECTORY)],shell=True)
-    # List all extracted objects.
-    IFS_OLD = IFS
-    IFS = "\n"
-    OBJECTS = "(" + os.popen("find \"" + str(OBJECT_DIRECTORY) + "\" -type f").read().rstrip("\n") + ")"
-    IFS = IFS_OLD
-    # Extract patterns from library.
-    PATTERN_FILE = str(DIR_PATH) + "/" + str(LIB_NAME) + ".pat"
-    PATTERN_FILES = "(" + str(PATTERN_FILE) + ")"
-    subprocess.call([str(BIN2PAT),"-o",str(PATTERN_FILE),str(OBJECTS[@] ])],shell=True)
-    if _rc0 != 0:
-        die_with_error_and_cleanup("utility bin2pat failed when processing '" + str(LIB_PATH) + "'")
-    # Remove extracted objects continuously.
-    if not str(NO_CLEANUP) != '':
-        subprocess.call(["rm","-r",str(OBJECT_DIRECTORY)],shell=True)
+    pattern_files = []
+    object_dirs = []
 
-# Skip second step - only .pat files will be created.
-if str(BIN2PAT_ONLY) != '':
-    if not str(NO_CLEANUP) != '':
-        subprocess.call(["rm","-f",str(OBJECT_DIRECTORIES[@] ])],shell=True)
-    sys.exit(0)
+    # Create .pat files for every library.
+    for lib_path in _args.input:
+        # Check for invalid archives.
+        if not utils.is_valid_archive(lib_path):
+            print('ignoring file '' + str(LIB_PATH) + '' - not valid archive')
+            continue
 
-# Create final .yara file from .pat files.
-if str(DO_LOGFILE) != '':
-    subprocess.call([str(PAT2YARA),str(PATTERN_FILES[@] ]),"--min-pure",str(MIN_PURE),"-o",str(FILE_PATH),"-l",str(FILE_PATH) + ".log",str(IGNORE_NOP),str(IGNORE_OPCODE)],shell=True)
-    if _rc0 != 0:
-        die_with_error_and_cleanup("utility pat2yara failed")
-else:
-    subprocess.call([str(PAT2YARA),str(PATTERN_FILES[@] ]),"--min-pure",str(MIN_PURE),"-o",str(FILE_PATH),str(IGNORE_NOP),str(IGNORE_OPCODE)],shell=True)
-    if _rc0 != 0:
-        die_with_error_and_cleanup("utility pat2yara failed")
+        # Get library name for .pat file.
+        lib_name = Path(lib_path).resolve().stem
 
-# Do cleanup.
-if not str(NO_CLEANUP) != '':
-    temporary_files_cleanup()
+        # Create sub-directory for object files.
+        object_dir = tmp_dir_path + '/' + lib_name + '-objects'
+        object_dirs = [object_dir]
+        os.mkdir(object_dir)
+
+        # Extract all files to temporary folder.
+        subprocess.call([config.AR, lib_path, '--extract', '--output', object_dir], shell=True)
+
+        # List all extracted objects.
+        objects = []
+
+        for root, dirs, files in os.walk(object_dir):
+            for f in files:
+                fname = os.path.join(root, f)
+                if os.path.isfile(fname):
+                    objects.append(fname)
+
+        # Extract patterns from library.
+        pattern_file = tmp_dir_path + '/' + lib_name + '.pat'
+        pattern_files = [pattern_file]
+        result = subprocess.call([config.BIN2PAT, '-o', pattern_file, ' '.join(objects)], shell=True)
+
+        if result != 0:
+            die_with_error_and_cleanup(_args, 'utility bin2pat failed when processing '' + str(LIB_PATH) + ''')
+
+        # Remove extracted objects continuously.
+        if not _args.no_cleanup:
+            shutil.rmtree(object_dir)
+
+    # Skip second step - only .pat files will be created.
+    if _args.bin_to_pat_only:
+        if not _args.no_cleanup:
+            for d in object_dirs:
+                shutil.rmtree(d)
+
+        sys.exit(0)
+
+    # Create final .yara file from .pat files.
+    if _args.log_file:
+        result = subprocess.call(
+            [config.PAT2YARA, ' '.join(pattern_files), '--min-pure', _args.min_pure, '-o', file_path, '-l',
+             file_path + '.log', ignore_nop, _args.ignore_nops], shell=True)
+
+        if result != 0:
+            die_with_error_and_cleanup(_args, 'utility pat2yara failed')
+    else:
+        result = subprocess.call(
+            [config.PAT2YARA, ' '.join(pattern_files), '--min-pure', _args.min_pure, '-o', file_path, ignore_nop,
+             _args.ignore_nops], shell=True)
+
+        if result != 0:
+            die_with_error_and_cleanup(_args, 'utility pat2yara failed')
+
+    # Do cleanup.
+    if not _args.no_cleanup:
+        temporary_files_cleanup()
+
+
+if __name__ == '__main__':
+    args = get_parser().parse_args()
+    main(args)
