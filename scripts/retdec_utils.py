@@ -34,7 +34,7 @@ def print_error_and_die(error):
     Returns - 1 if number of arguments is incorrect
     """
     if error is None:
-        exit(1)
+        sys.exit(1)
 
     sys.stderr.write("Error: %s" % error)
     sys.exit(1)

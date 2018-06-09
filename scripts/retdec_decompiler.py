@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -247,6 +248,8 @@ def get_parser():
                         help='Input file')
 
 
+# todo move
+_args = get_parser().parse_args()
 
 def check_arguments(_args):
     """Check proper combination of input arguments.
@@ -300,17 +303,17 @@ def check_arguments(_args):
         if not _args.endian:
                 utils.print_error_and_die('Option -e|--endian must be used with mode ' + _args.mode)
 
-        if not str(RAW_ENTRY_POINT) != '':
+        if not RAW_ENTRY_POINT != '':
                 utils.print_error_and_die('Option --raw-entry-point must be used with mode ' + _args.mode)
 
-        if not str(RAW_SECTION_VMA) != '':
+        if not RAW_SECTION_VMA != '':
                 utils.print_error_and_die('Option --raw-section-vma must be used with mode ' + _args.mode)
 
-        if not subprocess.call(['is_number', str(RAW_ENTRY_POINT)], shell=True):
+        if not subprocess.call(['is_number', (RAW_ENTRY_POINT)], shell=True):
             subprocess.call(['print_error_and_die',
                              'Value in option --raw-entry-point must be decimal (e.g. 123) or hexadecimal value (e.g. 0x123)'],
                             shell=True)
-        if not subprocess.call(['is_number', str(RAW_SECTION_VMA)], shell=True):
+        if not subprocess.call(['is_number', (RAW_SECTION_VMA)], shell=True):
             subprocess.call(['print_error_and_die',
                              'Value in option --raw-section-vma must be decimal (e.g. 123) or hexadecimal value (e.g. 0x123)'],
                             shell=True)
@@ -326,8 +329,7 @@ def check_arguments(_args):
 
     if not _args.output:
         # No output file was given, so use the default one.
-        (name, ext) = os.path.splitext(IN)
-
+        (iname, ext) = os.path.splitext(IN)
 
         if ext == 'll':
             # Suffix .ll
@@ -364,23 +366,23 @@ def check_arguments(_args):
             for r in _args.selected_ranges:
                 # Check if valid range.
                 if not utils.is_range(r):
-                    utils.print_error_and_die('Range '' + str(r) + '' in option --select-ranges is not a valid decimal (e.g. 123-456) or hexadecimal (e.g. 0x123-0xabc) range.')
+                    utils.print_error_and_die('Range '' + (r) + '' in option --select-ranges is not a valid decimal (e.g. 123-456) or hexadecimal (e.g. 0x123-0xabc) range.')
 
         # Check if first <= last.
         ranges = _args.selected_ranges.split('-')
         # parser line into array
         if int(ranges[0]) > int(ranges[1]):
-            utils.print_error_and_die('Range '' + str(r) + '' in option --select-ranges is not a valid range: second address must be greater or equal than the first one.')
+            utils.print_error_and_die('Range '' + (r) + '' in option --select-ranges is not a valid range: second address must be greater or equal than the first one.')
 
 
 def print_warning_if_decompiling_bytecode():
     """Prints a warning if we are decompiling bytecode."""
 
-    bytecode = os.popen('\'' + str(config.CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --bytecode').read(). \
+    bytecode = os.popen('\'' + config.CONFIGTOOL + '\' \'' + CONFIG + '\' --read --bytecode').read(). \
         rstrip('\n')
 
     if bytecode != '':
-        utils.print_warning('Detected ' + str(bytecode) + ' bytecode, which cannot be decompiled by our machine-code '
+        utils.print_warning('Detected ' + bytecode + ' bytecode, which cannot be decompiled by our machine-code '
                                                           'decompiler. The decompilation result may be inaccurate.')
 
 
@@ -445,7 +447,7 @@ def cleanup():
             utils.remove_forced(sig)
 
         # Signatures generated from archives
-        if str(TOOL_LOG_FILE) != '':
+        if TOOL_LOG_FILE != '':
             utils.remove_forced(TOOL_LOG_FILE)
 
 
@@ -516,10 +518,10 @@ def get_tool_runtime(_p1):
     #        [..] (other data)
     #
     # We combine the user and system times into a single time in seconds.
-    USER_TIME_F = os.popen('egrep \'User time \\(seconds\\').read().rstrip('\n') + ': <<< ' + str(_p1) + ' | cut -d: -f2)'
+    USER_TIME_F = os.popen('egrep \'User time \\(seconds\\').read().rstrip('\n') + ': <<< ' + (_p1) + ' | cut -d: -f2)'
 
-    SYSTEM_TIME_F = os.popen('egrep \'System time \\(seconds\\').read().rstrip('\n') + ': <<< ' + str(_p1) + ' | cut -d: -f2)'
-    RUNTIME_F = os.popen('echo ' + str(USER_TIME_F) + '  +  ' + str(SYSTEM_TIME_F) + ' | bc').read().rstrip('\n')
+    SYSTEM_TIME_F = os.popen('egrep \'System time \\(seconds\\').read().rstrip('\n') + ': <<< ' + (_p1) + ' | cut -d: -f2)'
+    RUNTIME_F = os.popen('echo ' + USER_TIME_F + '  +  ' + SYSTEM_TIME_F + ' | bc').read().rstrip('\n')
     # Convert the runtime from float to int (http://unix.stackexchange.com/a/89843).
     # By adding 1, we make sure that the runtime is at least one second. This
     # also takes care of proper rounding (we want to round runtime 1.1 to 2).
@@ -554,7 +556,7 @@ def get_tool_memory_usage(tool):
     We want the value of 'resident set size' (RSS), which we convert from KB
     to MB. If the resulting value is less than 1 MB, round it to 1 MB.
     """
-    RSS_KB = os.popen('egrep \'Maximum resident set size \\(kbytes\\').read().rstrip('\n') + ': <<< ' + str(
+    RSS_KB = os.popen('egrep \'Maximum resident set size \\(kbytes\\').read().rstrip('\n') + ': <<< ' + (
         tool) + ' | cut -d: -f2)'
 
     RSS_MB = (RSS_KB // 1024)
@@ -589,7 +591,7 @@ def get_tool_output(_p1):
         os.close(_rcr1)
         os.dup2(_rcw1, 1)
         _rc0 = subprocess.Popen('sed' + ' ' + '-n' + ' ' + '/Command being timed:/q;p', shell=True, stdin=subprocess.PIPE)
-        _rc0.communicate(str(_p1) + '\n')
+        _rc0.communicate((_p1) + '\n')
 
         return _rc0.wait()
         #sys.exit(0)
@@ -643,7 +645,7 @@ def remove_colors(_p1):
     """Removes color codes from the given text ($1).
     """
     _rc0 = subprocess.Popen('sed' + ' ' + '-r' + ' ' + 's/\x1b[^m]*m//g', shell=True, stdin=subprocess.PIPE)
-    _rc0.communicate(str(_p1) + '\n')
+    _rc0.communicate((_p1) + '\n')
 
     return _rc0.wait()
 
@@ -661,14 +663,14 @@ def timed_kill(pid):
 
     PID = pid
     # PID of the target process
-    PROCESS_NAME = os.popen('ps -p ' + str(PID) + ' -o comm --no-heading').read().rstrip('\n')
+    PROCESS_NAME = os.popen('ps -p ' + PID + ' -o comm --no-heading').read().rstrip('\n')
 
     if PROCESS_NAME == 'time':
         # The program is run through `/usr/bin/time`, so get the PID of the
         # child process (the actual program). Otherwise, if we killed
         # `/usr/bin/time`, we would obtain no output from it (user time, memory
         # usage etc.).
-        PID = os.popen('ps --ppid ' + str(PID) + ' -o pid --no-heading | head -n1').read().rstrip('\n')
+        PID = os.popen('ps --ppid ' + PID + ' -o pid --no-heading | head -n1').read().rstrip('\n')
 
     if not TIMEOUT:
         TIMEOUT = 300
@@ -679,14 +681,14 @@ def timed_kill(pid):
     while t > 0:
         subprocess.call(['sleep', '1'], shell=True)
 
-        if not subprocess.call('kill' + ' ' + '-0' + ' ' + str(PID), shell=True, stdout=open(os.devnull, 'wb'),
+        if not subprocess.call('kill' + ' ' + '-0' + ' ' + PID, shell=True, stdout=open(os.devnull, 'wb'),
                                stderr=open(os.devnull, 'wb')):
             exit(0)
 
     t = t - 1
 
-    _rc0 = subprocess.call('kill_tree' + ' ' + str(PID) + ' ' + 'SIGKILL', shell=True, stdout=open(os.devnull, 'wb'),
-                       stderr=open(os.devnull, 'wb'))
+    _rc0 = subprocess.call('kill_tree' + ' ' + PID + ' ' + 'SIGKILL', shell=True, stdout=open(os.devnull, 'wb'),
+                           stderr=open(os.devnull, 'wb'))
 
     return 0
 
@@ -765,409 +767,411 @@ def generate_log():
                     ' \'%s\',\n\t\'fileinfo_memory\' : \'%s\',\n\t\'bin2llvmir_memory\' :' \
                     ' \'%s\',\n\t\'llvmir2hll_memory\' : \'%s\'\n}\n'
 
-    print(str(log_structure) % (
-        str(IN), str(PDB_FILE), str(LOG_DECOMPILATION_START_DATE), str(LOG_DECOMPILATION_END_DATE), str(MODE),
-        str(ARCH),
-        str(FORMAT), str(LOG_FILEINFO_RC), str(LOG_UNPACKER_RC), str(LOG_BIN2LLVMIR_RC), str(LOG_LLVMIR2HLL_RC),
-        str(LOG_FILEINFO_OUTPUT), str(LOG_UNPACKER_OUTPUT), str(LOG_BIN2LLVMIR_OUTPUT), str(LOG_LLVMIR2HLL_OUTPUT),
-        str(LOG_FILEINFO_RUNTIME), str(LOG_BIN2LLVMIR_RUNTIME), str(LOG_LLVMIR2HLL_RUNTIME), str(LOG_FILEINFO_MEMORY),
-        str(LOG_BIN2LLVMIR_MEMORY), str(LOG_LLVMIR2HLL_MEMORY)))
+    print(log_structure % (
+        IN, PDB_FILE, LOG_DECOMPILATION_START_DATE, LOG_DECOMPILATION_END_DATE, MODE,
+        ARCH,
+        FORMAT, LOG_FILEINFO_RC, LOG_UNPACKER_RC, LOG_BIN2LLVMIR_RC, LOG_LLVMIR2HLL_RC,
+        LOG_FILEINFO_OUTPUT, LOG_UNPACKER_OUTPUT, LOG_BIN2LLVMIR_OUTPUT, LOG_LLVMIR2HLL_OUTPUT,
+        LOG_FILEINFO_RUNTIME, LOG_BIN2LLVMIR_RUNTIME, LOG_LLVMIR2HLL_RUNTIME, LOG_FILEINFO_MEMORY,
+        LOG_BIN2LLVMIR_MEMORY, LOG_LLVMIR2HLL_MEMORY))
 
-
+"""
 while True:
 
-    if str(sys.argv[1]) == '-a' or str(sys.argv[1]) == '--arch':
+    if (sys.argv[1]) == '-a' or (sys.argv[1]) == '--arch':
         # Target architecture.
-        if str(ARCH) != '':
+        if (ARCH) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: -a|--arch'], shell=True)
-        if str(sys.argv[
-                   2]) != 'mips' os.path.exists(str(sys.argv[2])) '!='  '-a' str(sys.argv[2]) != 'arm' os.path.exists(str(sys.argv[2])) '!='  '-a' str(sys.argv[2]) != 'powerpc' os.path.exists(str(sys.argv[2]))'!=' != '':
+        if (sys.argv[
+                   2]) != 'mips' os.path.exists((sys.argv[2])) '!='  '-a' (sys.argv[2]) != 'arm' os.path.exists((sys.argv[2])) '!='  '-a' (sys.argv[2]) != 'powerpc' os.path.exists((sys.argv[2]))'!=' != '':
             subprocess.call(['print_error_and_die',
-                             'Unsupported target architecture '' + str(sys.argv[2]) + ''. Supported architectures: Intel x86, ARM, ARM + Thumb, MIPS, PIC32, PowerPC.'],
+                             'Unsupported target architecture '' + (sys.argv[2]) + ''. Supported architectures: Intel x86, ARM, ARM + Thumb, MIPS, PIC32, PowerPC.'],
                             shell=True)
         ARCH = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '-e' or str(sys.argv[1]) == '--endian':
+    elif (sys.argv[1]) == '-e' or (sys.argv[1]) == '--endian':
         # Endian.
-        if str(ENDIAN) != '':
+        if ENDIAN != '':
             utils.print_error_and_die('Duplicate option: -e|--endian')
         ENDIAN = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '-h' or str(sys.argv[1]) == '--help':
+    elif (sys.argv[1]) == '-h' or (sys.argv[1]) == '--help':
         # Help.
         print_help()
         exit(0)
-    elif str(sys.argv[1]) == '-k' or str(sys.argv[1]) == '--keep-unreachable-funcs':
+    elif (sys.argv[1]) == '-k' or (sys.argv[1]) == '--keep-unreachable-funcs':
         # Keep unreachable functions.
         # Do not check if this parameter is a duplicate because when both
         # --select-ranges or --select--functions and -k is specified, the
         # decompilation fails.
         KEEP_UNREACHABLE_FUNCS = 1
         subprocess.call(['shift'], shell=True)
-    elif str(sys.argv[1]) == '-l' or str(sys.argv[1]) == '--target-language':
+    elif (sys.argv[1]) == '-l' or (sys.argv[1]) == '--target-language':
         # Target language.
-        if str(HLL) != '':
+        if (HLL) != '':
             utils.print_error_and_die('Duplicate option: -l|--target-language')
-        if str(sys.argv[2]) != 'c' and os.path.exists(str(sys.argv[2])) != '':
-            utils.print_error_and_die('Unsupported target language '' + str(sys.argv[2]) + ''. Supported languages: C, Python.')
+        if (sys.argv[2]) != 'c' and os.path.exists((sys.argv[2])) != '':
+            utils.print_error_and_die('Unsupported target language '' + (sys.argv[2]) + ''. Supported languages: C, Python.')
         HLL = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '-m' or str(sys.argv[1]) == '--mode':
+    elif (sys.argv[1]) == '-m' or (sys.argv[1]) == '--mode':
         # Decompilation mode.
-        if str(MODE) != '':
+        if (MODE) != '':
             utils.print_error_and_die('Duplicate option: -m|--mode')
-        if str(sys.argv[2]) != 'bin' os.path.exists(str(sys.argv[2])) '!='  '-a' str(sys.argv[2]) != 'raw':
-            utils.print_error_and_die('Unsupported decompilation mode '' + str(sys.argv[2]) + ''. Supported modes: bin, ll, raw.')
+        if (sys.argv[2]) != 'bin' os.path.exists((sys.argv[2])) '!='  '-a' (sys.argv[2]) != 'raw':
+            utils.print_error_and_die('Unsupported decompilation mode '' + (sys.argv[2]) + ''. Supported modes: bin, ll, raw.')
         MODE = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '-o' or str(sys.argv[1]) == '--output':
+    elif (sys.argv[1]) == '-o' or (sys.argv[1]) == '--output':
         # Output file.
-        if str(OUT) != '':
+        if (OUT) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: -o|--output'], shell=True)
         OUT = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '-p' or str(sys.argv[1]) == '--pdb':
+    elif (sys.argv[1]) == '-p' or (sys.argv[1]) == '--pdb':
         # File containing PDB debug information.
-        if str(PDB_FILE) != '':
+        if (PDB_FILE) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: -p|--pdb'], shell=True)
         PDB_FILE = sys.argv[2]
         if not os.access, R_OK) ):
             subprocess.call(
-                ['print_error_and_die', 'The input PDB file '' + str(PDB_FILE) + '' does not exist or is not readable'],
+                ['print_error_and_die', 'The input PDB file '' + (PDB_FILE) + '' does not exist or is not readable'],
                 shell=True)
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '--backend-aggressive-opts':
+    elif (sys.argv[1]) == '--backend-aggressive-opts':
         # Enable aggressive optimizations.
-        if str(BACKEND_AGGRESSIVE_OPTS) != '':
+        if (BACKEND_AGGRESSIVE_OPTS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-aggressive-opts'], shell=True)
         BACKEND_AGGRESSIVE_OPTS = 1
         subprocess.call(['shift'], shell=True)
-    elif str(sys.argv[1]) == '--backend-arithm-expr-evaluator':
+    elif (sys.argv[1]) == '--backend-arithm-expr-evaluator':
         # Name of the evaluator of arithmetical expressions.
-        if str(BACKEND_ARITHM_EXPR_EVALUATOR) != '':
+        if (BACKEND_ARITHM_EXPR_EVALUATOR) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-arithm-expr-evaluator'], shell=True)
         BACKEND_ARITHM_EXPR_EVALUATOR = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '--backend-call-info-obtainer':
+    elif (sys.argv[1]) == '--backend-call-info-obtainer':
         # Name of the obtainer of information about function calls.
-        if str(BACKEND_CALL_INFO_OBTAINER) != '':
+        if (BACKEND_CALL_INFO_OBTAINER) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-call-info-obtainer'], shell=True)
         BACKEND_CALL_INFO_OBTAINER = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '--backend-cfg-test':
+    elif (sys.argv[1]) == '--backend-cfg-test':
         # Unify the labels in the emitted CFG.
-        if str(BACKEND_CFG_TEST) != '':
+        if (BACKEND_CFG_TEST) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-cfg-test'], shell=True)
         BACKEND_CFG_TEST = 1
         subprocess.call(['shift'], shell=True)
-    elif str(sys.argv[1]) == '--backend-disabled-opts':
+    elif (sys.argv[1]) == '--backend-disabled-opts':
         # List of disabled optimizations in the backend.
-        if str(BACKEND_DISABLED_OPTS) != '':
+        if (BACKEND_DISABLED_OPTS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-disabled-opts'], shell=True)
         BACKEND_DISABLED_OPTS = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '--backend-emit-cfg':
+    elif (sys.argv[1]) == '--backend-emit-cfg':
         # Emit a CFG of each function in the backend IR.
-        if str(BACKEND_EMIT_CFG) != '':
+        if (BACKEND_EMIT_CFG) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-emit-cfg'], shell=True)
         BACKEND_EMIT_CFG = 1
         subprocess.call(['shift'], shell=True)
-    elif str(sys.argv[1]) == '--backend-emit-cg':
+    elif (sys.argv[1]) == '--backend-emit-cg':
         # Emit a CG of the decompiled module in the backend IR.
-        if str(BACKEND_EMIT_CG) != '':
+        if (BACKEND_EMIT_CG) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-emit-cg'], shell=True)
         BACKEND_EMIT_CG = 1
         subprocess.call(['shift'], shell=True)
-    elif str(sys.argv[1]) == '--backend-cg-conversion':
+    elif (sys.argv[1]) == '--backend-cg-conversion':
         # Should the CG from the backend be converted automatically into the desired format?.
-        if str(BACKEND_CG_CONVERSION) != '':
+        if (BACKEND_CG_CONVERSION) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-cg-conversion'], shell=True)
-        if str(sys.argv[2]) != 'auto' os.path.exists(str(sys.argv[2]))'!=' != '':
+        if (sys.argv[2]) != 'auto' os.path.exists((sys.argv[2]))'!=' != '':
             subprocess.call(['print_error_and_die',
-                             'Unsupported CG conversion mode '' + str(sys.argv[2]) + ''. Supported modes: auto, manual.'],
+                             'Unsupported CG conversion mode '' + (sys.argv[2]) + ''. Supported modes: auto, manual.'],
                             shell=True)
         BACKEND_CG_CONVERSION = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '--backend-cfg-conversion':
+    elif (sys.argv[1]) == '--backend-cfg-conversion':
         # Should CFGs from the backend be converted automatically into the desired format?.
-        if str(BACKEND_CFG_CONVERSION) != '':
+        if (BACKEND_CFG_CONVERSION) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-cfg-conversion'], shell=True)
-        if str(sys.argv[2]) != 'auto' os.path.exists(str(sys.argv[2]))'!=' != '':
+        if (sys.argv[2]) != 'auto' os.path.exists((sys.argv[2]))'!=' != '':
             subprocess.call(['print_error_and_die',
-                             'Unsupported CFG conversion mode '' + str(sys.argv[2]) + ''. Supported modes: auto, manual.'],
+                             'Unsupported CFG conversion mode '' + (sys.argv[2]) + ''. Supported modes: auto, manual.'],
                             shell=True)
         BACKEND_CFG_CONVERSION = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif str(sys.argv[1]) == '--backend-enabled-opts':
+    elif (sys.argv[1]) == '--backend-enabled-opts':
         # List of enabled optimizations in the backend.
-        if str(BACKEND_ENABLED_OPTS) != '':
+        if (BACKEND_ENABLED_OPTS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-enabled-opts'], shell=True)
         BACKEND_ENABLED_OPTS = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-find-patterns'):
+    elif ((sys.argv[1]) == '--backend-find-patterns'):
         # Try to find patterns.
-        if str(BACKEND_FIND_PATTERNS) != '':
+        if (BACKEND_FIND_PATTERNS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-find-patterns'], shell=True)
         BACKEND_FIND_PATTERNS = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-force-module-name'):
+    elif ((sys.argv[1]) == '--backend-force-module-name'):
         # Force the module's name in the backend.
-        if str(BACKEND_FORCED_MODULE_NAME) != '':
+        if (BACKEND_FORCED_MODULE_NAME) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-force-module-name'], shell=True)
         BACKEND_FORCED_MODULE_NAME = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-keep-all-brackets'):
+    elif ((sys.argv[1]) == '--backend-keep-all-brackets'):
         # Keep all brackets.
-        if str(BACKEND_KEEP_ALL_BRACKETS) != '':
+        if (BACKEND_KEEP_ALL_BRACKETS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-keep-all-brackets'], shell=True)
         BACKEND_KEEP_ALL_BRACKETS = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-keep-library-funcs'):
+    elif ((sys.argv[1]) == '--backend-keep-library-funcs'):
         # Keep library functions.
-        if str(BACKEND_KEEP_LIBRARY_FUNCS) != '':
+        if (BACKEND_KEEP_LIBRARY_FUNCS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-keep-library-funcs'], shell=True)
         BACKEND_KEEP_LIBRARY_FUNCS = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-llvmir2bir-converter'):
+    elif ((sys.argv[1]) == '--backend-llvmir2bir-converter'):
         # Name of the converter of LLVM IR to BIR.
-        if str(BACKEND_LLVMIR2BIR_CONVERTER) != '':
+        if (BACKEND_LLVMIR2BIR_CONVERTER) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-llvmir2bir-converter'], shell=True)
         BACKEND_LLVMIR2BIR_CONVERTER = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-compound-operators'):
+    elif ((sys.argv[1]) == '--backend-no-compound-operators'):
         # Do not use compound operators.
-        if str(BACKEND_NO_COMPOUND_OPERATORS) != '':
+        if (BACKEND_NO_COMPOUND_OPERATORS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-compound-operators'], shell=True)
         BACKEND_NO_COMPOUND_OPERATORS = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-debug'):
+    elif ((sys.argv[1]) == '--backend-no-debug'):
         # Emission of debug messages.
-        if str(BACKEND_NO_DEBUG) != '':
+        if (BACKEND_NO_DEBUG) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-debug'], shell=True)
         BACKEND_NO_DEBUG = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-debug-comments'):
+    elif ((sys.argv[1]) == '--backend-no-debug-comments'):
         # Emission of debug comments.
-        if str(BACKEND_NO_DEBUG_COMMENTS) != '':
+        if (BACKEND_NO_DEBUG_COMMENTS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-debug-comments'], shell=True)
         BACKEND_NO_DEBUG_COMMENTS = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-opts'):
+    elif ((sys.argv[1]) == '--backend-no-opts'):
         # Disable backend optimizations.
-        if str(BACKEND_OPTS_DISABLED) != '':
+        if (BACKEND_OPTS_DISABLED) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-opts'], shell=True)
         BACKEND_OPTS_DISABLED = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-symbolic-names'):
+    elif ((sys.argv[1]) == '--backend-no-symbolic-names'):
         # Disable the conversion of constant arguments.
-        if str(BACKEND_NO_SYMBOLIC_NAMES) != '':
+        if (BACKEND_NO_SYMBOLIC_NAMES) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-symbolic-names'], shell=True)
         BACKEND_NO_SYMBOLIC_NAMES = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-time-varying-info'):
+    elif ((sys.argv[1]) == '--backend-no-time-varying-info'):
         # Do not emit any time-varying information.
-        if str(BACKEND_NO_TIME_VARYING_INFO) != '':
+        if (BACKEND_NO_TIME_VARYING_INFO) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-time-varying-info'], shell=True)
         BACKEND_NO_TIME_VARYING_INFO = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-no-var-renaming'):
+    elif ((sys.argv[1]) == '--backend-no-var-renaming'):
         # Disable renaming of variables in the backend.
-        if str(BACKEND_VAR_RENAMING_DISABLED) != '':
+        if (BACKEND_VAR_RENAMING_DISABLED) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-no-var-renaming'], shell=True)
         BACKEND_VAR_RENAMING_DISABLED = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-semantics'):
+    elif ((sys.argv[1]) == '--backend-semantics'):
         # The used semantics in the backend.
-        if str(BACKEND_SEMANTICS) != '':
+        if (BACKEND_SEMANTICS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-semantics'], shell=True)
         BACKEND_SEMANTICS = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-strict-fpu-semantics'):
+    elif ((sys.argv[1]) == '--backend-strict-fpu-semantics'):
         # Use strict FPU semantics in the backend.
-        if str(BACKEND_STRICT_FPU_SEMANTICS) != '':
+        if (BACKEND_STRICT_FPU_SEMANTICS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-strict-fpu-semantics'], shell=True)
         BACKEND_STRICT_FPU_SEMANTICS = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--backend-var-renamer'):
+    elif ((sys.argv[1]) == '--backend-var-renamer'):
         # Used renamer of variable names.
-        if str(BACKEND_VAR_RENAMER) != '':
+        if (BACKEND_VAR_RENAMER) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --backend-var-renamer'], shell=True)
-        if str(sys.argv[
-                   2]) != 'address' os.path.exists(str(sys.argv[2])) '!='  '-a' str(sys.argv[2]) != 'readable' os.path.exists(str(sys.argv[2])) '!='  '-a' str(sys.argv[2]) != 'unified':
+        if (sys.argv[
+                   2]) != 'address' os.path.exists((sys.argv[2])) '!='  '-a' (sys.argv[2]) != 'readable' os.path.exists((sys.argv[2])) '!='  '-a' (sys.argv[2]) != 'unified':
             subprocess.call(['print_error_and_die',
-                             'Unsupported variable renamer '' + str(sys.argv[2]) + ''. Supported renamers: address, hungarian, readable, simple, unified.'],
+                             'Unsupported variable renamer '' + (sys.argv[2]) + ''. Supported renamers: address, hungarian, readable, simple, unified.'],
                             shell=True)
         BACKEND_VAR_RENAMER = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--raw-entry-point'):
+    elif ((sys.argv[1]) == '--raw-entry-point'):
         # Entry point address for binary created from raw data.
-        if str(RAW_ENTRY_POINT) != '':
+        if (RAW_ENTRY_POINT) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --raw-entry-point'], shell=True)
         RAW_ENTRY_POINT = sys.argv[2]
         # RAW_ENTRY_POINT='$(($2))'  # evaluate hex address - probably not needed
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--raw-section-vma'):
+    elif ((sys.argv[1]) == '--raw-section-vma'):
         # Virtual memory address for section created from raw data.
-        if str(RAW_SECTION_VMA) != '':
+        if (RAW_SECTION_VMA) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --raw-section-vma'], shell=True)
         RAW_SECTION_VMA = sys.argv[2]
         # RAW_SECTION_VMA='$(($2))'  # evaluate hex address - probably not needed
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--cleanup'):
+    elif ((sys.argv[1]) == '--cleanup'):
         # Cleanup.
-        if str(CLEANUP) != '':
+        if (CLEANUP) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --cleanup'], shell=True)
         CLEANUP = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--color-for-ida'):
-        if str(COLOR_IDA) != '':
+    elif ((sys.argv[1]) == '--color-for-ida'):
+        if (COLOR_IDA) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --color-for-ida'], shell=True)
         COLOR_IDA = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--config'):
-        if str(CONFIG_DB) != '':
+    elif ((sys.argv[1]) == '--config'):
+        if (CONFIG_DB) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --config'], shell=True)
-        if str(NO_CONFIG) != '':
+        if (NO_CONFIG) != '':
             subprocess.call(['print_error_and_die', 'Option --config can not be used with option --no-config'],
                             shell=True)
         CONFIG_DB = sys.argv[2]
-        if (not os.access(str(CONFIG_DB), R_OK) ):
+        if (not os.access((CONFIG_DB), R_OK) ):
             subprocess.call(['print_error_and_die',
-                             'The input JSON configuration file '' + str(CONFIG_DB) + '' does not exist or is not readable'],
+                             'The input JSON configuration file '' + (CONFIG_DB) + '' does not exist or is not readable'],
                             shell=True)
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--no-config'):
-        if str(NO_CONFIG) != '':
+    elif ((sys.argv[1]) == '--no-config'):
+        if (NO_CONFIG) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --no-config'], shell=True)
-        if str(CONFIG_DB) != '':
+        if (CONFIG_DB) != '':
             subprocess.call(['print_error_and_die', 'Option --no-config can not be used with option --config'],
                             shell=True)
         NO_CONFIG = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--graph-format'):
+    elif ((sys.argv[1]) == '--graph-format'):
         # Format of graph files.
-        if str(GRAPH_FORMAT) != '':
+        if (GRAPH_FORMAT) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --graph-format'], shell=True)
-        if str(sys.argv[2]) != 'pdf' os.path.exists(str(sys.argv[2])) '!='  '-a' str(sys.argv[2]) != 'svg':
+        if (sys.argv[2]) != 'pdf' os.path.exists((sys.argv[2])) '!='  '-a' (sys.argv[2]) != 'svg':
             subprocess.call(['print_error_and_die',
-                             'Unsupported graph format '' + str(sys.argv[2]) + ''. Supported formats: pdf, png, svg.'],
+                             'Unsupported graph format '' + (sys.argv[2]) + ''. Supported formats: pdf, png, svg.'],
                             shell=True)
         GRAPH_FORMAT = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--select-decode-only'):
-        if str(SELECTED_DECODE_ONLY) != '':
+    elif ((sys.argv[1]) == '--select-decode-only'):
+        if (SELECTED_DECODE_ONLY) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --select-decode-only'], shell=True)
         SELECTED_DECODE_ONLY = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--select-functions'):
+    elif ((sys.argv[1]) == '--select-functions'):
         # List of selected functions.
-        if str(SELECTED_FUNCTIONS) != '':
+        if (SELECTED_FUNCTIONS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --select-functions'], shell=True)
         IFS').setValue(',')
         # parser line into array
         KEEP_UNREACHABLE_FUNCS = 1
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--select-ranges'):
+    elif ((sys.argv[1]) == '--select-ranges'):
         # List of selected ranges.
-        if str(SELECTED_RANGES) != '':
+        if (SELECTED_RANGES) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --select-ranges'], shell=True)
         SELECTED_RANGES = sys.argv[2]
         IFS').setValue(',')
         # parser line into array
         KEEP_UNREACHABLE_FUNCS = 1
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--stop-after'):
+    elif ((sys.argv[1]) == '--stop-after'):
         # Stop decompilation after the given tool.
-        if str(STOP_AFTER) != '':
+        if (STOP_AFTER) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --stop-after'], shell=True)
         STOP_AFTER = sys.argv[2]
-        if (not re.search('^(fileinfo|unpacker|bin2llvmir|llvmir2hll)' + '$', str(STOP_AFTER))):
-            subprocess.call(['print_error_and_die', 'Unsupported tool '' + str(STOP_AFTER) + '' for --stop-after'],
+        if (not re.search('^(fileinfo|unpacker|bin2llvmir|llvmir2hll)' + '$', (STOP_AFTER))):
+            subprocess.call(['print_error_and_die', 'Unsupported tool '' + (STOP_AFTER) + '' for --stop-after'],
                             shell=True)
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--static-code-sigfile'):
+    elif ((sys.argv[1]) == '--static-code-sigfile'):
         # User provided signature file.
-        if not os.path.isfile(str(sys.argv[2])):
-            subprocess.call(['print_error_and_die', 'Invalid .yara file '' + str(sys.argv[2]) + '''], shell=True)
-        TEMPORARY_SIGNATURES').setValue('(' + str(sys.argv[2]) + ')')
+        if not os.path.isfile((sys.argv[2])):
+            subprocess.call(['print_error_and_die', 'Invalid .yara file '' + (sys.argv[2]) + '''], shell=True)
+        TEMPORARY_SIGNATURES').setValue('(' + (sys.argv[2]) + ')')
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--static-code-archive'):
+    elif ((sys.argv[1]) == '--static-code-archive'):
         # User provided archive to create signature file from.
-        if not os.path.isfile(str(sys.argv[2])):
-            subprocess.call(['print_error_and_die', 'Invalid archive file '' + str(sys.argv[2]) + '''], shell=True)
-        SIGNATURE_ARCHIVE_PATHS').setValue('(' + str(sys.argv[2]) + ')')
+        if not os.path.isfile((sys.argv[2])):
+            subprocess.call(['print_error_and_die', 'Invalid archive file '' + (sys.argv[2]) + '''], shell=True)
+        SIGNATURE_ARCHIVE_PATHS').setValue('(' + (sys.argv[2]) + ')')
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--no-default-static-signatures'):
+    elif ((sys.argv[1]) == '--no-default-static-signatures'):
         DO_NOT_LOAD_STATIC_SIGNATURES = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--fileinfo-verbose'):
+    elif ((sys.argv[1]) == '--fileinfo-verbose'):
         # Enable --verbose mode in fileinfo.
-        if str(FILEINFO_VERBOSE) != '':
+        if (FILEINFO_VERBOSE) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --fileinfo-verbose'], shell=True)
         FILEINFO_VERBOSE = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--fileinfo-use-all-external-patterns'):
-        if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
+    elif ((sys.argv[1]) == '--fileinfo-use-all-external-patterns'):
+        if (FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --fileinfo-use-all-external-patterns'],
                             shell=True)
         FILEINFO_USE_ALL_EXTERNAL_PATTERNS = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--ar-name'):
+    elif ((sys.argv[1]) == '--ar-name'):
         # Archive decompilation by name.
-        if str(AR_NAME) != '':
+        if (AR_NAME) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --ar-name'], shell=True)
         AR_NAME = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--ar-index'):
+    elif ((sys.argv[1]) == '--ar-index'):
         # Archive decompilation by index.
-        if str(AR_INDEX) != '':
+        if (AR_INDEX) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --ar-index'], shell=True)
         AR_INDEX = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--max-memory'):
-        if str(MAX_MEMORY) != '':
+    elif ((sys.argv[1]) == '--max-memory'):
+        if (MAX_MEMORY) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --max-memory'], shell=True)
-        if str(NO_MEMORY_LIMIT) != '':
+        if (NO_MEMORY_LIMIT) != '':
             subprocess.call(['print_error_and_die', 'Clashing options: --max-memory and --no-memory-limit'], shell=True)
         MAX_MEMORY = sys.argv[2]
-        if (not re.search(Str(Glob('^[0-9] + ' + '$')), str(MAX_MEMORY))):
+        if (not re.search(Str(Glob('^[0-9] + ' + '$')), (MAX_MEMORY))):
             subprocess.call(['print_error_and_die',
-                             'Invalid value for --max-memory: ' + str(MAX_MEMORY) + ' (expected a positive integer)'],
+                             'Invalid value for --max-memory: ' + (MAX_MEMORY) + ' (expected a positive integer)'],
                             shell=True)
         subprocess.call(['shift', '2'], shell=True)
-    elif (str(sys.argv[1]) == '--no-memory-limit'):
-        if str(NO_MEMORY_LIMIT) != '':
+    elif ((sys.argv[1]) == '--no-memory-limit'):
+        if (NO_MEMORY_LIMIT) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --no-memory-limit'], shell=True)
-        if str(MAX_MEMORY) != '':
+        if (MAX_MEMORY) != '':
             subprocess.call(['print_error_and_die', 'Clashing options: --max-memory and --no-memory-limit'], shell=True)
         NO_MEMORY_LIMIT = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--generate-log'):
+    elif ((sys.argv[1]) == '--generate-log'):
         # Intentionally undocumented option.
         # Used only for internal testing.
         # NOT guaranteed it works everywhere (systems other than our internal test machines).
-        if str(GENERATE_LOG) != '':
+        if (GENERATE_LOG) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --generate-log'], shell=True)
         GENERATE_LOG = 1
         NO_MEMORY_LIMIT = 1
         subprocess.call(['shift'], shell=True)
-    elif (str(sys.argv[1]) == '--'):
+    elif ((sys.argv[1]) == '--'):
         # Input file.
         if (Expand.hash() == 2):
             IN = sys.argv[2]
-            if (not os.access(str(IN), R_OK) ):
+            if (not os.access((IN), R_OK) ):
                 subprocess.call(
-                    ['print_error_and_die', 'The input file '' + str(IN) + '' does not exist or is not readable'],
+                    ['print_error_and_die', 'The input file '' + (IN) + '' does not exist or is not readable'],
                     shell=True)
         elif (Expand.hash() > 2):
             # Invalid options.
             subprocess.call(
-                ['print_error_and_die', 'Invalid options: '' + str(sys.argv[2]) + '', '' + str(sys.argv[3]) + '' ...'],
+                ['print_error_and_die', 'Invalid options: '' + (sys.argv[2]) + '', '' + (sys.argv[3]) + '' ...'],
                 shell=True)
         break
+"""
+
 
 # Check arguments and set default values for unset options.
-check_arguments(args)
+check_arguments(_args)
 
 # Initialize variables used by logging.
 if _args.generate_log:
@@ -1192,33 +1196,33 @@ if _args.mode == 'raw':
 if _args.mode == 'bin':
     # Check for archives packed in Mach-O Universal Binaries.
     print('##### Checking if file is a Mach-O Universal static library...')
-    print('RUN: ' + str(EXTRACT) + ' --list ' + str(IN))
+    print('RUN: ' + config.EXTRACT + ' --list ' + IN)
 
     if utils.is_macho_archive(IN):
         OUT_ARCHIVE = OUT + '.a'
         if _args.arch:
             print()
             print('##### Restoring static library with architecture family ' + _args.arch + '...')
-            print('RUN: ' + config.EXTRACT + ' --family ' + _args.arch + ' --out ' + str(OUT_ARCHIVE) + ' ' + str(IN))
+            print('RUN: ' + config.EXTRACT + ' --family ' + _args.arch + ' --out ' + OUT_ARCHIVE + ' ' + IN)
             if (
-                    not subprocess.call([config.EXTRACT, '--family', _args.arch, '--out', str(OUT_ARCHIVE), str(IN)],
+                    not subprocess.call([config.EXTRACT, '--family', _args.arch, '--out', OUT_ARCHIVE, IN],
                                         shell=True)):
                 # Architecture not supported
                 print('Invalid --arch option \'' + _args.arch + '\'. File contains these architecture families:')
-                subprocess.call([config.EXTRACT, '--list', str(IN)], shell=True)
+                subprocess.call([config.EXTRACT, '--list', (IN)], shell=True)
                 cleanup()
                 sys.exit(1)
         else:
             # Pick best architecture
             print()
             print('##### Restoring best static library for decompilation...')
-            print('RUN: ' + config.EXTRACT + ' --best --out ' + str(OUT_ARCHIVE) + ' ' + str(IN))
-            subprocess.call([config.EXTRACT, '--best', '--out', str(OUT_ARCHIVE), str(IN)], shell=True)
+            print('RUN: ' + config.EXTRACT + ' --best --out ' + OUT_ARCHIVE + ' ' + IN)
+            subprocess.call([config.EXTRACT, '--best', '--out', OUT_ARCHIVE, IN], shell=True)
         IN = OUT_ARCHIVE
 
     print()
     print('##### Checking if file is an archive...')
-    print('RUN: ' + str(AR) + ' --arch-magic ' + str(IN))
+    print('RUN: ' + AR + ' --arch-magic ' + IN)
 
     if utils.has_archive_signature(IN):
         print('This file is an archive!')
@@ -1240,30 +1244,30 @@ if _args.mode == 'bin':
             utils.print_error_and_die('The input archive is empty.')
 
         # Prepare object output path.
-        OUT_RESTORED = str(OUT) + '.restored'
+        OUT_RESTORED = OUT + '.restored'
 
         # Pick object by index.
-        if str(AR_INDEX) != '':
+        if AR_INDEX != '':
             print()
-            print('##### Restoring object file on index '' + str(AR_INDEX) + '' from archive...')
-            print('RUN: ' + str(AR) + ' ' + str(IN) + ' --index ' + str(AR_INDEX) + ' --output ' + str(OUT_RESTORED))
+            print('##### Restoring object file on index '' + (AR_INDEX) + '' from archive...')
+            print('RUN: ' + config.AR + ' ' + IN + ' --index ' + AR_INDEX + ' --output ' + OUT_RESTORED)
 
             if not utils.archive_get_by_index(IN, AR_INDEX, OUT_RESTORED):
                 cleanup()
                 VALID_INDEX = (ARCH_OBJECT_COUNT - 1)
 
                 if int(VALID_INDEX) != 0:
-                    subprocess.call(['print_error_and_die', 'File on index \'' + str(
-                        AR_INDEX) + '\' was not found in the input archive. Valid indexes are 0-' + str(
+                    subprocess.call(['print_error_and_die', 'File on index \'' + (
+                        AR_INDEX) + '\' was not found in the input archive. Valid indexes are 0-' + (
                         VALID_INDEX) + '.'], shell=True)
                 else:
-                    subprocess.call(['print_error_and_die', 'File on index \'' + str(
+                    subprocess.call(['print_error_and_die', 'File on index \'' + (
                         AR_INDEX) + '\' was not found in the input archive. The only valid index is 0.'], shell=True)
             IN = OUT_RESTORED
-        elif str(AR_NAME) != '':
+        elif AR_NAME != '':
             print()
-            print('##### Restoring object file with name '' + str(AR_NAME) + '' from archive...')
-            print('RUN: ' + config.AR + ' ' + str(IN) + ' --name ' + str(AR_NAME) + ' --output ' + str(OUT_RESTORED))
+            print('##### Restoring object file with name '' + (AR_NAME) + '' from archive...')
+            print('RUN: ' + config.AR + ' ' + IN + ' --name ' + AR_NAME + ' --output ' + OUT_RESTORED)
             if not utils.archive_get_by_name(IN, AR_NAME, OUT_RESTORED):
                 cleanup()
                 utils.print_error_and_die('File named %s was not found in the input archive.' % AR_NAME)
@@ -1277,100 +1281,101 @@ if _args.mode == 'bin':
             cleanup()
             exit(1)
     else:
-        if str(AR_NAME) != '':
+        if AR_NAME != '':
             subprocess.call(['print_warning', 'Option --ar-name can be used only with archives.'], shell=True)
-        if str(AR_INDEX) != '':
+        if AR_INDEX != '':
             subprocess.call(['print_warning', 'Option --ar-index can be used only with archives.'], shell=True)
         print('Not an archive, going to the next step.')
 
 
 if _args.mode == 'bin' or _args.mode == 'raw':
     # Assignment of other used variables.
-    OUT_UNPACKED = str(OUT %. *) + '-unpacked'
-    OUT_FRONTEND = str(OUT) + '.frontend'
-    OUT_FRONTEND_LL = str(OUT_FRONTEND) + '.ll'
-    OUT_FRONTEND_BC = str(OUT_FRONTEND) + '.bc'
+    name = os.path.splitext(OUT)[0]
+    OUT_UNPACKED = name + '-unpacked'
+    OUT_FRONTEND = OUT + '.frontend'
+    OUT_FRONTEND_LL = OUT_FRONTEND + '.ll'
+    OUT_FRONTEND_BC = OUT_FRONTEND + '.bc'
     CONFIG = OUT + '.json'
 
-    if str(CONFIG) != str(CONFIG_DB):
+    if CONFIG != CONFIG_DB:
         utils.remove_forced(CONFIG)
 
-    if str(CONFIG_DB) != '':
+    if CONFIG_DB != '':
         shutil.copyfile(CONFIG_DB, CONFIG)
 
     # Preprocess existing file or create a new, empty JSON file.
     if os.path.isfile(CONFIG):
         subprocess.call([config.CONFIGTOOL, CONFIG, '--preprocess'], shell=True)
     else:
-        print('{}', file=file(str(CONFIG), 'wb'))
+        print('{}', file=file(CONFIG, 'wb'))
 
 
     # Raw data needs architecture, endianess and optionaly sections's vma and entry point to be specified.
     if _args.mode == 'raw':
-        if not ARCH or ARCH '='  '-o' str(ARCH) == str():
-            subprocess.call(['print_error_and_die', 'Option -a|--arch must be used with mode ' + str(MODE)], shell=True)
-        if not str(ENDIAN) != '':
-            subprocess.call(['print_error_and_die', 'Option -e|--endian must be used with mode ' + str(MODE)], shell=True)
+        if not _args.arch or _args.arch == 'unknown' or _args.arch == '':
+            utils.print_error_and_die('Option -a|--arch must be used with mode ' + _args.mode)
 
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--format', 'raw'], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--bit-size', '32'], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--file-class', '32'], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--endian', str(ENDIAN)], shell=True)
+        if not _args.endian:
+            utils.print_error_and_die('Option -e|--endian must be used with mode ' + _args.mode)
 
-        if str(RAW_ENTRY_POINT) != '':
-            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--entry-point', str(RAW_ENTRY_POINT)], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--format', 'raw'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--arch', _args.arch], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--bit-size', '32'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--file-class', '32'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--endian', _args.endian], shell=True)
 
-        if str(RAW_SECTION_VMA) != '':
-            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--section-vma', str(RAW_SECTION_VMA)], shell=True)
+        if RAW_ENTRY_POINT != '':
+            subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--entry-point', RAW_ENTRY_POINT], shell=True)
+
+        if RAW_SECTION_VMA != '':
+            subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--section-vma', RAW_SECTION_VMA], shell=True)
 
     ##
     ## Call fileinfo to create an initial config file.
     ##
-    FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity ' + str(IN) + ' --no-hashes=all)'
+    FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', IN, '--no-hashes=all']
 
-    if str(FILEINFO_VERBOSE) != '':
-        FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity --verbose ' + str(IN) + ')'
-    for par in Array(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
-        FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
+    if FILEINFO_VERBOSE != '':
+        FILEINFO_PARAMS.append('-c ' + CONFIG + ' --similarity --verbose ' + IN)
+    for par in FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
+        FILEINFO_PARAMS.append('--crypto ' + ' '.join(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES))
 
-    if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
-        for par in Array(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
-            FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
-            if (not str(MAX_MEMORY) == ''):
-                FILEINFO_PARAMS = '(--max-memory ' + str(MAX_MEMORY) + ')'
-            elif (str(NO_MEMORY_LIMIT) == ''):
+    if FILEINFO_USE_ALL_EXTERNAL_PATTERNS != '':
+        for par in FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
+            FILEINFO_PARAMS = '(--crypto ' + (par) + ')'
+            if MAX_MEMORY:
+                FILEINFO_PARAMS = '(--max-memory ' + MAX_MEMORY + ')'
+            elif NO_MEMORY_LIMIT == '':
             # By default, we want to limit the memory of fileinfo into half of
             # system RAM to prevent potential black screens on Windows (#270).
                 FILEINFO_PARAMS = '(--max-memory-half-ram)'
 
     print()
     print('##### Gathering file information...')
-    print('RUN: ' + str(FILEINFO) + ' ' + str(FILEINFO_PARAMS[ @]]))
+    print('RUN: ' + config.FILEINFO + ' ' +  ' '.join(FILEINFO_PARAMS))
 
-    if str(GENERATE_LOG) != '':
-        FILEINFO_AND_TIME_OUTPUT = os.popen(str(TIME) + ' \'' + str(FILEINFO) + '\' \''
-                                            + str(FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
+    if GENERATE_LOG != '':
+        FILEINFO_AND_TIME_OUTPUT = os.popen(TIME + ' \'' + FILEINFO + '\' \''
+                                            + (FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
 
         FILEINFO_RC = _rc0
-        LOG_FILEINFO_RC = os.popen('get_tool_rc \'' + str(FILEINFO_RC) + '\' \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_FILEINFO_RC = os.popen('get_tool_rc \'' + (FILEINFO_RC) + '\' \'' + (FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
 
-        LOG_FILEINFO_RUNTIME = os.popen('get_tool_runtime \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-        LOG_FILEINFO_MEMORY = os.popen('get_tool_memory_usage \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-        LOG_FILEINFO_OUTPUT = os.popen('get_tool_output \'' + str(FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_FILEINFO_RUNTIME = os.popen('get_tool_runtime \'' + (FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_FILEINFO_MEMORY = os.popen('get_tool_memory_usage \'' + (FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        LOG_FILEINFO_OUTPUT = os.popen('get_tool_output \'' + (FILEINFO_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
         print(LOG_FILEINFO_OUTPUT)
     else:
-        _rc0 = subprocess.call([str(FILEINFO), str(FILEINFO_PARAMS[ @]])], shell = True)
+        _rc0 = subprocess.call([config.FILEINFO, ' '.join(FILEINFO_PARAMS)], shell = True)
         FILEINFO_RC = _rc0
 
     if int(FILEINFO_RC) != 0:
-        if
-        str(GENERATE_LOG) != '':
+        if GENERATE_LOG:
+            generate_log()
 
-        generate_log()
         cleanup()
         # The error message has been already reported by fileinfo in stderr.
-        subprocess.call(['print_error_and_die'], shell=True)
+        utils.print_error_and_die('')
 
     check_whether_decompilation_should_be_forcefully_stopped('fileinfo')
 
@@ -1379,21 +1384,20 @@ if _args.mode == 'bin' or _args.mode == 'raw':
     ##
     UNPACK_PARAMS = ['--extended-exit-codes', '--output ', OUT_UNPACKED, IN]
 
-    if not str(MAX_MEMORY) == '':
+    if not MAX_MEMORY == '':
         UNPACK_PARAMS.append('--max-memory ' + MAX_MEMORY)
-    elif str(NO_MEMORY_LIMIT) == '':
+    elif NO_MEMORY_LIMIT == '':
         # By default, we want to limit the memory of retdec-unpacker into half
         # of system RAM to prevent potential black screens on Windows (#270).
         UNPACK_PARAMS.append('--max-memory-half-ram')
 
-    if str(GENERATE_LOG) != '':
-        LOG_UNPACKER_OUTPUT = os.popen(str(UNPACK_SH) + ' \'' + str(UNPACK_PARAMS[ @]]) + '\' 2>&1').read().rstrip('\n')
+    if GENERATE_LOG != '':
+        LOG_UNPACKER_OUTPUT = os.popen(config.UNPACK + ' \'' + ' '.join(UNPACK_PARAMS) + '\' 2>&1').read().rstrip('\n')
 
         UNPACKER_RC = _rc0
         LOG_UNPACKER_RC = UNPACKER_RC
     else:
-        _rc0 = subprocess.call([str(UNPACK_SH), str(UNPACK_PARAMS[ @]])], shell = True)
-        UNPACKER_RC = _rc0
+        UNPACKER_RC = subprocess.call([config.UNPACK, ' '.join(UNPACK_PARAMS)], shell = True)
 
     check_whether_decompilation_should_be_forcefully_stopped('unpacker')
 
@@ -1402,32 +1406,32 @@ if _args.mode == 'bin' or _args.mode == 'raw':
     # RET_NOTHING_TO_DO=2
     # RET_UNPACKER_FAILED_OTHERS_OK=3
     # RET_UNPACKER_FAILED=4
-    if (if not if not int(UNPACKER_RC) == 0:
-        int(UNPACKER_RC) == 1:
-        int(UNPACKER_RC) == 3 ):
+    if UNPACKER_RC == 0 or UNPACKER_RC == 1 or UNPACKER_RC == 3:
         # Successfully unpacked -> re-run fileinfo to obtain fresh information.
         IN = OUT_UNPACKED
-        FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity ' + str(IN) + ' --no-hashes=all)'
-        if (str(FILEINFO_VERBOSE) != ''):
-            FILEINFO_PARAMS = '(-c ' + str(CONFIG) + ' --similarity --verbose ' + str(IN) + ')'
-        for par in Array(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES[ @]]):
-            FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
-        if str(FILEINFO_USE_ALL_EXTERNAL_PATTERNS) != '':
-            for par in Array(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES[ @]]):
-        FILEINFO_PARAMS = '(--crypto ' + str(par) + ')'
-        if (not str(MAX_MEMORY) == ''):
-            FILEINFO_PARAMS = '(--max-memory ' + str(MAX_MEMORY) + ')'
-        elif str(NO_MEMORY_LIMIT) == '':
+        FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', IN, '--no-hashes=all']
+
+        if FILEINFO_VERBOSE != '':
+            FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', '--verbose', IN]
+
+        FILEINFO_PARAMS.append('--crypto ' + ' '.join(FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES))
+
+        if FILEINFO_USE_ALL_EXTERNAL_PATTERNS != '':
+            FILEINFO_PARAMS.append('--crypto ' + ' '.join(FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES))
+
+        if not MAX_MEMORY == '':
+            FILEINFO_PARAMS.append('--max-memory ' + MAX_MEMORY)
+        elif NO_MEMORY_LIMIT == '':
         # By default, we want to limit the memory of fileinfo into half of
         # system RAM to prevent potential black screens on Windows (#270).
-            FILEINFO_PARAMS = '(--max-memory-half-ram)'
+            FILEINFO_PARAMS.append('--max-memory-half-ram')
 
         print()
         print('##### Gathering file information after unpacking...')
-        print('RUN: ' + str(FILEINFO) + ' ' + str(FILEINFO_PARAMS[ @]]))
+        print('RUN: ' + FILEINFO + ' ' + ' '.join(FILEINFO_PARAMS))
 
-        if str(GENERATE_LOG) != '':
-            FILEINFO_AND_TIME_OUTPUT = os.popen(str(TIME) + ' \'' + str(FILEINFO) + '\' \'' + str(FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip(
+        if GENERATE_LOG != '':
+            FILEINFO_AND_TIME_OUTPUT = os.popen((TIME) + ' \'' + (FILEINFO) + '\' \'' + (FILEINFO_PARAMS[ @]]) + '\' 2>&1').read().rstrip(
             '\n')
 
             FILEINFO_RC = _rc0
@@ -1439,12 +1443,12 @@ if _args.mode == 'bin' or _args.mode == 'raw':
             LOG_FILEINFO_OUTPUT = get_tool_output(FILEINFO_AND_TIME_OUTPUT)
             print(LOG_FILEINFO_OUTPUT)
         else:
-            _rc0 = subprocess.call([str(FILEINFO), str(FILEINFO_PARAMS[ @]])], shell = True)
+            _rc0 = subprocess.call([(FILEINFO), (FILEINFO_PARAMS[ @]])], shell = True)
             FILEINFO_RC = _rc0
         if int(FILEINFO_RC) != 0:
-            if
-            str(GENERATE_LOG) != '':
-            generate_log()
+            if GENERATE_LOG:
+                generate_log()
+
             cleanup()
             # The error message has been already reported by fileinfo in stderr.
             subprocess.call(['print_error_and_die'], shell=True)
@@ -1452,79 +1456,77 @@ if _args.mode == 'bin' or _args.mode == 'raw':
         print_warning_if_decompiling_bytecode()
 
     # Check whether the architecture was specified.
-    if str(ARCH) != '':
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
+    if ARCH != '':
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--arch', ARCH], shell=True)
     else:
         # Get full name of the target architecture including comments in parentheses
         ARCH_FULL = os.popen(
-            '\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --arch | awk \'{print tolower($0').read().rstrip(
+            '\'' + config.CONFIGTOOL + '\' \'' + (CONFIG) + '\' --read --arch | awk \'{print tolower($0').read().rstrip(
             '\n') + '})')
 
     # Strip comments in parentheses and all trailing whitespace
-    ARCH = os.popen('echo ' + str(ARCH_FULL % (*) + ' | sed -e '
-    s / ^ [[: space:]] * // '').read().rstrip('\n')
+    ARCH = os.popen('echo ' + (ARCH_FULL % (*) + ' | sed -e s / ^ [[: space:]] * // \'').read().rstrip('\n')
 
     # Get object file format.
     FORMAT = os.popen(
-        '\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --format | awk \'{print tolower($1').read().rstrip(
+        '\'' + config.CONFIGTOOL + '\' \'' + CONFIG + '\' --read --format | awk \'{print tolower($1').read().rstrip(
         '\n') + ';})'
 
     # Intel HEX needs architecture to be specified
-    if str(FORMAT) == 'ihex':
-        if
-        not ARCH or ARCH
-        '='  '-o'
-        str(ARCH) == str():
-        subprocess.call(['print_error_and_die', 'Option -a|--arch must be used with format ' + str(FORMAT)], shell=True)
-        if not str(ENDIAN) != '':
-            subprocess.call(['print_error_and_die', 'Option -e|--endian must be used with format ' + str(FORMAT)], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--arch', str(ARCH)], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--bit-size', '32'], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--file-class', '32'], shell=True)
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--endian', str(ENDIAN)], shell=True)
+    if FORMAT == 'ihex':
+        if not _args.arch or _args.arch == 'unknown' or _args.arch == '':
+            utils.print_error_and_die('Option -a|--arch must be used with format ' + FORMAT)
+
+        if not _args.endian:
+            utils.print_error_and_die('Option -e|--endian must be used with format ' + FORMAT)
+
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--arch', _args.arch], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--bit-size', '32'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--file-class', '32'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--endian', _args.endian], shell=True)
 
     # Check whether the correct target architecture was specified.
-    if (str(ARCH) == 'arm' - o str(ARCH)
+    if (ARCH == 'arm' - o (ARCH)
         '=' != '' ):
         ORDS_DIR = ARM_ORDS_DIR
-    elif (str(ARCH) == 'x86'):
+    elif (ARCH) == 'x86':
         ORDS_DIR = X86_ORDS_DIR
-    elif (str(ARCH) == 'powerpc' - o str(ARCH)
+    elif (ARCH == 'powerpc' - o (ARCH)
         '='  '-o'
-    str(ARCH) == 'pic32' ):
+    (ARCH) == 'pic32' ):
         pass
     else:
     # nothing
-    if str(GENERATE_LOG) != '':
+    if GENERATE_LOG:
         generate_log()
-        cleanup()
-        subprocess.call(['print_error_and_die',
-                         'Unsupported target architecture '' + str(ARCH^^) + ''. Supported architectures: Intel x86, ARM, ARM + Thumb, MIPS, PIC32, PowerPC.'],
-                        shell=True)
+
+    cleanup()
+    subprocess.call(['print_error_and_die',
+                     'Unsupported target architecture '' + (ARCH^^) + ''. Supported architectures: Intel x86, ARM, ARM + Thumb, MIPS, PIC32, PowerPC.'],
+                    shell=True)
 
     # Check file class (e.g. 'ELF32', 'ELF64'). At present, we can only decompile 32-bit files.
     # Note: we prefer to report the 'unsupported architecture' error (above) than this 'generic' error.
-    FILECLASS = os.popen('\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --file-class').read().rstrip('\n')
+    FILECLASS = os.popen('\'' + config.CONFIGTOOL + '\' \'' + (CONFIG) + '\' --read --file-class').read().rstrip('\n')
 
-    if (if str(FILECLASS) != '16':
-        str(FILECLASS) != '32' ):
-        if str(GENERATE_LOG) != '':
+    if FILECLASS != '16' or FILECLASS != '32':
+        if GENERATE_LOG != '':
             generate_log()
+
         cleanup()
         subprocess.call(['print_error_and_die',
-                        'Unsupported target format '' + str(FORMAT^^) + str(FILECLASS) + ''. Supported formats: ELF32, PE32, Intel HEX 32, Mach-O 32.'],
+                        'Unsupported target format '' + (FORMAT^^) + (FILECLASS) + ''. Supported formats: ELF32, PE32, Intel HEX 32, Mach-O 32.'],
                         shell=True)
 
     # Set path to statically linked code signatures.
     #
-    # TODO: Useing ELF for IHEX is ok, but for raw, we probably should somehow decide between ELF and PE, or use both, for RAW.
+    # TODO: Using ELF for IHEX is ok, but for raw, we probably should somehow decide between ELF and PE, or use both, for RAW.
     SIG_FORMAT = FORMAT
 
-    if (if not str(SIG_FORMAT) == 'ihex':
-        str(SIG_FORMAT) == 'raw' ):
+    if SIG_FORMAT == 'ihex' or SIG_FORMAT == 'raw':
         SIG_FORMAT = 'elf'
 
-    ENDIAN = os.popen('\'' + str(CONFIGTOOL) + '\' \'' + str(CONFIG) + '\' --read --endian').read().rstrip('\n')
+    ENDIAN = os.popen('\'' + config.CONFIGTOOL + '\' \'' + (CONFIG) + '\' --read --endian').read().rstrip('\n')
 
     if _args.endian == 'little':
         SIG_ENDIAN = 'le'
@@ -1535,78 +1537,80 @@ if _args.mode == 'bin' or _args.mode == 'raw':
 
     SIG_ARCH = ARCH
 
-    if str(SIG_ARCH) == 'pic32':
+    if (SIG_ARCH) == 'pic32':
         SIG_ARCH = 'mips'
 
-    SIGNATURES_DIR = str(GENERIC_SIGNATURES_DIR) + '/' + str(SIG_FORMAT) + '/' + str(FILECLASS,, ) + '/' + str(SIG_ENDIAN,,) + '/' + str(
+    SIGNATURES_DIR = GENERIC_SIGNATURES_DIR + '/' + SIG_FORMAT + '/' + (FILECLASS,,) + '/' + (SIG_ENDIAN,,) + '/' + (
         SIG_ARCH)
 
     print_warning_if_decompiling_bytecode()
 
     # Decompile unreachable functions.
     if KEEP_UNREACHABLE_FUNCS:
-        subprocess.call([CONFIGTOOL, CONFIG, '--write', '--keep-unreachable-funcs', 'true'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--keep-unreachable-funcs', 'true'], shell=True)
 
     # Get signatures from selected archives.
-    if (Expand.hash()SIGNATURE_ARCHIVE_PATHS[@] != 0):
+    if len(SIGNATURE_ARCHIVE_PATHS) > 0:
         print()
         print('##### Extracting signatures from selected archives...')
 
     l = 0
-    while (l < Expand.hash()SIGNATURE_ARCHIVE_PATHS[@]):
-        LIB = SIGNATURE_ARCHIVE_PATHS[l]]
-        print('Extracting signatures from file '' + str(LIB) + ''')
-        CROP_ARCH_PATH = os.popen('basename \'' + str(LIB) + '\' | LC_ALL=C sed -e \'s/[^A-Za-z0-9_.-]/_/g\'').read().rstrip('\n')
-        SIG_OUT = str(OUT) + '.' + str(CROP_ARCH_PATH) + '.' + str(l) + '.yara'
+    while l < len(SIGNATURE_ARCHIVE_PATHS):
+        LIB = SIGNATURE_ARCHIVE_PATHS[l]
 
-        if (subprocess.call(str(SIG_FROM_LIB_SH) + ' ' + str(LIB) + ' ' + '--output' + ' ' + str(SIG_OUT), shell=True,
-                            stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))):
-            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--user-signature', str(SIG_OUT)], shell=True)
-            SIGNATURES_TO_REMOVE = '(' + str(SIG_OUT) + ')'
+        print('Extracting signatures from file '' + (LIB) + ''')
+        CROP_ARCH_PATH = os.popen('basename \'' + LIB + '\' | LC_ALL=C sed -e \'s/[^A-Za-z0-9_.-]/_/g\'').read().rstrip('\n')
+        SIG_OUT = OUT + '.' + CROP_ARCH_PATH + '.' + l + '.yara'
+
+        if (subprocess.call(config.SIG_FROM_LIB + ' ' + LIB + ' ' + '--output' + ' ' + SIG_OUT, shell=True,
+                            stderr=subprocess.STDOUT, stdout=file((DEV_NULL), 'wb'))):
+            subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--user-signature', SIG_OUT], shell=True)
+            SIGNATURES_TO_REMOVE = '(' + SIG_OUT + ')'
         else:
-            subprocess.call(['print_warning', 'Failed extracting signatures from file \'' + str(LIB) + '\''], shell=True)
+            utils.print_warning('Failed extracting signatures from file \'' + LIB + '\'')
 
         l += 1
 
     # Store paths of signature files into config for frontend.
     if not DO_NOT_LOAD_STATIC_SIGNATURES:
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--signatures', str(SIGNATURES_DIR)], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--signatures', SIGNATURES_DIR], shell=True)
     # User provided signatures.
 
     for i in Array(TEMPORARY_SIGNATURES[ @]]):
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--user-signature', str(i)], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--user-signature', (i)], shell=True)
 
     # Store paths of type files into config for frontend.
-    if os.path.isdir(str(GENERIC_TYPES_DIR)):
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--types', str(GENERIC_TYPES_DIR)], shell=True)
+    if os.path.isdir((GENERIC_TYPES_DIR)):
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--types', (GENERIC_TYPES_DIR)], shell=True)
 
     # Store path of directory with ORD files into config for frontend (note: only directory, not files themselves).
-    if os.path.isdir(str(ORDS_DIR)):
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--ords', str(ORDS_DIR) + '/'], shell=True)
+    if os.path.isdir(ORDS_DIR):
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--ords', (ORDS_DIR) + '/'], shell=True)
 
     # Store paths to file with PDB debugging information into config for frontend.
-    if os.path.exists(str(PDB_FILE)):
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--pdb-file', str(PDB_FILE)], shell=True)
+    if os.path.exists(PDB_FILE):
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--pdb-file', PDB_FILE], shell=True)
 
     # Store file names of input and output into config for frontend.
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--input-file', str(IN)], shell=True)
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--frontend-output-file', str(OUT_FRONTEND_LL)],
+    subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--input-file', IN], shell=True)
+    subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--frontend-output-file', OUT_FRONTEND_LL],
                     shell=True)
-    subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--output-file', str(OUT)], shell=True)
+    subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--output-file', OUT], shell=True)
+
     # Store decode only selected parts flag.
     if SELECTED_DECODE_ONLY:
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--decode-only-selected', 'true'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--decode-only-selected', 'true'], shell=True)
     else:
-        subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--decode-only-selected', 'false'], shell=True)
+        subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--decode-only-selected', 'false'], shell=True)
 
     # Store selected functions or selected ranges into config for frontend.
     if SELECTED_FUNCTIONS:
-        for f in Array(SELECTED_FUNCTIONS[ @]]):
-            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--selected-func', str(f)], shell=True)
+        for f in SELECTED_FUNCTIONS:
+            subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--selected-func', f], shell=True)
 
     if SELECTED_RANGES:
-        for r in Array(SELECTED_RANGES[ @]]):
-            subprocess.call([str(CONFIGTOOL), str(CONFIG), '--write', '--selected-range', str(r)], shell=True)
+        for r in SELECTED_RANGES:
+            subprocess.call([config.CONFIGTOOL, CONFIG, '--write', '--selected-range', r], shell=True)
 
     # Assignment of other used variables.
     # We have to ensure that the .bc version of the decompiled .ll file is placed
@@ -1614,42 +1618,42 @@ if _args.mode == 'bin' or _args.mode == 'raw':
     # race-condition problems when the same input .ll file is decompiled in
     # parallel processes because they would overwrite each other's .bc file. This
     # is most likely to happen in regression tests in the 'll' mode.
-    OUT_BACKEND = str(OUT) + '.backend'
+    OUT_BACKEND = OUT + '.backend'
     # If the input file is the same as $OUT_BACKEND_LL below, then we have to change the name of
     # $OUT_BACKEND. Otherwise, the input file would get overwritten during the conversion.
     if OUT_FRONTEND_LL == OUT_BACKEND + '.ll':
-        OUT_BACKENDstr(OUT) + '.backend.backend'
+        OUT_BACKEND = OUT + '.backend.backend'
 
-    OUT_BACKEND_BC = str(OUT_BACKEND) + '.bc'
-    OUT_BACKEND_LL = str(OUT_BACKEND) + '.ll'
+    OUT_BACKEND_BC = OUT_BACKEND + '.bc'
+    OUT_BACKEND_LL = OUT_BACKEND + '.ll'
     ##
     ## Decompile the binary into LLVM IR.
     ##
     if KEEP_UNREACHABLE_FUNCS:
         # Prevent bin2llvmir from removing unreachable functions.
-        BIN2LLVMIR_PARAMS = os.popen('sed ' s / -unreachable - funcs * // g' <<< \'' + str(BIN2LLVMIR_PARAMS) + '\'').read().rstrip('\n')
+        BIN2LLVMIR_PARAMS = os.popen('sed ' s / -unreachable - funcs * // g' <<< \'' + BIN2LLVMIR_PARAMS + '\'').read().rstrip('\n')
 
-    if (if str(CONFIG) == str():
-        str(CONFIG_DB) != str() ):
+    if (if (CONFIG) == ():
+        CONFIG_DB != () ):
         CONFIG = CONFIG_DB
-        BIN2LLVMIR_PARAMS = '(-provider-init -config-path ' + str(CONFIG) + ' -decoder ' + str(BIN2LLVMIR_PARAMS) + ')'
+        BIN2LLVMIR_PARAMS = '(-provider-init -config-path ' + (CONFIG) + ' -decoder ' + BIN2LLVMIR_PARAMS + ')'
 
-    if (not str(MAX_MEMORY) == ''):
-        BIN2LLVMIR_PARAMS = '(-max-memory ' + str(MAX_MEMORY) + ')'
-    elif (str(NO_MEMORY_LIMIT) == ''):
+    if (not (MAX_MEMORY) == ''):
+        BIN2LLVMIR_PARAMS = '(-max-memory ' + (MAX_MEMORY) + ')'
+    elif ((NO_MEMORY_LIMIT) == ''):
         # By default, we want to limit the memory of bin2llvmir into half of
         # system RAM to prevent potential black screens on Windows (#270).
         BIN2LLVMIR_PARAMS = '(-max-memory-half-ram)'
 
     print()
-    print('##### Decompiling ' + str(IN) + ' into ' + str(OUT_BACKEND_BC) + '...')
-    print('RUN: ' + str(BIN2LLVMIR) + ' ' + str(BIN2LLVMIR_PARAMS[ @]]) + ' -o ' + str(OUT_BACKEND_BC))
+    print('##### Decompiling ' + IN + ' into ' + OUT_BACKEND_BC + '...')
+    print('RUN: ' + config.BIN2LLVMIR + ' ' + ' '.join(BIN2LLVMIR_PARAMS) + ' -o ' + OUT_BACKEND_BC)
 
-    if str(GENERATE_LOG) != '':
+    if GENERATE_LOG != '':
         def thread1():
             subprocess.call(
-                str(TIME) + ' ' + str(BIN2LLVMIR) + ' ' + str(BIN2LLVMIR_PARAMS[ @]])  +  ' ' + '-o' + ' ' + str(
-                OUT_BACKEND_BC), shell = True, stdout = file(str(TOOL_LOG_FILE), 'wb'), stderr = subprocess.STDOUT)
+                TIME + ' ' + BIN2LLVMIR + ' ' + ''.join(BIN2LLVMIR_PARAMS) + ' ' + '-o' + ' ' + (
+                OUT_BACKEND_BC), shell = True, stdout = file(TOOL_LOG_FILE, 'wb'), stderr = subprocess.STDOUT)
 
             threading.Thread(target=thread1).start()
 
@@ -1660,23 +1664,23 @@ if _args.mode == 'bin' or _args.mode == 'raw':
 
         threading.Thread(target=thread2).start()
 
-        subprocess.call('wait' + ' ' + str(PID), shell=True, stderr=subprocess.STDOUT, stdout=open(os.devnull, 'wb'))
+        subprocess.call('wait' + ' ' + PID, shell=True, stderr=subprocess.STDOUT, stdout=open(os.devnull, 'wb'))
 
         BIN2LLVMIR_RC = _rc2
-        BIN2LLVMIR_AND_TIME_OUTPUT = os.popen('cat \'' + str(TOOL_LOG_FILE) + '\'').read().rstrip('\n')
-        LOG_BIN2LLVMIR_RC = os.popen('get_tool_rc \'' + str(BIN2LLVMIR_RC) + '\' \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-        LOG_BIN2LLVMIR_RUNTIME = os.popen('get_tool_runtime \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-        LOG_BIN2LLVMIR_MEMORY = os.popen('get_tool_memory_usage \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-        LOG_BIN2LLVMIR_OUTPUT = os.popen('get_tool_output \'' + str(BIN2LLVMIR_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+        BIN2LLVMIR_AND_TIME_OUTPUT = os.popen('cat \'' + TOOL_LOG_FILE + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_RC = os.popen('get_tool_rc \'' + BIN2LLVMIR_RC + '\' \'' + BIN2LLVMIR_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_RUNTIME = os.popen('get_tool_runtime \'' + BIN2LLVMIR_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_MEMORY = os.popen('get_tool_memory_usage \'' + BIN2LLVMIR_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
+        LOG_BIN2LLVMIR_OUTPUT = os.popen('get_tool_output \'' + BIN2LLVMIR_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
         print(LOG_BIN2LLVMIR_OUTPUT, end='')
     else:
-        subprocess.call([str(BIN2LLVMIR), str(BIN2LLVMIR_PARAMS[ @]]), '-o', str(OUT_BACKEND_BC)], shell = True)
+        subprocess.call([config.BIN2LLVMIR, ' '.join(BIN2LLVMIR_PARAMS)]), '-o', OUT_BACKEND_BC], shell = True)
         BIN2LLVMIR_RC = _rc2
 
     if int(BIN2LLVMIR_RC) != 0:
-        if
-        str(GENERATE_LOG) != '':
-        generate_log()
+        if GENERATE_LOG:
+            generate_log()
+
         cleanup()
         subprocess.call(['print_error_and_die', 'Decompilation to LLVM IR failed'], shell=True)
 
@@ -1697,11 +1701,11 @@ BACKEND_ARITHM_EXPR_EVALUATOR = Expand.colonEq('BACKEND_ARITHM_EXPR_EVALUATOR', 
 BACKEND_LLVMIR2BIR_CONVERTER = Expand.colonEq('BACKEND_LLVMIR2BIR_CONVERTER', 'orig')
 
 # Create parameters for the $LLVMIR2HLL call.
-LLVMIR2HLL_PARAMS = '(-target-hll=' + str(HLL) + ' -var-renamer=' + str(
-    BACKEND_VAR_RENAMER) + ' -var-name-gen=fruit -var-name-gen-prefix= -call-info-obtainer=' + str(
-    BACKEND_CALL_INFO_OBTAINER) + ' -arithm-expr-evaluator=' + str(
-    BACKEND_ARITHM_EXPR_EVALUATOR) + ' -validate-module -llvmir2bir-converter=' + str(
-    BACKEND_LLVMIR2BIR_CONVERTER) + ' -o ' + str(OUT) + ' ' + str(OUT_BACKEND_BC) + ')'
+LLVMIR2HLL_PARAMS = '(-target-hll=' + (HLL) + ' -var-renamer=' + (
+    BACKEND_VAR_RENAMER) + ' -var-name-gen=fruit -var-name-gen-prefix= -call-info-obtainer=' + (
+    BACKEND_CALL_INFO_OBTAINER) + ' -arithm-expr-evaluator=' + (
+    BACKEND_ARITHM_EXPR_EVALUATOR) + ' -validate-module -llvmir2bir-converter=' + (
+    BACKEND_LLVMIR2BIR_CONVERTER) + ' -o ' + OUT + ' ' + OUT_BACKEND_BC + ')'
 
 if BACKEND_NO_DEBUG:
     LLVMIR2HLL_PARAMS = '(-enable-debug)'
@@ -1710,19 +1714,19 @@ if BACKEND_NO_DEBUG_COMMENTS:
     LLVMIR2HLL_PARAMS = '(-emit-debug-comments)'
 
 if CONFIG:
-    LLVMIR2HLL_PARAMS = '(-config-path=' + str(CONFIG) + ')'
+    LLVMIR2HLL_PARAMS = '(-config-path=' + CONFIG + ')'
 
 if KEEP_UNREACHABLE_FUNCS:
     LLVMIR2HLL_PARAMS = '(-keep-unreachable-funcs)'
 
 if BACKEND_SEMANTICS:
-    LLVMIR2HLL_PARAMS = '(-semantics ' + str(BACKEND_SEMANTICS) + ')'
+    LLVMIR2HLL_PARAMS = '(-semantics ' + BACKEND_SEMANTICS + ')'
 
 if BACKEND_ENABLED_OPTS:
-    LLVMIR2HLL_PARAMS = '(-enabled-opts=' + str(BACKEND_ENABLED_OPTS) + ')'
+    LLVMIR2HLL_PARAMS = '(-enabled-opts=' + BACKEND_ENABLED_OPTS + ')'
 
 if BACKEND_DISABLED_OPTS:
-    LLVMIR2HLL_PARAMS = '(-disabled-opts=' + str(BACKEND_DISABLED_OPTS) + ')'
+    LLVMIR2HLL_PARAMS = '(-disabled-opts=' + BACKEND_DISABLED_OPTS + ')'
 
 if BACKEND_OPTS_DISABLED:
     LLVMIR2HLL_PARAMS = '(-no-opts)'
@@ -1749,13 +1753,13 @@ if BACKEND_NO_COMPOUND_OPERATORS:
     LLVMIR2HLL_PARAMS = '(-no-compound-operators)'
 
 if BACKEND_FIND_PATTERNS:
-    LLVMIR2HLL_PARAMS = '(-find-patterns ' + str(BACKEND_FIND_PATTERNS) + ')'
+    LLVMIR2HLL_PARAMS = '(-find-patterns ' + (BACKEND_FIND_PATTERNS) + ')'
 
 if BACKEND_EMIT_CG:
     LLVMIR2HLL_PARAMS = '(-emit-cg)'
 
 if BACKEND_FORCED_MODULE_NAME:
-    LLVMIR2HLL_PARAMS = '(-force-module-name=' + str(BACKEND_FORCED_MODULE_NAME) + ')'
+    LLVMIR2HLL_PARAMS = '(-force-module-name=' + BACKEND_FORCED_MODULE_NAME + ')'
 
 if BACKEND_STRICT_FPU_SEMANTICS:
     LLVMIR2HLL_PARAMS = '(-strict-fpu-semantics)'
@@ -1766,10 +1770,10 @@ if BACKEND_EMIT_CFG):
 if BACKEND_CFG_TEST:
     LLVMIR2HLL_PARAMS = '(--backend-cfg-test)'
 
-if not str(MAX_MEMORY) == '':
-    LLVMIR2HLL_PARAMS = '(-max-memory ' + str(MAX_MEMORY) + ')'
+if not (MAX_MEMORY) == '':
+    LLVMIR2HLL_PARAMS = '(-max-memory ' + MAX_MEMORY + ')'
 
-elif str(NO_MEMORY_LIMIT) == '':
+elif (NO_MEMORY_LIMIT) == '':
     # By default, we want to limit the memory of llvmir2hll into half of system
     # RAM to prevent potential black screens on Windows (#270).
     LLVMIR2HLL_PARAMS = '(-max-memory-half-ram)'
@@ -1777,15 +1781,15 @@ elif str(NO_MEMORY_LIMIT) == '':
 
 
 print()
-print('##### Decompiling ' + str(OUT_BACKEND_BC) + ' into ' + str(OUT) + '...')
-print('RUN: ' + str(LLVMIR2HLL) + ' ' + str(LLVMIR2HLL_PARAMS[ @]]))
+print('##### Decompiling ' + OUT_BACKEND_BC + ' into ' + OUT + '...')
+print('RUN: ' + config.LLVMIR2HLL + ' ' + ' '.join(LLVMIR2HLL_PARAMS))
 
-if str(GENERATE_LOG) != '':
+if GENERATE_LOG:
 
     def thread3():
         subprocess.call(
-            str(TIME) + ' ' + str(LLVMIR2HLL) + ' ' + str(LLVMIR2HLL_PARAMS[ @]]), shell = True, stdout = file(
-            str(TOOL_LOG_FILE), 'wb'), stderr = subprocess.STDOUT)
+            TIME + ' ' + config.LLVMIR2HLL + ' ' + ' '.join(LLVMIR2HLL_PARAMS), shell = True, stdout = file(
+                TOOL_LOG_FILE, 'wb'), stderr = subprocess.STDOUT)
 
         threading.Thread(target=thread3).start()
 
@@ -1797,29 +1801,27 @@ if str(GENERATE_LOG) != '':
 
     threading.Thread(target=thread4).start()
 
-    subprocess.call('wait' + ' ' + str(PID), shell=True, stderr=subprocess.STDOUT, stdout=file(str(DEV_NULL), 'wb'))
+    subprocess.call('wait' + ' ' + PID, shell=True, stderr=subprocess.STDOUT, stdout=file((DEV_NULL), 'wb'))
 
     LLVMIR2HLL_RC = _rc4
-    LLVMIR2HLL_AND_TIME_OUTPUT = os.popen('cat \'' + str(TOOL_LOG_FILE) + '\'').read().rstrip('\n')
-    LOG_LLVMIR2HLL_RC = os.popen('get_tool_rc \'' + str(LLVMIR2HLL_RC) + '\' \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-    LOG_LLVMIR2HLL_RUNTIME = os.popen('get_tool_runtime \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-    LOG_LLVMIR2HLL_MEMORY = os.popen('get_tool_memory_usage \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
-    LOG_LLVMIR2HLL_OUTPUT = os.popen('get_tool_output \'' + str(LLVMIR2HLL_AND_TIME_OUTPUT) + '\'').read().rstrip('\n')
+    LLVMIR2HLL_AND_TIME_OUTPUT = os.popen('cat \'' + TOOL_LOG_FILE + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_RC = os.popen('get_tool_rc \'' + LLVMIR2HLL_RC + '\' \'' + LLVMIR2HLL_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_RUNTIME = os.popen('get_tool_runtime \'' + LLVMIR2HLL_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_MEMORY = os.popen('get_tool_memory_usage \'' + LLVMIR2HLL_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
+    LOG_LLVMIR2HLL_OUTPUT = os.popen('get_tool_output \'' + LLVMIR2HLL_AND_TIME_OUTPUT + '\'').read().rstrip('\n')
 
     print(LOG_LLVMIR2HLL_OUTPUT)
     # Wait a bit to ensure that all the memory that has been assigned to the tool was released.
     subprocess.call(['sleep', '0.1'], shell=True)
 else:
-    _rc4 = subprocess.call([str(LLVMIR2HLL), str(LLVMIR2HLL_PARAMS[ @]])], shell = True)
-    LLVMIR2HLL_RC = _rc4
+    LLVMIR2HLL_RC = subprocess.call([LLVMIR2HLL, ' '.join(LLVMIR2HLL_PARAMS)], shell = True)
 
 if int(LLVMIR2HLL_RC) != 0:
-    if
-    str(GENERATE_LOG) != '':
-    generate_log()
-    cleanup()
+    if GENERATE_LOG:
+        generate_log()
 
-    subprocess.call(['print_error_and_die', 'Decompilation of file '' + str(OUT_BACKEND_BC) + '' failed'], shell=True)
+    cleanup()
+    subprocess.call(['print_error_and_die', 'Decompilation of file '' + (OUT_BACKEND_BC) + '' failed'], shell=True)
 
 check_whether_decompilation_should_be_forcefully_stopped('llvmir2hll')
 
@@ -1829,24 +1831,24 @@ BACKEND_CG_CONVERSION = Expand.colonEq('BACKEND_CG_CONVERSION', 'auto')
 BACKEND_CFG_CONVERSION = Expand.colonEq('BACKEND_CFG_CONVERSION', 'auto')
 
 # Convert .dot graphs to desired format.
-if ((str(BACKEND_EMIT_CG) != '' and str(BACKEND_CG_CONVERSION) == 'auto') or (
-        str(BACKEND_EMIT_CFG) != '' and str(BACKEND_CFG_CONVERSION) == 'auto')):
+if ((BACKEND_EMIT_CG != '' and BACKEND_CG_CONVERSION == 'auto') or (
+        BACKEND_EMIT_CFG != '' and BACKEND_CFG_CONVERSION == 'auto')):
     print()
     print('##### Converting .dot files to the desired format...')
 
-if (if str(BACKEND_EMIT_CG) != '':
-    str(BACKEND_CG_CONVERSION) == 'auto' ):
-    print('RUN: dot -T' + str(GRAPH_FORMAT) + ' ' + str(OUT) + '.cg.dot > ' + str(OUT) + '.cg.' + str(GRAPH_FORMAT))
-    subprocess.call('dot' + ' ' + '-T' + str(GRAPH_FORMAT) + ' ' + str(OUT) + '.cg.dot', shell=True,
-    stdout = file(str(OUT) + '.cg.' + str(GRAPH_FORMAT), 'wb'))
+if (if (BACKEND_EMIT_CG) != '':
+    BACKEND_CG_CONVERSION == 'auto' ):
+    print('RUN: dot -T' + GRAPH_FORMAT + ' ' + OUT + '.cg.dot > ' + OUT + '.cg.' + GRAPH_FORMAT)
+    subprocess.call('dot' + ' ' + '-T' + GRAPH_FORMAT + ' ' + OUT + '.cg.dot', shell=True,
+                    stdout = file(OUT + '.cg.' + GRAPH_FORMAT, 'wb'))
 
 
-if (if str(BACKEND_EMIT_CFG) != '':
-    str(BACKEND_CFG_CONVERSION) == 'auto' ):
-    for cfg in Glob(str(OUT) + '.cfg.*.dot'):
-        print('RUN: dot -T' + str(GRAPH_FORMAT) + ' ' + str(cfg) + ' > ' + str(cfg %. *) + '.' + str(GRAPH_FORMAT))
-        subprocess.call('dot' + ' ' + '-T' + str(GRAPH_FORMAT) + ' ' + str(cfg), shell=True,
-            stdout = file(str(cfg %. *) + '.' + str(GRAPH_FORMAT), 'wb'))
+if (if (BACKEND_EMIT_CFG) != '':
+    BACKEND_CFG_CONVERSION == 'auto' ):
+    for cfg in Glob((OUT) + '.cfg.*.dot'):
+        print('RUN: dot -T' + GRAPH_FORMAT + ' ' + cfg + ' > ' + (cfg %. *) + '.' + GRAPH_FORMAT)
+        subprocess.call('dot' + ' ' + '-T' + GRAPH_FORMAT + ' ' + cfg, shell=True,
+                        stdout = file((cfg %. *) + '.' + GRAPH_FORMAT, 'wb'))
 
 
 # Remove trailing whitespace and the last redundant empty new line from the
@@ -1856,9 +1858,9 @@ if (if str(BACKEND_EMIT_CFG) != '':
 #       of getting sed -i to work consistently on both MacOS and Linux.
 _rc4 = subprocess.call(
 'sed' + ' ' + '-e' + ' ' + ':a' + ' ' + '-e' + ' ' + '/^\\n*$/{$d;N;};/\\n$/ba' + ' ' + '-e' + ' ' + 's/[[:space:]]*$//',
-shell = True, stdin = file(str(OUT), 'rb'), stdout = file(str(OUT) + '.tmp', 'wb'))
+shell = True, stdin = file(OUT, 'rb'), stdout = file(OUT + '.tmp', 'wb'))
 
-shutil.shutil.move(OUT + '.tmp', OUT)
+shutil.move(OUT + '.tmp', OUT)
 
 # Colorize output file.
 if COLOR_IDA:
@@ -1869,6 +1871,6 @@ if GENERATE_LOG:
     generate_log()
 
 # Success!
-cleanup()
+cleanup(_args)
 print()
 print('##### Done!')
