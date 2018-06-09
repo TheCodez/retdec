@@ -9,7 +9,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 Paths relative from script path.
 """
 INSTALL_BIN_DIR = SCRIPT_DIR
-unit_tests_dir = INSTALL_BIN_DIR
+UNIT_TESTS_DIR = INSTALL_BIN_DIR
 INSTALL_SHARE_DIR = INSTALL_BIN_DIR + '/../share/retdec'
 INSTALL_SUPPORT_DIR = INSTALL_SHARE_DIR + '/support'
 INSTALL_SHARE_YARA_DIR = INSTALL_SUPPORT_DIR + '/generic/yara_patterns'

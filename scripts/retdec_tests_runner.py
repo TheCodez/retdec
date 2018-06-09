@@ -6,7 +6,7 @@ import sys
 import os
 import subprocess
 
-unit_tests_dir = ''
+import retdec_config as config
 
 """First argument can be verbose."""
 if sys.argv[1] == '-v' or sys.argv[1] == '--verbose':
@@ -89,13 +89,10 @@ def run_unit_tests_in_dir(path):
     Returns 0 if all tests passed, 1 otherwise.
     """
 
-    global unit_tests_dir
-
-    unit_tests_dir = path
     tests_failed = False
     tests_run = False
 
-    for unit_test in unit_tests_in_dir(unit_tests_dir):
+    for unit_test in unit_tests_in_dir(path):
         print()
         unit_test_name = os.popen('sed \'s/^.*/bin///' << '\'' + unit_test + '\'').read().rstrip('\n')
         print_colored(unit_test_name, 'yellow')
@@ -149,11 +146,11 @@ def run_unit_tests_in_dir(path):
         return 0
 
 
-if not os.path.isdir(unit_tests_dir):
+if not os.path.isdir(config.UNIT_TESTS_DIR):
     '''Run all binaries in unit test dir.'''
 
-    sys.stderr.write('error: no unit tests found in %s' % unit_tests_dir)
+    sys.stderr.write('error: no unit tests found in %s' % config.UNIT_TESTS_DIR)
     sys.exit(1)
 
-print('Running all unit tests in %s...' % unit_tests_dir)
-run_unit_tests_in_dir(unit_tests_dir)
+print('Running all unit tests in %s...' % config.UNIT_TESTS_DIR)
+run_unit_tests_in_dir(config.UNIT_TESTS_DIR)
