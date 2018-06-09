@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 """Decompiles the given file into the selected target high-level language."""
+
 import argparse
 import glob
 import hashlib
@@ -263,20 +264,12 @@ def check_arguments(_args):
     """
 
     global IN
-    global MODE
     global CONFIG_DB
-    global NO_CONFIG
-    global ENDIAN
     global RAW_ENTRY_POINT
     global RAW_SECTION_VMA
-    global _args.ar_name
-    global AR_INDEX
     global HLL
     global OUT
     global PICKED_FILE
-    global r
-    global IFS
-    global vs
 
     # Check whether the input file was specified.
     if not _args.input:
@@ -297,7 +290,7 @@ def check_arguments(_args):
             utils.print_warning('Option -a|--arch is not used in mode ' + _args.mode)
         if _args.pdb:
             utils.print_warning('Option -p|--pdb is not used in mode ' + _args.mode)
-        if CONFIG_DB == '' or NO_CONFIG:
+        if CONFIG_DB == '' or _args.config:
             utils.print_error_and_die('Option --config or --no-config must be specified in mode ' + _args.mode)
     elif _args.mode == 'raw':
         # Errors -- missing critical arguments.
@@ -319,12 +312,12 @@ def check_arguments(_args):
             utils.print_error_and_die('Value in option --raw-section-vma must be decimal (e.g. 123) or hexadecimal value (e.g. 0x123)')
 
     # Archive decompilation errors.
-    if _args.ar_name and AR_INDEX:
+    if _args.ar_name and _args.ar_index:
         utils.print_error_and_die('Options --ar-name and --ar-index are mutually exclusive. Pick one.')
     if _args.mode != 'bin':
         if _args.ar_name:
             utils.print_warning('Option --ar-name is not used in mode ' + _args.mode)
-        if AR_INDEX:
+        if _args.ar_index:
             utils.print_warning('Option --ar-index is not used in mode ' + _args.mode)
 
 
@@ -364,10 +357,10 @@ def check_arguments(_args):
 
         # Check that selected ranges are valid.
         if _args.selected_ranges:
-            for r in _args.selected_ranges:
+            for range in _args.selected_ranges:
                 # Check if valid range.
-                if not utils.is_range(r):
-                    utils.print_error_and_die('Range '' + (r) + '' in option --select-ranges is not a valid decimal (e.g. 123-456) or hexadecimal (e.g. 0x123-0xabc) range.')
+                if not utils.is_range(range):
+                    utils.print_error_and_die('Range %s in option --select-ranges is not a valid decimal (e.g. 123-456) or hexadecimal (e.g. 0x123-0xabc) range.' % range)
 
         # Check if first <= last.
         ranges = _args.selected_ranges.split('-')
@@ -589,7 +582,7 @@ def get_tool_output(_p1):
         os.close(_rcr1)
         os.dup2(_rcw1, 1)
         _rc0 = subprocess.Popen('sed' + ' ' + '-n' + ' ' + '/Command being timed:/q;p', shell=True, stdin=subprocess.PIPE)
-        _rc0.communicate((_p1) + '\n')
+        _rc0.communicate(_p1 + '\n')
 
         return _rc0.wait()
         #sys.exit(0)
@@ -643,7 +636,7 @@ def remove_colors(_p1):
     """Removes color codes from the given text ($1).
     """
     _rc0 = subprocess.Popen('sed' + ' ' + '-r' + ' ' + 's/\x1b[^m]*m//g', shell=True, stdin=subprocess.PIPE)
-    _rc0.communicate((_p1) + '\n')
+    _rc0.communicate(_p1 + '\n')
 
     return _rc0.wait()
 
@@ -724,17 +717,14 @@ def string_to_md5(string):
 
 
 def generate_log():
-    global LOG_FILE
     global OUT
     global LOG_DECOMPILATION_END_DATE
     global LOG_FILEINFO_OUTPUT
     global LOG_UNPACKER_OUTPUT
     global LOG_BIN2LLVMIR_OUTPUT
     global LOG_LLVMIR2HLL_OUTPUT
-    global log_structure
     global IN
     global LOG_DECOMPILATION_START_DATE
-    global MODE
     global FORMAT
     global LOG_FILEINFO_RC
     global LOG_UNPACKER_RC
@@ -768,7 +758,7 @@ def generate_log():
                     ' \'%s\',\n\t\'llvmir2hll_memory\' : \'%s\'\n}\n'
 
     print(log_structure % (
-        IN, _args.pdb, LOG_DECOMPILATION_START_DATE, LOG_DECOMPILATION_END_DATE, MODE,
+        IN, _args.pdb, LOG_DECOMPILATION_START_DATE, LOG_DECOMPILATION_END_DATE, _args.mode,
         _args.arch,
         FORMAT, LOG_FILEINFO_RC, LOG_UNPACKER_RC, LOG_BIN2LLVMIR_RC, LOG_LLVMIR2HLL_RC,
         LOG_FILEINFO_OUTPUT, LOG_UNPACKER_OUTPUT, LOG_BIN2LLVMIR_OUTPUT, LOG_LLVMIR2HLL_OUTPUT,
@@ -1122,9 +1112,9 @@ while True:
         subprocess.call(['shift', '2'], shell=True)
     elif ((sys.argv[1]) == '--ar-index'):
         # Archive decompilation by index.
-        if (AR_INDEX) != '':
+        if (_args.ar_index) != '':
             subprocess.call(['print_error_and_die', 'Duplicate option: --ar-index'], shell=True)
-        AR_INDEX = sys.argv[2]
+        _args.ar_index = sys.argv[2]
         subprocess.call(['shift', '2'], shell=True)
     elif ((sys.argv[1]) == '--max-memory'):
         if (_args.max_memory) != '':
@@ -1247,22 +1237,22 @@ if _args.mode == 'bin':
         OUT_RESTORED = OUT + '.restored'
 
         # Pick object by index.
-        if AR_INDEX != '':
+        if _args.ar_index != '':
             print()
-            print('##### Restoring object file on index '' + (AR_INDEX) + '' from archive...')
-            print('RUN: ' + config.AR + ' ' + IN + ' --index ' + AR_INDEX + ' --output ' + OUT_RESTORED)
+            print('##### Restoring object file on index '' + (_args.ar_index) + '' from archive...')
+            print('RUN: ' + config.AR + ' ' + IN + ' --index ' + _args.ar_index + ' --output ' + OUT_RESTORED)
 
-            if not utils.archive_get_by_index(IN, AR_INDEX, OUT_RESTORED):
+            if not utils.archive_get_by_index(IN, _args.ar_index, OUT_RESTORED):
                 cleanup()
                 VALID_INDEX = (ARCH_OBJECT_COUNT - 1)
 
                 if VALID_INDEX != 0:
                     utils.print_error_and_die('File on index \'' + (
-                        AR_INDEX) + '\' was not found in the input archive. Valid indexes are 0-' + (
+                        _args.ar_index) + '\' was not found in the input archive. Valid indexes are 0-' + (
                         VALID_INDEX) + '.')
                 else:
                     utils.print_error_and_die('File on index \'' + (
-                        AR_INDEX) + '\' was not found in the input archive. The only valid index is 0.')
+                        _args.ar_index) + '\' was not found in the input archive. The only valid index is 0.')
             IN = OUT_RESTORED
         elif _args.ar_name:
             print()
@@ -1285,7 +1275,7 @@ if _args.mode == 'bin':
         if _args.ar_name != '':
             utils.print_warning('Option --ar-name can be used only with archives.')
 
-        if AR_INDEX != '':
+        if _args.ar_index != '':
             utils.print_warning('Option --ar-index can be used only with archives.')
 
         print('Not an archive, going to the next step.')
@@ -1712,8 +1702,8 @@ if _args.backend_no_debug:
 if _args.backend_no_debug_comments:
     LLVMIR2HLL_PARAMS.append('-emit-debug-comments')
 
-if CONFIG:
-    LLVMIR2HLL_PARAMS = '(-config-path=' + CONFIG + ')'
+if _args.config:
+    LLVMIR2HLL_PARAMS = '(-config-path=' + _args.config + ')'
 
 if _args.keep_unreachable_funcs:
     LLVMIR2HLL_PARAMS = '(-keep-unreachable-funcs)'
