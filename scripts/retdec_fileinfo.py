@@ -48,7 +48,7 @@ def main(_args):
         # instead of fileinfo.
         archive_decompiler_args = _args.file + " --list"
 
-        res = subprocess.call([config.ARCHIVE_DECOMPILER, archive_decompiler_args], shell=True)
+        res = subprocess.call([config.ARCHIVE_DECOMPILER_PY, archive_decompiler_args], shell=True)
 
         sys.exit(res)
 
