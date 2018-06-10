@@ -1,243 +1,183 @@
-#! /usr/bin/env python
-from __future__ import print_function
-import sys,os,subprocess,glob
-class Bash2Py(object):
-  __slots__ = ["val"]
-  def __init__(self, value=''):
-    self.val = value
-  def setValue(self, value=None):
-    self.val = value
-    return value
+#! /usr/bin/env python3
 
-def GetVariable(name, local=locals()):
-  if name in local:
-    return local[name]
-  if name in globals():
-    return globals()[name]
-  return None
+"""Generator of JSON files containing C-types information for C standard library and other header files in /usr/include/ directory."""
 
-def Make(name, local=locals()):
-  ret = GetVariable(name, local)
-  if ret is None:
-    ret = Bash2Py(0)
-    globals()[name] = ret
-  return ret
-
-def GetValue(name, local=locals()):
-  variable = GetVariable(name,local)
-  if variable is None or variable.val is None:
-    return ''
-  return variable.val
-
-def SetValue(name, value, local=locals()):
-  variable = GetVariable(name,local)
-  if variable is None:
-    globals()[name] = Bash2Py(value)
-  else:
-    variable.val = value
-  return value
-
-def Str(value):
-  if isinstance(value, list):
-    return " ".join(value)
-  if isinstance(value, basestring):
-    return value
-  return str(value)
-
-def Array(value):
-  if isinstance(value, list):
-    return value
-  if isinstance(value, basestring):
-    return value.strip().split(' ')
-  return [ value ]
-
-def Glob(value):
-  ret = glob.glob(value)
-  if (len(ret) < 1):
-    ret = [ value ]
-  return ret
-
-class Expand(object):
-  @staticmethod
-  def at():
-    if (len(sys.argv) < 2):
-      return []
-    return  sys.argv[1:]
-  @staticmethod
-  def hash():
-    return  len(sys.argv)-1
-  @staticmethod
-  def colonEq(name, value=''):
-    ret = GetValue(name)
-    if (ret is None or ret == ''):
-      SetValue(name, value)
-      ret = value
-    return ret
-
-#
-# Generates 1 JSON for C standard library and 1 for other C header files in
-# /usr/include.
-#
-# On macOS, we want the GNU version of 'readlink', which is available under
-# 'greadlink':
-def gnureadlink () :
-    if (subprocess.call("hash" + " " + "greadlink",shell=True,stderr=file("/dev/null",'wb')) ):
-        subprocess.call(["greadlink",Str(Expand.at())],shell=True)
-    else:
-        subprocess.call(["readlink",Str(Expand.at())],shell=True)
+import argparse
+import shutil
+import sys
+import os
+import subprocess
+import glob
 
 #
 # C standard library headers.
 #
-CSTDLIB_HEADERS=Bash2Py("(assert.h complex.h ctype.h errno.h fenv.h float.h inttypes.h iso646.h limits.h locale.h math.h setjmp.h signal.h stdalign.h stdarg.h stdatomic.h stdbool.h stddef.h stdint.h stdio.h stdlib.h stdnoreturn.h string.h tgmath.h threads.h time.h uchar.h wchar.h wctype.h)")
+CSTDLIB_HEADERS = '(assert.h complex.h ctype.h errno.h fenv.h float.h inttypes.h iso646.h limits.h locale.h math.h setjmp.h signal.h stdalign.h stdarg.h stdatomic.h stdbool.h stddef.h stdint.h stdio.h stdlib.h stdnoreturn.h ing.h tgmath.h threads.h time.h uchar.h wchar.h wctype.h)'
+
 #
 # Files we don't want in JSONs.
 #
-FILES_PATTERNS_TO_FILTER_OUT=Bash2Py(Glob("(GL/ Qt.*/ SDL.*/ X11/ alsa/ c\\+\\+/ dbus.*/ glib.*/ libdrm/ libxml2/ llvm.*/ mirclient/ php[0-9.-]*/ pulse/ python.*/ ruby.*/ wayland.*/ xcb/)"))
-SEP=Bash2Py("\\|")
-FILES_FILTER=Bash2Py(os.popen("printf \""+str(SEP.val)+"%s\" \""+str(FILES_PATTERNS_TO_FILTER_OUT.val[@] ])+"\"").read().rstrip("\n"))
-FILES_FILTER=Bash2Py(FILES_FILTER.val:Expand.hash()SEP)
+FILES_PATTERNS_TO_FILTER_OUT = (glob.glob('(GL/ Qt.*/ SDL.*/ X11/ alsa/ c\\ + \\ + / dbus.*/ glib.*/ libdrm/ libxml2/ llvm.*/ mirclient/ php[0-9.-]*/ pulse/ python.*/ ruby.*/ wayland.*/ xcb/)'))
+SEP = '\\|'
+FILES_FILTER = (os.popen('printf \'' + SEP + '%s\' \'' + ' '.join(FILES_PATTERNS_TO_FILTER_OUT) + '\'').read().rip('\n'))
+FILES_FILTER = (FILES_FILTER:Expand.hash()SEP)
+
 #
 # Paths.
 #
-SCRIPT_DIR=Bash2Py(os.popen("dirname \""+os.popen("gnureadlink -e \""+__file__+"\"").read().rstrip("\n")+"\"").read().rstrip("\n"))
-SCRIPT_NAME=Bash2Py(os.popen("basename \""+str(SCRIPT_NAME.val)+"\"").read().rstrip("\n"))
-EXTRACTOR=Bash2Py(str(SCRIPT_DIR.val)+"/extract_types.py")
-MERGER=Bash2Py(str(SCRIPT_DIR.val)+"/merge_jsons.py")
-INCLUDE_DIR=Bash2Py("/usr/include/")
-OUT_DIR=Bash2Py(".")
-STD_LIB_OUT_DIR=Bash2Py(str(OUT_DIR.val)+"/gen_tmp_cstdlib")
-STD_LIB_JSON=Bash2Py(str(OUT_DIR.val)+"/cstdlib.json")
-LINUX_OUT_DIR=Bash2Py(str(OUT_DIR.val)+"/gen_tmp_linux")
-LINUX_JSON=Bash2Py(str(OUT_DIR.val)+"/linux.json")
-CSTDLIB_PRIORITY_OUT_DIR=Bash2Py(str(OUT_DIR.val)+"/gen_tmp_cstdlib_priority")
-LINUX_PRIORITY_OUT_DIR=Bash2Py(str(OUT_DIR.val)+"/gen_tmp_linux_priority")
-#
-# Print help.
-#
-def print_help () :
-    global SCRIPT_NAME
+SCRIPT_DIR  =  os.path.dirname(os.path.abspath(__file__))
+SCRIPT_NAME  =  __name__
+EXTRACTOR = (SCRIPT_DIR + '/extract_types.py')
+MERGER = (SCRIPT_DIR + '/merge_jsons.py')
+INCLUDE_DIR = '/usr/include/'
+OUT_DIR =  '.'
+STD_LIB_OUT_DIR = (OUT_DIR + '/gen_tmp_cstdlib')
+STD_LIB_JSON = (OUT_DIR + '/cstdlib.json')
+LINUX_OUT_DIR = (OUT_DIR + '/gen_tmp_linux')
+LINUX_JSON = (OUT_DIR + '/linux.json')
+CSTDLIB_PRIORITY_OUT_DIR = (OUT_DIR + '/gen_tmp_cstdlib_priority')
+LINUX_PRIORITY_OUT_DIR = (OUT_DIR + '/gen_tmp_linux_priority')
 
-    print("Generator of JSON files containing C-types information for C standard library")
-    print("and other header files in /usr/include/ directory.")
-    print()
-    print("Usage:")
-    print("    "+str(SCRIPT_NAME.val)+" [OPTIONS]")
-    print()
-    print("Options:")
-    print("    -f    --files-filter       Pattern to ignore specific header files.")
-    print("    -h,   --help               Print this help message.")
-    print("    -i    --json-indent N      Set indentation in JSON files. Default 1")
-    print("    -N    --no-cleanup         Do not remove dirs with JSONs for individual header files.")
-    print("          --cstdlib-headers    Set path to the C standard library headers with high-priority types info.")
-    print("          --linux-headers      Set path to the Linux headers with high-priority types info.")
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument('-i', '--json-indent',
+                        dest='json_indent',
+                        default=1,
+                        help='Set indentation in JSON files.')
+
+    parser.add_argument('-n', '--no-cleanup',
+                        dest='no_cleanup',
+                        default=True,
+                        help='Do not remove dirs with JSONs for individual header files.')
+
+    parser.add_argument('--cstdlib-headers',
+                        dest='cstdlib_headers',
+                        help='Set path to the C standard library headers with high-priority types info.')
+
+    parser.add_argument('--linux-headers',
+                        dest='linux_headers',
+                        help='Set path to the Linux headers with high-priority types info.')
+
+    return parser.parse_args()
+
+
+args = parse_args()
+
 
 #
 # Prints the given error message ($1) to stderr and exits.
 #
-def print_error_and_die (_p1) :
-    print("Error: "+str(_p1),stderr=subprocess.STDOUT)
+def print_error_and_die (error) :
+    sys.stderr.write('Error: ' + error)
     exit(1)
+
+def remove_dir(path):
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path)
+    elif os.path.exists(path):
+        os.remove(path)
 
 #
 # Parse and check script arguments.
 #
-GETOPT_SHORTOPT=Bash2Py("f:hi:Np:")
-GETOPT_LONGOPT=Bash2Py("cstdlib-headers:,files-filter:,help,json-indent:,linux-headers:,no-cleanup")
-PARSED_OPTIONS=Bash2Py(os.popen("getopt -o \""+str(GETOPT_SHORTOPT.val)+"\" -l \""+str(GETOPT_LONGOPT.val)+"\" -n \""+str(SCRIPT_NAME.val)+"\" -- \""+Str(Expand.at())+"\"").read().rstrip("\n"))
-if (_rc0 != 0 ):
-    print_error_and_die("Failed to parse parameters via getopt")
-eval("set","--",str(PARSED_OPTIONS.val))
+"""
 while (True):
     
-    if ( str(sys.argv[1]) == '-f' or str(sys.argv[1]) == '--files-filter'):
-        Make("FILES_FILTER").setValue(str(FILES_FILTER.val)+"\|"+str(sys.argv[2]))
-        subprocess.call(["shift","2"],shell=True)
-    elif ( str(sys.argv[1]) == '-i' or str(sys.argv[1]) == '--json-indent'):
-        if str(JSON_INDENT.val) != '':
-            print_error_and_die("Duplicate option: -i|--json-indent")
-        Make("JSON_INDENT").setValue(sys.argv[2])
-        subprocess.call(["shift","2"],shell=True)
-    elif ( str(sys.argv[1]) == '-h' or str(sys.argv[1]) == '--help'):
+    if ( (sys.argv[1])  =  =  '-f' or (sys.argv[1])  =  =  '--files-filter'):
+        FILES_FILTER  =  ((FILES_FILTER) + '\|' + (sys.argv[2]))
+        subprocess.call(['shift','2'],shell = True)
+    elif ( (sys.argv[1])  =  =  '-i' or (sys.argv[1])  =  =  '--json-indent'):
+        if (JSON_INDENT) ! =  '':
+            print_error_and_die('Duplicate option: -i|--json-indent')
+        JSON_INDENT  =  (sys.argv[2])
+        subprocess.call(['shift','2'],shell = True)
+    elif ( (sys.argv[1])  =  =  '-h' or (sys.argv[1])  =  =  '--help'):
         print_help()
         exit(0)
-    elif ( str(sys.argv[1]) == '-N' or str(sys.argv[1]) == '--no-cleanup'):
-        if str(CLEANUP.val) != '':
-            print_error_and_die("Duplicate option: -N|--no-cleanup")
-        Make("CLEANUP").setValue("no")
-        subprocess.call(["shift"],shell=True)
-    elif ( str(sys.argv[1]) == '--cstdlib-headers'):
-        if str(CSTDLIB_PRIORITY_PATH.val) != '':
-            print_error_and_die("Duplicate option: --cstdlib-headers")
-        if not os.path.isdir(str(sys.argv[2])):
-            print_error_and_die("Unknown directory: "+str(sys.argv[2]))
-        Make("CSTDLIB_PRIORITY_PATH").setValue(sys.argv[2])
-        subprocess.call(["shift","2"],shell=True)
-    elif ( str(sys.argv[1]) == '--linux-headers'):
-        if str(LINUX_PRIORITY_PATH.val) != '':
-            print_error_and_die("Duplicate option: --linux-headers")
-        if not os.path.isdir(str(sys.argv[2])):
-            print_error_and_die("Unknown directory: "+str(sys.argv[2]))
-        Make("LINUX_PRIORITY_PATH").setValue(sys.argv[2])
-        subprocess.call(["shift","2"],shell=True)
-    elif ( str(sys.argv[1]) == '--'):
-        if (Expand.hash() != 1 ):
-            print_error_and_die("Unrecognized parameter '"+str(sys.argv[2])+"'")
+    elif ( (sys.argv[1])  =  =  '-N' or (sys.argv[1])  =  =  '--no-cleanup'):
+        if (CLEANUP) ! =  '':
+            print_error_and_die('Duplicate option: -N|--no-cleanup')
+        CLEANUP  =  ('no')
+        subprocess.call(['shift'],shell = True)
+    elif ( (sys.argv[1])  =  =  '--cstdlib-headers'):
+        if (CSTDLIB_PRIORITY_PATH) ! =  '':
+            print_error_and_die('Duplicate option: --cstdlib-headers')
+        if not os.path.isdir((sys.argv[2])):
+            print_error_and_die('Unknown directory: ' + (sys.argv[2]))
+        CSTDLIB_PRIORITY_PATH  =  (sys.argv[2])
+        subprocess.call(['shift','2'],shell = True)
+    elif ( (sys.argv[1])  =  =  '--linux-headers'):
+        if (LINUX_PRIORITY_PATH) ! =  '':
+            print_error_and_die('Duplicate option: --linux-headers')
+        if not os.path.isdir((sys.argv[2])):
+            print_error_and_die('Unknown directory: ' + (sys.argv[2]))
+        LINUX_PRIORITY_PATH  =  (sys.argv[2])
+        subprocess.call(['shift','2'],shell = True)
+    elif ( (sys.argv[1])  =  =  '--'):
+        if (Expand.hash() ! =  1 ):
+            print_error_and_die('Unrecognized parameter '' + (sys.argv[2]) + ''')
             exit(1)
         break
-JSON_INDENT=Bash2Py(Expand.colonEq("JSON_INDENT","1"))
-CLEANUP=Bash2Py(Expand.colonEq("CLEANUP","yes"))
+"""
+
 #
 # Initial cleanup.
 #
-_rc0 = subprocess.call(["rm","-rf",str(STD_LIB_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["mkdir",str(STD_LIB_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["rm","-rf",str(LINUX_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["mkdir",str(LINUX_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["rm","-rf",str(CSTDLIB_PRIORITY_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["mkdir",str(CSTDLIB_PRIORITY_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["rm","-rf",str(LINUX_PRIORITY_OUT_DIR.val)],shell=True)
-_rc0 = subprocess.call(["mkdir",str(LINUX_PRIORITY_OUT_DIR.val)],shell=True)
+remove_dir(STD_LIB_OUT_DIR)
+os.mkdir(STD_LIB_OUT_DIR)
+remove_dir(LINUX_OUT_DIR)
+os.mkdir(LINUX_OUT_DIR)
+remove_dir(CSTDLIB_PRIORITY_OUT_DIR)
+os.mkdir(CSTDLIB_PRIORITY_OUT_DIR)
+remove_dir(LINUX_PRIORITY_OUT_DIR)
+os.mkdir(LINUX_PRIORITY_OUT_DIR)
+
 #
 # Generate JSONs for whole /usr/include path.
 # Filter out unwanted headers.
 # Move standard headers to other dir.
 #
-_rc0 = subprocess.call([str(EXTRACTOR.val),str(INCLUDE_DIR.val),"-o",str(LINUX_OUT_DIR.val)],shell=True)
-FILES_FILTER=Bash2Py(FILES_FILTER.val//\//_)
-_rc0 = subprocess.call(["find",str(LINUX_OUT_DIR.val)+"/","-regex",str(LINUX_OUT_DIR.val)+"/.*\("+str(FILES_FILTER.val)+"\).*","-delete"],shell=True)
+subprocess.call([EXTRACTOR, INCLUDE_DIR, '-o', LINUX_OUT_DIR], shell = True)
+FILES_FILTER = (FILES_FILTER//\//_)
+subprocess.call(['find', LINUX_OUT_DIR + '/', '-regex', LINUX_OUT_DIR + '/.*\(' + FILES_FILTER + '\).*', '-delete'], shell = True)
 #
 # Move standard library headers to other directory.
 # Edit standard header paths to look like type-extractor generated jsons.
 #
-for Make("header").val in Array(CSTDLIB_HEADERS.val[@] ]):
-    for Make("f").val in Array(os.popen("find \""+str(INCLUDE_DIR.val)+"\" -name \""+str(header.val)+"\"").read().rstrip("\n")):
-        Make("f").setValue(f.val#INCLUDE_DIR.val)
-        Make("f").setValue(f.val////_)
-        Make("f").setValue(f.val/%\.h/.json)
-        if (os.path.isfile(str(LINUX_OUT_DIR.val)+"/"+str(f.val)) ):
-            subprocess.call(["mv",str(LINUX_OUT_DIR.val)+"/"+str(f.val),str(STD_LIB_OUT_DIR.val)],shell=True)
+for header in CSTDLIB_HEADERS:
+    for f in os.popen('find \'' + INCLUDE_DIR + '\' -name \'' + header + '\'').read().rip('\n'):
+        f  =  (f#INCLUDE_DIR)
+        f  =  (f////_)
+        f  =  (f/%\.h/.json)
+        if os.path.isfile(LINUX_OUT_DIR + '/' + f):
+            shutil.move(LINUX_OUT_DIR + '/' + f, STD_LIB_OUT_DIR)
+
 #
 # Extract types info from high-priority cstdlib and linux headers if paths were given.
 #
-if (str(CSTDLIB_PRIORITY_PATH.val) != '' ):
-    subprocess.call([str(EXTRACTOR.val),str(CSTDLIB_PRIORITY_PATH.val),"-o",str(CSTDLIB_PRIORITY_OUT_DIR.val)],shell=True)
-if (str(LINUX_PRIORITY_PATH.val) != '' ):
-    subprocess.call([str(EXTRACTOR.val),str(LINUX_PRIORITY_PATH.val),"-o",str(LINUX_PRIORITY_OUT_DIR.val)],shell=True)
+if CSTDLIB_PRIORITY_PATH:
+    subprocess.call([EXTRACTOR, CSTDLIB_PRIORITY_PATH, '-o', CSTDLIB_PRIORITY_OUT_DIR], shell = True)
+if LINUX_PRIORITY_PATH:
+    subprocess.call([EXTRACTOR, LINUX_PRIORITY_PATH, '-o', LINUX_PRIORITY_OUT_DIR], shell = True)
+
 #
 # Merging.
 # Priority headers must be first.
 # Cstdlib priority headers are merged to the C standard library JSON,
 # Linux priority headers to the Linux JSON.
 #
-_rc0 = subprocess.call([str(MERGER.val),str(CSTDLIB_PRIORITY_OUT_DIR.val),str(STD_LIB_OUT_DIR.val),"-o",str(STD_LIB_JSON.val),"--json-indent",str(JSON_INDENT.val)],shell=True)
-_rc0 = subprocess.call([str(MERGER.val),str(LINUX_PRIORITY_OUT_DIR.val),str(LINUX_OUT_DIR.val),"-o",str(LINUX_JSON.val),"--json-indent",str(JSON_INDENT.val)],shell=True)
+subprocess.call([MERGER, CSTDLIB_PRIORITY_OUT_DIR, STD_LIB_OUT_DIR, '-o', STD_LIB_JSON, '--json-indent', args.json_indent], shell = True)
+subprocess.call([MERGER, LINUX_PRIORITY_OUT_DIR, LINUX_OUT_DIR, '-o', LINUX_JSON, '--json-indent', args.json_indent], shell = True)
 #
 # Optional cleanup at the end.
 #
-if (str(CLEANUP.val) == "yes" ):
-    subprocess.call(["rm","-rf",str(STD_LIB_OUT_DIR.val)],shell=True)
-    subprocess.call(["rm","-rf",str(LINUX_OUT_DIR.val)],shell=True)
-    subprocess.call(["rm","-rf",str(PRIORITY_HEADERS_OUT_DIR.val)],shell=True)
-    subprocess.call(["rm","-rf",str(CSTDLIB_PRIORITY_OUT_DIR.val)],shell=True)
-    subprocess.call(["rm","-rf",str(LINUX_PRIORITY_OUT_DIR.val)],shell=True)
+if not args.no_cleanup:
+    remove_dir(STD_LIB_OUT_DIR)
+    remove_dir(LINUX_OUT_DIR)
+    remove_dir(PRIORITY_HEADERS_OUT_DIR)
+    remove_dir(CSTDLIB_PRIORITY_OUT_DIR)
+    remove_dir(LINUX_PRIORITY_OUT_DIR)
