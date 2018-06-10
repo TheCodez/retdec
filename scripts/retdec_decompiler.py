@@ -50,11 +50,13 @@ def get_parser():
 
     parser.add_argument('-o', '--output',
                         dest='output',
+                        metavar='FILE',
                         default='file.ext',
                         help='Output file.')
 
     parser.add_argument('-p', '--pdb',
                         dest='pdb',
+                        metavar='FILE',
                         help='File with PDB debug information.')
 
     parser.add_argument('--generate-log',
@@ -253,194 +255,368 @@ def get_parser():
                         help='Disables the default memory limit (half of system RAM) of fileinfo, unpacker, bin2llvmir, and llvmir2hll.')
 
     parser.add_argument('input',
+                        metavar='FILE',
                         help='Input file')
 
 
-# todo move
-_args = get_parser().parse_args()
+class Decompiler:
+    def __init__(self, _args):
+        self.args = _args
 
-def check_arguments(_args):
-    """Check proper combination of input arguments.
-    """
+    def check_arguments(self):
+        pass
 
-    global IN
-    global CONFIG_DB
-    global RAW_ENTRY_POINT
-    global RAW_SECTION_VMA
-    global HLL
-    global OUT
-    global PICKED_FILE
+    def print_warning_if_decompiling_bytecode(self):
+        """Prints a warning if we are decompiling bytecode."""
 
-    # Check whether the input file was specified.
-    if not _args.input:
-        Utils.print_error_and_die('No input file was specified')
+        bytecode = os.popen('\'' + config.CONFIGTOOL + '\' \'' + CONFIG + '\' --read --bytecode').read(). \
+            rstrip('\n')
 
-    # Try to detect desired decompilation mode if not set by user.
-    # We cannot detect 'raw' mode because it overlaps with 'bin' (at least not based on extension).
-    if not _args.mode:
-        if Path(_args.input).suffix == 'll':
-            # Suffix .ll
-            _args.mode = 'll'
+        if bytecode != '':
+            Utils.print_warning('Detected ' + bytecode + ' bytecode, which cannot be decompiled by our machine-code '
+                                                         'decompiler. The decompilation result may be inaccurate.')
+
+    def check_whether_decompilation_should_be_forcefully_stopped(self, tool_name):
+        """Checks whether the decompilation should be forcefully stopped because of the
+        --stop-after parameter. If so, cleanup is run and the script exits with 0.
+
+        Arguments:
+
+          $1 Name of the tool.
+
+        The function expects the $STOP_AFTER variable to be set.
+        """
+
+        if self.args.stop_after == tool_name:
+            if self.args.generate_log:
+                self.generate_log()
+
+            self.cleanup()
+            print()
+            print('#### Forced stop due to  - -stop - after %s...' % self.args.stop_after)
+            # sys.exit(0)
+
+    def cleanup(self):
+        """Cleanup working directory"""
+
+        global OUT_UNPACKED
+        global OUT_FRONTEND_LL
+        global OUT_FRONTEND_BC
+        global CONFIG
+        global CONFIG_DB
+        global OUT_BACKEND_BC
+        global OUT_BACKEND_LL
+        global OUT_RESTORED
+        global OUT_ARCHIVE
+        global SIGNATURES_TO_REMOVE
+        global TOOL_LOG_FILE
+
+        if self.args.cleanup:
+            Utils.remove_forced(OUT_UNPACKED)
+            Utils.remove_forced(OUT_FRONTEND_LL)
+            Utils.remove_forced(OUT_FRONTEND_BC)
+
+            if CONFIG != CONFIG_DB:
+                Utils.remove_forced(CONFIG)
+
+            Utils.remove_forced(OUT_BACKEND_BC)
+            Utils.remove_forced(OUT_BACKEND_LL)
+            Utils.remove_forced(OUT_RESTORED)
+
+            # Archive support
+            Utils.remove_forced(OUT_ARCHIVE)
+
+            # Archive support (Macho-O Universal)
+            for sig in SIGNATURES_TO_REMOVE:
+                Utils.remove_forced(sig)
+
+            # Signatures generated from archives
+            if TOOL_LOG_FILE != '':
+                Utils.remove_forced(TOOL_LOG_FILE)
+
+    def generate_log(self):
+        global OUT
+        global LOG_DECOMPILATION_END_DATE
+        global LOG_FILEINFO_OUTPUT
+        global LOG_UNPACKER_OUTPUT
+        global LOG_BIN2LLVMIR_OUTPUT
+        global LOG_LLVMIR2HLL_OUTPUT
+        global IN
+        global LOG_DECOMPILATION_START_DATE
+        global FORMAT
+        global LOG_FILEINFO_RC
+        global LOG_UNPACKER_RC
+        global LOG_BIN2LLVMIR_RC
+        global LOG_LLVMIR2HLL_RC
+        global LOG_FILEINFO_RUNTIME
+        global LOG_BIN2LLVMIR_RUNTIME
+        global LOG_LLVMIR2HLL_RUNTIME
+        global LOG_FILEINFO_MEMORY
+        global LOG_BIN2LLVMIR_MEMORY
+        global LOG_LLVMIR2HLL_MEMORY
+
+        LOG_FILE = OUT + '.decompilation.log'
+        LOG_DECOMPILATION_END_DATE = time.strftime('%S')
+
+        LOG_FILEINFO_OUTPUT = self.json_escape(LOG_FILEINFO_OUTPUT)
+        LOG_UNPACKER_OUTPUT = self.json_escape(LOG_UNPACKER_OUTPUT)
+        LOG_BIN2LLVMIR_OUTPUT = self.remove_colors(LOG_BIN2LLVMIR_OUTPUT)
+        LOG_BIN2LLVMIR_OUTPUT = self.json_escape(LOG_BIN2LLVMIR_OUTPUT)
+        LOG_LLVMIR2HLL_OUTPUT = self.remove_colors(LOG_LLVMIR2HLL_OUTPUT)
+        LOG_LLVMIR2HLL_OUTPUT = self.json_escape(LOG_LLVMIR2HLL_OUTPUT)
+
+        log_structure = '{\n\t\'input_file\' : \'%s\',\n\t\'pdb_file\' : \'%s\',\n\t\'start_date\' :' \
+                        ' \'%s\',\n\t\'end_date\' : \'%s\',\n\t\'mode\' : \'%s\',\n\t\'arch\' : \'%s\',\n\t\'format\'' \
+                        ' : \'%s\',\n\t\'fileinfo_rc\' : \'%s\',\n\t\'unpacker_rc\' : \'%s\',\n\t\'bin2llvmir_rc\'' \
+                        ' : \'%s\',\n\t\'llvmir2hll_rc\' : \'%s\',\n\t\'fileinfo_output\' :' \
+                        ' \'%s\',\n\t\'unpacker_output\' : \'%s\',\n\t\'bin2llvmir_output\' :' \
+                        ' \'%s\',\n\t\'llvmir2hll_output\' : \'%s\',\n\t\'fileinfo_runtime\' :' \
+                        ' \'%s\',\n\t\'bin2llvmir_runtime\' : \'%s\',\n\t\'llvmir2hll_runtime\' :' \
+                        ' \'%s\',\n\t\'fileinfo_memory\' : \'%s\',\n\t\'bin2llvmir_memory\' :' \
+                        ' \'%s\',\n\t\'llvmir2hll_memory\' : \'%s\'\n}\n'
+
+        print(log_structure % (
+            IN, self.args.pdb, LOG_DECOMPILATION_START_DATE, LOG_DECOMPILATION_END_DATE, self.args.mode,
+            self.args.arch,
+            FORMAT, LOG_FILEINFO_RC, LOG_UNPACKER_RC, LOG_BIN2LLVMIR_RC, LOG_LLVMIR2HLL_RC,
+            LOG_FILEINFO_OUTPUT, LOG_UNPACKER_OUTPUT, LOG_BIN2LLVMIR_OUTPUT, LOG_LLVMIR2HLL_OUTPUT,
+            LOG_FILEINFO_RUNTIME, LOG_BIN2LLVMIR_RUNTIME, LOG_LLVMIR2HLL_RUNTIME, LOG_FILEINFO_MEMORY,
+            LOG_BIN2LLVMIR_MEMORY, LOG_LLVMIR2HLL_MEMORY))
+
+    #
+    # Parses the given return code and output from a tool that was run through
+    # `/usr/bin/time -v` and prints the return code to be stored into the log.
+    #
+    # Parameters:
+    #
+    #    - $1: return code from `/usr/bin/time`
+    #    - $2: combined output from the tool and `/usr/bin/time -v`
+    #
+    # This function has to be called for every tool that is run through
+    # `/usr/bin/time`. The reason is that when a tool is run without
+    # `/usr/bin/time` and it e.g. segfaults, shell returns 139, but when it is run
+    # through `/usr/bin/time`, it returns 11 (139 - 128). If this is the case, this
+    # function prints 139 instead of 11 to make the return codes of all tools
+    # consistent.
+    #
+    def get_tool_rc(self, return_code, output):
+        global BASH_REMATCH
+        global RC
+
+        orig_rc = return_code
+        signal_regex = 'Command terminated by signal ([0-9]*)'
+
+        if re.search(signal_regex, output):
+            signal_num = BASH_REMATCH[1]
+            RC = signal_num + 128
         else:
-            _args.mode = 'bin'
+            RC = orig_rc
+            # We want to be able to distinguish assertions and memory-insufficiency
+            # errors. The problem is that both assertions and memory-insufficiency
+            # errors make the program exit with return code 134. We solve this by
+            # replacing 134 with 135 (SIBGUS, 7) when there is 'std::bad_alloc' in the
+            # output. So, 134 will mean abort (assertion error) and 135 will mean
+            # memory-insufficiency error.
+            if RC == 134 or re.search('std::bad_alloc', output):
+                RC = 135
+            print(RC)
 
-    # Print warning message about unsupported combinations of options.
-    if _args.mode == 'll':
-        if _args.arch:
-            Utils.print_warning('Option -a|--arch is not used in mode ' + _args.mode)
-        if _args.pdb:
-            Utils.print_warning('Option -p|--pdb is not used in mode ' + _args.mode)
-        if CONFIG_DB == '' or _args.config:
-            Utils.print_error_and_die('Option --config or --no-config must be specified in mode ' + _args.mode)
-    elif _args.mode == 'raw':
-        # Errors -- missing critical arguments.
-        if not _args.arch:
-            Utils.print_error_and_die('Option -a|--arch must be used with mode ' + _args.mode)
+        return RC
 
-        if not _args.endian:
-                Utils.print_error_and_die('Option -e|--endian must be used with mode ' + _args.mode)
+    #
+    # Parses the given output ($1) from a tool that was run through
+    # `/usr/bin/time -v` and prints the running time in seconds.
+    #
+    def get_tool_runtime(self, output):
+        global USER_TIME_F
+        global SYSTEM_TIME_F
+        global RUNTIME_F
 
-        if not RAW_ENTRY_POINT != '':
-                Utils.print_error_and_die('Option --raw-entry-point must be used with mode ' + _args.mode)
+        # The output from `/usr/bin/time -v` looks like this:
+        #
+        #    [..] (output from the tool)
+        #        Command being timed: 'tool'
+        #        User time (seconds): 0.04
+        #        System time (seconds): 0.00
+        #        [..] (other data)
+        #
+        # We combine the user and system times into a single time in seconds.
+        USER_TIME_F = os.popen('egrep \'User time \\(seconds\\').read().rstrip('\n') + ': <<< ' + (
+            output) + ' | cut -d: -f2)'
 
-        if not RAW_SECTION_VMA != '':
-                Utils.print_error_and_die('Option --raw-section-vma must be used with mode ' + _args.mode)
-
-        if not Utils.is_number(RAW_ENTRY_POINT):
-            Utils.print_error_and_die('Value in option --raw-entry-point must be decimal (e.g. 123) or hexadecimal value (e.g. 0x123)')
-        if not Utils.is_number(RAW_SECTION_VMA):
-            Utils.print_error_and_die('Value in option --raw-section-vma must be decimal (e.g. 123) or hexadecimal value (e.g. 0x123)')
-
-    # Archive decompilation errors.
-    if _args.ar_name and _args.ar_index:
-        Utils.print_error_and_die('Options --ar-name and --ar-index are mutually exclusive. Pick one.')
-    if _args.mode != 'bin':
-        if _args.ar_name:
-            Utils.print_warning('Option --ar-name is not used in mode ' + _args.mode)
-        if _args.ar_index:
-            Utils.print_warning('Option --ar-index is not used in mode ' + _args.mode)
-
-
-    if not _args.output:
-        # No output file was given, so use the default one.
-        (iname, ext) = os.path.splitext(IN)
-
-        if ext == 'll':
-            # Suffix .ll
-            OUT = name + '.' + HLL
-        elif ext == 'exe':
-            # Suffix .exe
-            OUT = name + '.' + HLL
-        elif ext == 'elf':
-            # Suffix .elf
-            OUT = name + '.' + HLL
-        elif ext == 'ihex':
-            # Suffix .ihex
-            OUT = name + '.' + HLL
-        elif ext == 'macho':
-            # Suffix .macho
-            OUT = name + '.' + HLL
+        SYSTEM_TIME_F = os.popen('egrep \'System time \\(seconds\\').read().rstrip('\n') + ': <<< ' + (
+            output) + ' | cut -d: -f2)'
+        RUNTIME_F = os.popen('echo ' + USER_TIME_F + '  +  ' + SYSTEM_TIME_F + ' | bc').read().rstrip('\n')
+        # Convert the runtime from float to int (http://unix.stackexchange.com/a/89843).
+        # By adding 1, we make sure that the runtime is at least one second. This
+        # also takes care of proper rounding (we want to round runtime 1.1 to 2).
+        _rc0 = _rcr2, _rcw2 = os.pipe()
+        if os.fork():
+            os.close(_rcw2)
+            os.dup2(_rcr2, 0)
+            subprocess.call(['bc'], shell=True)
         else:
-            OUT = IN + PICKED_FILE + '.' + HLL
+            os.close(_rcr2)
+            os.dup2(_rcw2, 1)
+            print('(' + RUNTIME_F + '  +  1)/1')
+            # sys.exit(0)
 
-        # If the output file name matches the input file name, we have to change the
-        # output file name. Otherwise, the input file gets overwritten.
-        if IN == OUT:
-            OUT = name + '.out.' + HLL
+        return RUNTIME_F
 
-        # Convert to absolute paths.
-        IN = Utils.get_realpath(IN)
-        OUT = Utils.get_realpath(OUT)
+    #
+    # Parses the given output ($1) from a tool that was run through
+    # `/usr/bin/time -v` and prints the memory usage in MB.
+    #
+    def get_tool_memory_usage(self, tool):
+        global RSS_KB
+        global RSS_MB
 
-        if os.path.exists(_args.pdb):
-            _args.pdb = Utils.get_realpath(_args.pdb)
+        """The output from `/usr/bin/time -v` looks like this:
 
-        # Check that selected ranges are valid.
-        if _args.selected_ranges:
-            for range in _args.selected_ranges:
-                # Check if valid range.
-                if not Utils.is_range(range):
-                    Utils.print_error_and_die('Range %s in option --select-ranges is not a valid decimal (e.g. 123-456) or hexadecimal (e.g. 0x123-0xabc) range.' % range)
+            [..] (output from the tool)
+                Command being timed: 'tool'
+                [..] (other data)
+                Maximum resident set size (kbytes): 1808
+                [..] (other data)
 
-        # Check if first <= last.
-        ranges = _args.selected_ranges.split('-')
-        # parser line into array
-        if int(ranges[0]) > int(ranges[1]):
-            Utils.print_error_and_die('Range '' + (r) + '' in option --select-ranges is not a valid range: second address must be greater or equal than the first one.')
+        We want the value of 'resident set size' (RSS), which we convert from KB
+        to MB. If the resulting value is less than 1 MB, round it to 1 MB.
+        """
+        RSS_KB = os.popen('egrep \'Maximum resident set size \\(kbytes\\').read().rstrip('\n') + ': <<< ' + (
+            tool) + ' | cut -d: -f2)'
 
+        RSS_MB = (RSS_KB // 1024)
+        print((RSS_MB if (RSS_MB > 0) else 1))
 
-def print_warning_if_decompiling_bytecode():
-    """Prints a warning if we are decompiling bytecode."""
+        return RSS_MB
 
-    bytecode = os.popen('\'' + config.CONFIGTOOL + '\' \'' + CONFIG + '\' --read --bytecode').read(). \
-        rstrip('\n')
+    #
+    # Prints the actual output of a tool that was run through `/usr/bin/time -v`.
+    # The parameter ($1) is the combined output from the tool and `/usr/bin/time -v`.
+    #
+    def get_tool_output(self, output):
+        # The output from `/usr/bin/time -v` looks either like this (success):
+        #
+        #    [..] (output from the tool)
+        #        Command being timed: 'tool'
+        #        [..] (other data)
+        #
+        # or like this (when there was an error):
+        #
+        #    [..] (output from the tool)
+        #        Command exited with non-zero status X
+        #        [..] (other data)
+        #
+        # Remove everything after and including 'Command...'
+        # (http://stackoverflow.com/a/5227429/2580955).
+        _rcr1, _rcw1 = os.pipe()
+        if os.fork():
+            os.close(_rcw1)
+            os.dup2(_rcr1, 0)
+            subprocess.call(['sed', '-n', '/Command exited with non-zero status/q;p'], shell=True)
+        else:
+            os.close(_rcr1)
+            os.dup2(_rcw1, 1)
+            _rc0 = subprocess.Popen('sed' + ' ' + '-n' + ' ' + '/Command being timed:/q;p', shell=True,
+                                    stdin=subprocess.PIPE)
+            _rc0.communicate(output + '\n')
 
-    if bytecode != '':
-        Utils.print_warning('Detected ' + bytecode + ' bytecode, which cannot be decompiled by our machine-code '
-                                                          'decompiler. The decompilation result may be inaccurate.')
+            return _rc0.wait()
+            # sys.exit(0)
 
+    #
+    # Prints an escaped version of the given text so it can be inserted into JSON.
+    #
+    # Parameters:
+    #   - $1 Text to be escaped.
+    #
+    def json_escape(self, text):
+        # We need to escape backslashes (\), double quotes ('), and replace new lines with '\n'.
 
-def check_whether_decompilation_should_be_forcefully_stopped(tool_name):
-    """Checks whether the decompilation should be forcefully stopped because of the
-    --stop-after parameter. If so, cleanup is run and the script exits with 0.
+        return re.escape(text)
 
-    Arguments:
+    def remove_colors(self, text):
+        """Removes color codes from the given text ($1).
+        """
+        #_rc0 = subprocess.Popen('sed' + ' ' + '-r' + ' ' + 's/\x1b[^m]*m//g', shell=True, stdin=subprocess.PIPE)
 
-      $1 Name of the tool.
+        res = re.compile(r's/\x1b[^m]*m//g')
+        return res.sub('', text)
 
-    The function expects the $STOP_AFTER variable to be set.
-    """
+    def timed_kill(self, pid):
+        """Platform-independent alternative to `ulimit -t` or `timeout`.
+        Based on http://www.bashcookbook.com/bashinfo/source/bash-4.0/examples/scripts/timeout3
+        1 argument is needed - PID
+        Returns - 1 if number of arguments is incorrect
+                  0 otherwise
+        """
 
-    if _args.stop_after == tool_name:
-        if _args.generate_log:
-            generate_log()
+        global TIMEOUT
+        global timeout
 
-        cleanup()
-        print()
-        print('#### Forced stop due to  - -stop - after %s...' % _args.stop_after)
-        sys.exit(0)
+        PID = pid
+        # PID of the target process
+        PROCESS_NAME = os.popen('ps -p ' + PID + ' -o comm --no-heading').read().rstrip('\n')
 
+        if PROCESS_NAME == 'time':
+            # The program is run through `/usr/bin/time`, so get the PID of the
+            # child process (the actual program). Otherwise, if we killed
+            # `/usr/bin/time`, we would obtain no output from it (user time, memory
+            # usage etc.).
+            PID = os.popen('ps --ppid ' + PID + ' -o pid --no-heading | head -n1').read().rstrip('\n')
 
-#
-# Clean working directory.
-#
-def cleanup():
-    global CLEANUP
-    global OUT_UNPACKED
-    global OUT_FRONTEND_LL
-    global OUT_FRONTEND_BC
-    global CONFIG
-    global CONFIG_DB
-    global OUT_BACKEND_BC
-    global OUT_BACKEND_LL
-    global OUT_RESTORED
-    global OUT_ARCHIVE
-    global SIGNATURES_TO_REMOVE
-    global TOOL_LOG_FILE
+        if not TIMEOUT:
+            TIMEOUT = 300
 
-    if _args.cleanup:
-        Utils.remove_forced(OUT_UNPACKED)
-        Utils.remove_forced(OUT_FRONTEND_LL)
-        Utils.remove_forced(OUT_FRONTEND_BC)
+        timeout = TIMEOUT
+        t = timeout
 
-        if CONFIG != CONFIG_DB:
-            Utils.remove_forced(CONFIG)
+        while t > 0:
+            time.sleep(1)
 
-        Utils.remove_forced(OUT_BACKEND_BC)
-        Utils.remove_forced(OUT_BACKEND_LL)
-        Utils.remove_forced(OUT_RESTORED)
+            if not subprocess.call('kill' + ' ' + '-0' + ' ' + PID, shell=True, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL):
+                exit(0)
 
-        # Archive support
-        Utils.remove_forced(OUT_ARCHIVE)
+            t = t - 1
 
-        # Archive support (Macho-O Universal)
-        for sig in SIGNATURES_TO_REMOVE:
-            Utils.remove_forced(sig)
+        subprocess.call('kill_tree' + ' ' + PID + ' ' + 'SIGKILL', shell=True, stdout=subprocess.DEVNULL,
+                               stderr=open(os.devnull, 'wb'))
 
-        # Signatures generated from archives
-        if TOOL_LOG_FILE != '':
-            Utils.remove_forced(TOOL_LOG_FILE)
+        return 0
 
+    #
+    # Kill process and all its children.
+    # Based on http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes/3211182#3211182
+    # 2 arguments are needed - PID of process to kill  +  signal type
+    # Returns - 1 if number of arguments is incorrect
+    #           0 otherwise
+    #
+    def kill_tree(self, pid, signal_type):
+        """ TODO implement
+        _pid = pid
+        _sig = Expand.colonMinus('2', 'TERM')
+        _rc0 = subprocess.call(['kill', '-stop', Expand.underbar() + 'pid'], shell=True)
+
+        # needed to stop quickly forking parent from producing child between child killing and parent killing
+        for _child in os.popen('ps -o pid --no-headers --ppid \'' + Expand.underbar() + 'pid\'').read().rstrip('\n'):
+            kill_tree(Expand.underbar() + 'child', Expand.underbar() + 'sig')
+        _rc0 = subprocess.call(['kill', '-' + Expand.underbar() + 'sig', Expand.underbar() + 'pid'], shell=True)
+        """
+
+        return 0
+
+    def string_to_md5(self, string):
+        """Generate a MD5 checksum from a given string.
+        """
+
+        m = hashlib.md5()
+        m.update(string)
+
+        return m.hexdigest()
+
+    def decompile(self):
+        self.check_arguments()
 
 #
 # An alternative to the `time` shell builtin that provides more information. It
@@ -448,322 +624,8 @@ def cleanup():
 #
 TIME = '/usr/bin/time -v'
 TIMEOUT = 300
-#
-# Parses the given return code and output from a tool that was run through
-# `/usr/bin/time -v` and prints the return code to be stored into the log.
-#
-# Parameters:
-#
-#    - $1: return code from `/usr/bin/time`
-#    - $2: combined output from the tool and `/usr/bin/time -v`
-#
-# This function has to be called for every tool that is run through
-# `/usr/bin/time`. The reason is that when a tool is run without
-# `/usr/bin/time` and it e.g. segfaults, shell returns 139, but when it is run
-# through `/usr/bin/time`, it returns 11 (139 - 128). If this is the case, this
-# function prints 139 instead of 11 to make the return codes of all tools
-# consistent.
-#
-def get_tool_rc(return_code, output):
-    global BASH_REMATCH
-    global RC
-
-    orig_rc = return_code
-    signal_regex = 'Command terminated by signal ([0-9]*)'
-
-    if re.search(signal_regex, output):
-        signal_num = BASH_REMATCH[1]
-        RC = signal_num + 128
-    else:
-        RC = orig_rc
-        # We want to be able to distinguish assertions and memory-insufficiency
-        # errors. The problem is that both assertions and memory-insufficiency
-        # errors make the program exit with return code 134. We solve this by
-        # replacing 134 with 135 (SIBGUS, 7) when there is 'std::bad_alloc' in the
-        # output. So, 134 will mean abort (assertion error) and 135 will mean
-        # memory-insufficiency error.
-        if RC == 134 or re.search('std::bad_alloc', output):
-            RC = 135
-        print(RC)
-
-    return RC
-
-#
-# Parses the given output ($1) from a tool that was run through
-# `/usr/bin/time -v` and prints the running time in seconds.
-#
-def get_tool_runtime(_p1):
-    global USER_TIME_F
-    global SYSTEM_TIME_F
-    global RUNTIME_F
-
-    # The output from `/usr/bin/time -v` looks like this:
-    #
-    #    [..] (output from the tool)
-    #        Command being timed: 'tool'
-    #        User time (seconds): 0.04
-    #        System time (seconds): 0.00
-    #        [..] (other data)
-    #
-    # We combine the user and system times into a single time in seconds.
-    USER_TIME_F = os.popen('egrep \'User time \\(seconds\\').read().rstrip('\n') + ': <<< ' + (_p1) + ' | cut -d: -f2)'
-
-    SYSTEM_TIME_F = os.popen('egrep \'System time \\(seconds\\').read().rstrip('\n') + ': <<< ' + (_p1) + ' | cut -d: -f2)'
-    RUNTIME_F = os.popen('echo ' + USER_TIME_F + '  +  ' + SYSTEM_TIME_F + ' | bc').read().rstrip('\n')
-    # Convert the runtime from float to int (http://unix.stackexchange.com/a/89843).
-    # By adding 1, we make sure that the runtime is at least one second. This
-    # also takes care of proper rounding (we want to round runtime 1.1 to 2).
-    _rc0 = _rcr2, _rcw2 = os.pipe()
-    if os.fork():
-        os.close(_rcw2)
-        os.dup2(_rcr2, 0)
-        subprocess.call(['bc'], shell=True)
-    else:
-        os.close(_rcr2)
-        os.dup2(_rcw2, 1)
-        print('(' + RUNTIME_F + '  +  1)/1')
-        #sys.exit(0)
-
-    return  RUNTIME_F
-
-#
-# Parses the given output ($1) from a tool that was run through
-# `/usr/bin/time -v` and prints the memory usage in MB.
-#
-def get_tool_memory_usage(tool):
-    global RSS_KB
-    global RSS_MB
-
-    """The output from `/usr/bin/time -v` looks like this:
-    
-        [..] (output from the tool)
-            Command being timed: 'tool'
-            [..] (other data)
-            Maximum resident set size (kbytes): 1808
-            [..] (other data)
-    
-    We want the value of 'resident set size' (RSS), which we convert from KB
-    to MB. If the resulting value is less than 1 MB, round it to 1 MB.
-    """
-    RSS_KB = os.popen('egrep \'Maximum resident set size \\(kbytes\\').read().rstrip('\n') + ': <<< ' + (
-        tool) + ' | cut -d: -f2)'
-
-    RSS_MB = (RSS_KB // 1024)
-    print((RSS_MB if (RSS_MB > 0) else 1))
-
-    return RSS_MB
 
 
-#
-# Prints the actual output of a tool that was run through `/usr/bin/time -v`.
-# The parameter ($1) is the combined output from the tool and `/usr/bin/time -v`.
-#
-def get_tool_output(_p1):
-    # The output from `/usr/bin/time -v` looks either like this (success):
-    #
-    #    [..] (output from the tool)
-    #        Command being timed: 'tool'
-    #        [..] (other data)
-    #
-    # or like this (when there was an error):
-    #
-    #    [..] (output from the tool)
-    #        Command exited with non-zero status X
-    #        [..] (other data)
-    #
-    # Remove everything after and including 'Command...'
-    # (http://stackoverflow.com/a/5227429/2580955).
-    _rcr1, _rcw1 = os.pipe()
-    if os.fork():
-        os.close(_rcw1)
-        os.dup2(_rcr1, 0)
-        subprocess.call(['sed', '-n', '/Command exited with non-zero status/q;p'], shell=True)
-    else:
-        os.close(_rcr1)
-        os.dup2(_rcw1, 1)
-        _rc0 = subprocess.Popen('sed' + ' ' + '-n' + ' ' + '/Command being timed:/q;p', shell=True, stdin=subprocess.PIPE)
-        _rc0.communicate(_p1 + '\n')
-
-        return _rc0.wait()
-        #sys.exit(0)
-
-
-#
-# Prints an escaped version of the given text so it can be inserted into JSON.
-#
-# Parameters:
-#   - $1 Text to be escaped.
-#
-def json_escape(_p1):
-    # We need to escape backslashes (\), double quotes ('), and replace new lines with '\n'.
-    _rcr1, _rcw1 = os.pipe()
-    if os.fork():
-        os.close(_rcw1)
-        os.dup2(_rcr1, 0)
-        _rcr2, _rcw2 = os.pipe()
-        if os.fork():
-            os.close(_rcw2)
-            os.dup2(_rcr2, 0)
-            _rcr3, _rcw3 = os.pipe()
-            if os.fork():
-                os.close(_rcw3)
-                os.dup2(_rcr3, 0)
-                subprocess.call(['sed', '{:q;N;s/\\n/\\\\n/g;t q}'], shell=True)
-            else:
-                os.close(_rcr3)
-                os.dup2(_rcw3, 1)
-                subprocess.call(['sed', 's/\'/\\\\\'/g'], shell=True)
-                #sys.exit(0)
-
-        else:
-            os.close(_rcr2)
-            os.dup2(_rcw2, 1)
-            subprocess.call(['sed', 's/\\\\/\\\\\\\\/g'], shell=True)
-            #sys.exit(0)
-
-    else:
-        os.close(_rcr1)
-        os.dup2(_rcw1, 1)
-        print(_p1)
-        #sys.exit(0)
-
-    # for now just return the param
-    return _p1
-
-
-
-def remove_colors(_p1):
-    """Removes color codes from the given text ($1).
-    """
-    _rc0 = subprocess.Popen('sed' + ' ' + '-r' + ' ' + 's/\x1b[^m]*m//g', shell=True, stdin=subprocess.PIPE)
-    _rc0.communicate(_p1 + '\n')
-
-    return _rc0.wait()
-
-
-def timed_kill(pid):
-    """Platform-independent alternative to `ulimit -t` or `timeout`.
-    Based on http://www.bashcookbook.com/bashinfo/source/bash-4.0/examples/scripts/timeout3
-    1 argument is needed - PID
-    Returns - 1 if number of arguments is incorrect
-              0 otherwise
-    """
-
-    global TIMEOUT
-    global timeout
-
-    PID = pid
-    # PID of the target process
-    PROCESS_NAME = os.popen('ps -p ' + PID + ' -o comm --no-heading').read().rstrip('\n')
-
-    if PROCESS_NAME == 'time':
-        # The program is run through `/usr/bin/time`, so get the PID of the
-        # child process (the actual program). Otherwise, if we killed
-        # `/usr/bin/time`, we would obtain no output from it (user time, memory
-        # usage etc.).
-        PID = os.popen('ps --ppid ' + PID + ' -o pid --no-heading | head -n1').read().rstrip('\n')
-
-    if not TIMEOUT:
-        TIMEOUT = 300
-
-    timeout = TIMEOUT
-    t = timeout
-
-    while t > 0:
-        subprocess.call(['sleep', '1'], shell=True)
-
-        if not subprocess.call('kill' + ' ' + '-0' + ' ' + PID, shell=True, stdout=open(os.devnull, 'wb'),
-                               stderr=open(os.devnull, 'wb')):
-            exit(0)
-
-    t = t - 1
-
-    _rc0 = subprocess.call('kill_tree' + ' ' + PID + ' ' + 'SIGKILL', shell=True, stdout=open(os.devnull, 'wb'),
-                           stderr=open(os.devnull, 'wb'))
-
-    return 0
-
-
-#
-# Kill process and all its children.
-# Based on http://stackoverflow.com/questions/392022/best-way-to-kill-all-child-processes/3211182#3211182
-# 2 arguments are needed - PID of process to kill  +  signal type
-# Returns - 1 if number of arguments is incorrect
-#           0 otherwise
-#
-def kill_tree(pid, signal_type):
-    """ TODO implement
-    _pid = pid
-    _sig = Expand.colonMinus('2', 'TERM')
-    _rc0 = subprocess.call(['kill', '-stop', Expand.underbar() + 'pid'], shell=True)
-
-    # needed to stop quickly forking parent from producing child between child killing and parent killing
-    for _child in os.popen('ps -o pid --no-headers --ppid \'' + Expand.underbar() + 'pid\'').read().rstrip('\n'):
-        kill_tree(Expand.underbar() + 'child', Expand.underbar() + 'sig')
-    _rc0 = subprocess.call(['kill', '-' + Expand.underbar() + 'sig', Expand.underbar() + 'pid'], shell=True)
-    """
-
-    return 0
-
-
-def string_to_md5(string):
-    """Generate a MD5 checksum from a given string.
-    """
-
-    m = hashlib.md5()
-    m.update(string)
-
-    return m.hexdigest()
-
-
-def generate_log():
-    global OUT
-    global LOG_DECOMPILATION_END_DATE
-    global LOG_FILEINFO_OUTPUT
-    global LOG_UNPACKER_OUTPUT
-    global LOG_BIN2LLVMIR_OUTPUT
-    global LOG_LLVMIR2HLL_OUTPUT
-    global IN
-    global LOG_DECOMPILATION_START_DATE
-    global FORMAT
-    global LOG_FILEINFO_RC
-    global LOG_UNPACKER_RC
-    global LOG_BIN2LLVMIR_RC
-    global LOG_LLVMIR2HLL_RC
-    global LOG_FILEINFO_RUNTIME
-    global LOG_BIN2LLVMIR_RUNTIME
-    global LOG_LLVMIR2HLL_RUNTIME
-    global LOG_FILEINFO_MEMORY
-    global LOG_BIN2LLVMIR_MEMORY
-    global LOG_LLVMIR2HLL_MEMORY
-
-    LOG_FILE = OUT + '.decompilation.log'
-    LOG_DECOMPILATION_END_DATE = os.popen('date  + %s').read().rstrip('\n')
-
-    LOG_FILEINFO_OUTPUT =  json_escape(LOG_FILEINFO_OUTPUT)
-    LOG_UNPACKER_OUTPUT = json_escape(LOG_UNPACKER_OUTPUT)
-    LOG_BIN2LLVMIR_OUTPUT = remove_colors(LOG_BIN2LLVMIR_OUTPUT)
-    LOG_BIN2LLVMIR_OUTPUT = json_escape(LOG_BIN2LLVMIR_OUTPUT)
-    LOG_LLVMIR2HLL_OUTPUT = remove_colors(LOG_LLVMIR2HLL_OUTPUT)
-    LOG_LLVMIR2HLL_OUTPUT = json_escape(LOG_LLVMIR2HLL_OUTPUT)
-
-    log_structure = '{\n\t\'input_file\' : \'%s\',\n\t\'pdb_file\' : \'%s\',\n\t\'start_date\' :' \
-                    ' \'%s\',\n\t\'end_date\' : \'%s\',\n\t\'mode\' : \'%s\',\n\t\'arch\' : \'%s\',\n\t\'format\'' \
-                    ' : \'%s\',\n\t\'fileinfo_rc\' : \'%s\',\n\t\'unpacker_rc\' : \'%s\',\n\t\'bin2llvmir_rc\'' \
-                    ' : \'%s\',\n\t\'llvmir2hll_rc\' : \'%s\',\n\t\'fileinfo_output\' :' \
-                    ' \'%s\',\n\t\'unpacker_output\' : \'%s\',\n\t\'bin2llvmir_output\' :' \
-                    ' \'%s\',\n\t\'llvmir2hll_output\' : \'%s\',\n\t\'fileinfo_runtime\' :' \
-                    ' \'%s\',\n\t\'bin2llvmir_runtime\' : \'%s\',\n\t\'llvmir2hll_runtime\' :' \
-                    ' \'%s\',\n\t\'fileinfo_memory\' : \'%s\',\n\t\'bin2llvmir_memory\' :' \
-                    ' \'%s\',\n\t\'llvmir2hll_memory\' : \'%s\'\n}\n'
-
-    print(log_structure % (
-        IN, _args.pdb, LOG_DECOMPILATION_START_DATE, LOG_DECOMPILATION_END_DATE, _args.mode,
-        _args.arch,
-        FORMAT, LOG_FILEINFO_RC, LOG_UNPACKER_RC, LOG_BIN2LLVMIR_RC, LOG_LLVMIR2HLL_RC,
-        LOG_FILEINFO_OUTPUT, LOG_UNPACKER_OUTPUT, LOG_BIN2LLVMIR_OUTPUT, LOG_LLVMIR2HLL_OUTPUT,
-        LOG_FILEINFO_RUNTIME, LOG_BIN2LLVMIR_RUNTIME, LOG_LLVMIR2HLL_RUNTIME, LOG_FILEINFO_MEMORY,
-        LOG_BIN2LLVMIR_MEMORY, LOG_LLVMIR2HLL_MEMORY))
 
 """
 while True:
