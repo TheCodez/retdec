@@ -1348,10 +1348,9 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
         LOG_FILEINFO_OUTPUT = get_tool_output(FILEINFO_AND_TIME_OUTPUT)
         print(LOG_FILEINFO_OUTPUT)
     else:
-        _rc0 = subprocess.call([config.FILEINFO, ' '.join(FILEINFO_PARAMS)], shell = True)
-        FILEINFO_RC = _rc0
+        FILEINFO_RC = subprocess.call([config.FILEINFO, ' '.join(FILEINFO_PARAMS)], shell = True)
 
-    if int(FILEINFO_RC) != 0:
+    if FILEINFO_RC != 0:
         if self.args.generate_log:
             generate_log()
 
@@ -1377,12 +1376,10 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
     unpacker = Unpacker(UNPACK_PARAMS)
     if self.args.generate_log:
         # we should get the output from the unpacker tool
-        LOG_UNPACKER_OUTPUT = os.popen(config.UNPACK_PY + ' \'' + ' '.join(UNPACK_PARAMS) + '\' 2>&1').read().rstrip('\n')
-
-        UNPACKER_RC = _rc0 # here should be the return code by unpacker.unpack_all()
+        LOG_UNPACKER_OUTPUT, UNPACKER_RC = unpacker.unpack_all()
         LOG_UNPACKER_RC = UNPACKER_RC
     else:
-        UNPACKER_RC = unpacker.unpack_all() # subprocess.call([config.UNPACK_PY, ' '.join(UNPACK_PARAMS)], shell = True)
+        _, UNPACKER_RC = unpacker.unpack_all()
 
     check_whether_decompilation_should_be_forcefully_stopped('unpacker')
 
@@ -1407,7 +1404,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
                 FILEINFO_PARAMS.extend(['--crypto ', ed])
 
         if self.args.max_memory:
-            FILEINFO_PARAMS.append('--max-memory ' + self.args.max_memory)
+            FILEINFO_PARAMS.extend(['--max-memory', self.args.max_memory])
         elif not self.args.no_memory_limit:
             # By default, we want to limit the memory of fileinfo into half of
             # system RAM to prevent potential black screens on Windows (#270).
@@ -1492,7 +1489,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
 
     # Check file class (e.g. 'ELF32', 'ELF64'). At present, we can only decompile 32-bit files.
     # Note: we prefer to report the 'unsupported architecture' error (above) than this 'generic' error.
-    FILECLASS = os.popen([config.CONFIGTOOL, CONFIG, '--read', '--file-class']).read().rstrip('\n')
+    FILECLASS = os.popen(config.CONFIGTOOL + ' ' + CONFIG + ' --read --file-class').read().rstrip('\n')
 
     if FILECLASS != '16' or FILECLASS != '32':
         if self.args.generate_log:
@@ -1509,7 +1506,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
     if SIG_FORMAT == 'ihex' or SIG_FORMAT == 'raw':
         SIG_FORMAT = 'elf'
 
-    ENDIAN = os.popen([config.CONFIGTOOL, CONFIG, '--read', '--endian']).read().rstrip('\n')
+    ENDIAN = os.popen(config.CONFIGTOOL + ' ' + CONFIG + ' --read --endian').read().rstrip('\n')
 
     if self.args.endian == 'little':
         SIG_ENDIAN = 'le'
@@ -1622,10 +1619,10 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
 
     if not CONFIG and CONFIG_DB:
         CONFIG = CONFIG_DB
-        BIN2LLVMIR_PARAMS.append('-provider-init -config-path ' + CONFIG + ' -decoder')
+        BIN2LLVMIR_PARAMS.extend(['-provider-init', '-config-path', CONFIG, '-decoder'])
 
     if self.args.max_memory:
-        BIN2LLVMIR_PARAMS.append('-max-memory ' + self.args.max_memory)
+        BIN2LLVMIR_PARAMS.extend(['-max-memory', self.args.max_memory])
     elif not self.args.no_memory_limit:
         # By default, we want to limit the memory of bin2llvmir into half of
         # system RAM to prevent potential black screens on Windows (#270).
@@ -1635,7 +1632,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
     print('##### Decompiling ' + IN + ' into ' + OUT_BACKEND_BC + '...')
     print('RUN: ' + config.BIN2LLVMIR + ' ' + ' '.join(BIN2LLVMIR_PARAMS) + ' -o ' + OUT_BACKEND_BC)
 
-    if self.args.generate_log != '':
+    if self.args.generate_log:
         PID = 0
         BIN2LLVMIR_RC = 0
 

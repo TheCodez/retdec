@@ -25,6 +25,7 @@ import os
 import subprocess
 
 from retdec_utils import Utils
+from retdec_utils import CmdRunner
 import retdec_config as config
 
 
@@ -83,7 +84,7 @@ class Unpacker:
 
         if not os.path.exists(self.args.input) or os.stat(self.args.input).st_size == 0:
             print('UNPACKER: wrong arguments')
-            return self.RET_NOTHING_TO_DO
+            return '', self.RET_NOTHING_TO_DO
 
         unpacker_params = [self.args.input, ' -o ', output]
 
@@ -96,11 +97,13 @@ class Unpacker:
         print('##### Trying to unpack ' + self.args.input + ' into ' + output + ' by using generic unpacker...')
         print('RUN: ' + config.UNPACKER + ' ' + ' '.join(unpacker_params))
 
-        unpacker_rc = subprocess.call([config.UNPACKER, ' '.join(unpacker_params)], shell=True)
+        cmd = CmdRunner()
+
+        output, unpacker_rc, _ = cmd.run_cmd([config.UNPACKER, ' '.join(unpacker_params)])
 
         if unpacker_rc == self.UNPACKER_EXIT_CODE_OK:
             print('##### Unpacking by using generic unpacker: successfully unpacked')
-            return self.RET_UNPACK_OK
+            return '', self.RET_UNPACK_OK
         elif unpacker_rc == self.UNPACKER_EXIT_CODE_NOTHING_TO_DO:
             print('##### Unpacking by using generic unpacker: nothing to do')
         else:
@@ -115,18 +118,17 @@ class Unpacker:
         print('##### Trying to unpack ' + self.args.input + ' into ' + output + ' by using UPX...')
         print('RUN: upx -d ' + self.args.input + ' -o ' + output)
 
-        upx_rc = subprocess.call(['upx', '-d', self.args.input, '-o', output], shell=True,
-                                 stdout=subprocess.DEVNULL)
+        output, upx_rc, _ = cmd.run_cmd(['upx', '-d', self.args.input, '-o', output])
 
         if upx_rc == 0:
             print('##### Unpacking by using UPX: successfully unpacked')
             if self.args.extended_exit_codes:
                 if unpacker_rc == self.UNPACKER_EXIT_CODE_NOTHING_TO_DO:
-                    return self.RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK
+                    return output, self.RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK
                 elif unpacker_rc >= self.UNPACKER_EXIT_CODE_UNPACKING_FAILED:
-                    return self.RET_UNPACKER_FAILED_OTHERS_OK
+                    return output, self.RET_UNPACKER_FAILED_OTHERS_OK
             else:
-                return self.RET_UNPACK_OK
+                return output, self.RET_UNPACK_OK
         else:
             # We cannot distinguish whether upx failed or the input file was
             # not upx-packed
@@ -135,21 +137,24 @@ class Unpacker:
         # Do not return -> try the next unpacker
         # Return.
         if unpacker_rc >= self.UNPACKER_EXIT_CODE_UNPACKING_FAILED:
-            return self.RET_UNPACKER_FAILED
+            return output, self.RET_UNPACKER_FAILED
         else:
-            return self.RET_NOTHING_TO_DO
+            return output, self.RET_NOTHING_TO_DO
 
     def unpack_all(self):
         # Check arguments and set default values for unset options.
         self._check_arguments()
         res_rc = -1
+        res_out = ''
 
         while True:
-            return_code = self._unpack(self.args.output + '.tmp')
+            output, return_code = self._unpack(self.args.output + '.tmp')
 
             if return_code == self.RET_UNPACK_OK or return_code == self.RET_UNPACKER_NOTHING_TO_DO_OTHERS_OK \
                     or return_code == self.RET_UNPACKER_FAILED_OTHERS_OK:
                 res_rc = return_code
+
+                res_out += output
 
                 shutil.move(args.output + '.tmp', args.output)
                 args.input = args.output
@@ -159,7 +164,7 @@ class Unpacker:
                 Utils.remove_forced(args.output + '.tmp')
                 break
 
-        return return_code if res_rc == -1 else res_rc
+        return res_out, return_code if res_rc == -1 else res_rc
 
 
 def parse_args():

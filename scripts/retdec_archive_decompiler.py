@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import argparse
-import multiprocessing
 import os
 import re
 import subprocess
@@ -9,6 +8,7 @@ import sys
 
 import retdec_config as config
 from retdec_utils import Utils
+from retdec_utils import CmdRunner
 
 
 def parse_args():
@@ -47,7 +47,7 @@ class ArchiveDecompiler:
         self.args = _args
 
         self.decompiler_sh_args = ''
-        self.time_out = 300
+        self.timeout = 300
         self.tmp_archive = ''
         self.use_json_format = False
         self.use_plain_format = False
@@ -75,20 +75,6 @@ class ArchiveDecompiler:
         """
 
         Utils.remove_forced(self.tmp_archive)
-
-    def _decompile(self):
-        for i in range(self.file_count):
-            file_index = (i + 1)
-            print('%d/%d\t\t' % (file_index, self.file_count))
-
-            # We have to use indexes instead of names because archives can contain multiple files with same name.
-            log_file = self.library_path + '.file_' + str(file_index) + '.log.verbose'
-            # Do not escape!
-
-            subprocess.call('%s --ar-index=%d -o %s.file_%d.c %s %s' % (
-                config.DECOMPILER_SH, i, self.library_path, file_index, self.library_path, self.decompiler_sh_args),
-                            shell=True,
-                            stdout=open(log_file, 'wb'), stderr=subprocess.STDOUT)
 
     def _check_arguments(self):
 
@@ -169,18 +155,28 @@ class ArchiveDecompiler:
             print(self.decompiler_sh_args, end='')
 
         print('\` over %d files with timeout %d s. (run \`kill %d \` to terminate this script)...' % (
-            self.file_count, self.time_out, os.getpid()), file=sys.stderr)
+            self.file_count, self.timeout, os.getpid()), file=sys.stderr)
 
-        p = multiprocessing.Process(target=self._decompile)
-        p.start()
-        p.join(self.time_out)
+        cmd = CmdRunner()
+        for i in range(self.file_count):
+            file_index = (i + 1)
+            print('%d/%d\t\t' % (file_index, self.file_count))
 
-        if p.is_alive():
-            print('[TIMEOUT]')
-            p.terminate()
-            p.join()
-        else:
-            print('[OK]')
+            # We have to use indexes instead of names because archives can contain multiple files with same name.
+            log_file = self.library_path + '.file_' + str(file_index) + '.log.verbose'
+
+            # Do not escape!
+            output, _, timeouted = cmd.run_cmd([config.DECOMPILER_SH, '--ar-index=' + str(i), '-o',
+                                                self.library_path + '.file_' + str(file_index) + '.c',
+                                                self.library_path, self.decompiler_sh_args], timeout=self.timeout)
+
+            with open(log_file, 'wb') as f:
+                f.write(output)
+
+            if timeouted:
+                print('[TIMEOUT]')
+            else:
+                print('[OK]')
 
         self._cleanup()
         # sys.exit(0)

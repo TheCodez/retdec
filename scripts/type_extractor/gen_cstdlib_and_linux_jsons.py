@@ -12,12 +12,62 @@ import glob
 #
 # C standard library headers.
 #
-CSTDLIB_HEADERS = '(assert.h complex.h ctype.h errno.h fenv.h float.h inttypes.h iso646.h limits.h locale.h math.h setjmp.h signal.h stdalign.h stdarg.h stdatomic.h stdbool.h stddef.h stdint.h stdio.h stdlib.h stdnoreturn.h ing.h tgmath.h threads.h time.h uchar.h wchar.h wctype.h)'
+CSTDLIB_HEADERS = [
+	'assert.h',
+	'complex.h',
+	'ctype.h',
+    'errno.h',
+    'fenv.h',
+    'float.h',
+    'inttypes.h',
+    'iso646.h',
+    'limits.h',
+    'locale.h',
+    'math.h',
+    'setjmp.h',
+    'signal.h',
+    'stdalign.h',
+    'stdarg.h',
+    'stdatomic.h',
+    'stdbool.h',
+    'stddef.h',
+    'stdint.h',
+    'stdio.h',
+    'stdlib.h',
+    'stdnoreturn.h',
+    'string.h',
+    'tgmath.h',
+    'threads.h',
+    'time.h',
+    'uchar.h',
+    'wchar.h',
+    'wctype.h'
+]
 
 #
 # Files we don't want in JSONs.
 #
-FILES_PATTERNS_TO_FILTER_OUT = (glob.glob('(GL/ Qt.*/ SDL.*/ X11/ alsa/ c\\ + \\ + / dbus.*/ glib.*/ libdrm/ libxml2/ llvm.*/ mirclient/ php[0-9.-]*/ pulse/ python.*/ ruby.*/ wayland.*/ xcb/)'))
+FILES_PATTERNS_TO_FILTER_OUT=[
+	'GL/',
+    'Qt.*/',
+    'SDL.*/',
+    'X11/',
+    'alsa/',
+    'c\\+\\+/',
+    'dbus.*/',
+    'glib.*/',
+    'libdrm/',
+    'libxml2/',
+    'llvm.*/',
+    'mirclient/',
+    'php[0-9.-]*/',
+    'pulse/',
+    'python.*/',
+    'ruby.*/',
+    'wayland.*/',
+    'xcb/'
+]
+
 SEP = '\\|'
 FILES_FILTER = (os.popen('printf \'' + SEP + '%s\' \'' + ' '.join(FILES_PATTERNS_TO_FILTER_OUT) + '\'').read().rip('\n'))
 FILES_FILTER = (FILES_FILTER:Expand.hash()SEP)
