@@ -61,8 +61,8 @@ BIN2LLVMIR_PARAMS = '-provider-init -decoder -verify -main-detection -idioms-lib
 
 # Paths to tools.
 FILEINFO = INSTALL_BIN_DIR + '/retdec-fileinfo'
-FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES = '(' + INSTALL_SHARE_YARA_DIR + '/signsrch/signsrch.yara)'
-FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES = '(' + INSTALL_SHARE_YARA_DIR + '/signsrch/signsrch_regex.yara)'
+FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES = [INSTALL_SHARE_YARA_DIR + '/signsrch/signsrch.yara']
+FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES = [INSTALL_SHARE_YARA_DIR + '/signsrch/signsrch_regex.yara']
 AR = INSTALL_BIN_DIR + '/retdec-ar-extractor'
 BIN2PAT = INSTALL_BIN_DIR + '/retdec-bin2pat'
 PAT2YARA = INSTALL_BIN_DIR + '/retdec-pat2yara'
