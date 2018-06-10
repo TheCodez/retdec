@@ -24,7 +24,7 @@ import argparse
 import os
 import subprocess
 
-import retdec_utils as utils
+from retdec_utils import Utils
 import retdec_config as config
 
 
@@ -58,10 +58,10 @@ class Unpacker:
 
         # Check whether the input file was specified.
         if not self.args.input:
-            utils.print_error_and_die('No input file was specified')
+            Utils.print_error_and_die('No input file was specified')
 
         if not os.access(self.args.input, os.R_OK):
-            utils.print_error_and_die('The input file %s does not exist or is not readable' % self.args.input)
+            Utils.print_error_and_die('The input file %s does not exist or is not readable' % self.args.input)
 
         # Conditional initialization.
         if not self.args.output:
@@ -70,12 +70,12 @@ class Unpacker:
             self.output = self.args.output
 
         if not re.search('^[0-9]+$', self.args.max_memory):
-            utils.print_error_and_die(
+            Utils.print_error_and_die(
                 'Invalid value for --max-memory: %d (expected a positive integer)' % self.args.max_memory)
 
         # Convert to absolute paths.
-        self.input = utils.get_realpath(self.args.input)
-        self.output = utils.get_realpath(self.output)
+        self.input = Utils.get_realpath(self.args.input)
+        self.output = Utils.get_realpath(self.output)
 
     def _unpack(self, output):
         """Try to unpack the given file.
@@ -156,7 +156,7 @@ class Unpacker:
             else:
                 # Remove the temporary file, just in case some of the unpackers crashed
                 # during unpacking and left it on the disk (e.g. upx).
-                utils.remove_forced(args.output + '.tmp')
+                Utils.remove_forced(args.output + '.tmp')
                 break
 
         return return_code if res_rc == -1 else res_rc

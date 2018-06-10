@@ -1,12 +1,5 @@
 #! /usr/bin/env python3
 
-import argparse
-import subprocess
-import sys
-
-import retdec_config as config
-import retdec_utils as utils
-
 """When analyzing an archive, use the archive decompilation script `--list` instead of
 `fileinfo` because fileinfo is currently unable to analyze archives.
 
@@ -16,8 +9,15 @@ all cases. A proper solution would need to parse fileinfo parameters, which
 would be complex.
 """
 
+import argparse
+import subprocess
+import sys
 
-def get_parser():
+import retdec_config as config
+from retdec_utils import Utils
+
+
+def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -34,13 +34,14 @@ def get_parser():
                         help="Should use external patterns")
 
     parser.add_argument('file',
+                        metavar='FILE',
                         help='The input file')
 
-    return parser
+    return parser.parse_args()
 
 
 def main(_args):
-    if utils.has_archive_signature(_args.file):
+    if Utils.has_archive_signature(_args.file):
         # The input file is not an archive.
 
         # The input file is an archive, so use the archive decompilation script
@@ -64,5 +65,6 @@ def main(_args):
     subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
 
 
-args = get_parser().parse_args()
-main(args)
+if __name__ == '__main__':
+    args = parse_args()
+    main(args)

@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 import retdec_config as config
-import retdec_utils as utils
+from retdec_utils import Utils
 
 time_out = 300
 use_json_format = False
@@ -63,7 +63,7 @@ def print_error_plain_or_json(error):
         exit(1)
     else:
         # Otherwise print in plain text.
-        utils.print_error_and_die(error)
+        Utils.print_error_and_die(error)
 
 
 def cleanup():
@@ -71,7 +71,7 @@ def cleanup():
     No arguments accepted.
     """
 
-    utils.remove_forced(tmp_archive)
+    Utils.remove_forced(tmp_archive)
 
 
 def decompile():
@@ -90,7 +90,7 @@ def decompile():
                         stdout=open(log_file, 'wb'), stderr=subprocess.STDOUT)
 
 
-def parse_args(_args):
+def check_arguments(_args):
     global use_json_format
     global use_plain_format
     global enable_list_mode
@@ -102,14 +102,14 @@ def parse_args(_args):
 
     if _args.plain_format:
         if use_json_format:
-            utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
+            Utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
 
         enable_list_mode = True
         use_plain_format = True
 
     if _args.json_format:
         if use_plain_format:
-            utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
+            Utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
         enable_list_mode = True
         use_json_format = True
 
@@ -118,7 +118,7 @@ def parse_args(_args):
 
     if _args.file:
         if not (os.path.isfile(_args.file)):
-            utils.print_error_and_die('Input %s is not a valid file.' % _args.file)
+            Utils.print_error_and_die('Input %s is not a valid file.' % _args.file)
 
         library_path = _args.file
 
@@ -128,14 +128,14 @@ def main(_args):
     global tmp_archive
     global file_count
 
-    parse_args(_args)
+    check_arguments(_args)
 
     # Check arguments
     if library_path == '':
         print_error_plain_or_json('No input file.')
 
     # Check for archives packed in Mach-O Universal Binaries.
-    if utils.is_macho_archive(library_path):
+    if Utils.is_macho_archive(library_path):
         if enable_list_mode:
             if use_json_format:
                 subprocess.call([config.EXTRACT, '--objects', '--json', library_path], shell=True)
@@ -148,24 +148,24 @@ def main(_args):
         library_path = tmp_archive
 
     # Check for thin archives.
-    if utils.has_thin_archive_signature(library_path) == 0:
+    if Utils.has_thin_archive_signature(library_path) == 0:
         print_error_plain_or_json('File is a thin archive and cannot be decompiled.')
 
     # Check if file is archive
-    if not utils.is_valid_archive(library_path):
+    if not Utils.is_valid_archive(library_path):
         print_error_plain_or_json('File is not supported archive or is not readable.')
 
     # Check number of files.
-    file_count = utils.archive_object_count(library_path)
+    file_count = Utils.archive_object_count(library_path)
     if file_count <= 0:
         print_error_plain_or_json('No files found in archive.')
 
     # List only mode.
     if enable_list_mode:
         if use_json_format:
-            utils.archive_list_numbered_content_json(library_path)
+            Utils.archive_list_numbered_content_json(library_path)
         else:
-            utils.archive_list_numbered_content(library_path)
+            Utils.archive_list_numbered_content(library_path)
         cleanup()
         sys.exit(0)
 
