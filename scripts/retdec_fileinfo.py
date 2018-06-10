@@ -17,21 +17,22 @@ import retdec_config as config
 from retdec_utils import Utils
 from retdec_archive_decompiler import ArchiveDecompiler
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-    parser.add_argument("-j", "--json",
-                        dest="json",
+    parser.add_argument('-j', '--json',
+                        dest='json',
                         action='store_true',
-                        help="Set to forward --json to the archive decompilation script.")
+                        help='Set to forward --json to the archive decompilation script.')
 
-    parser.add_argument("--use-external-patterns",
-                        dest="external_patterns",
+    parser.add_argument('--use-external-patterns',
+                        dest='external_patterns',
                         action='store_true',
-                        help="Should use external patterns")
+                        help='Should use external patterns')
 
     parser.add_argument('file',
                         metavar='FILE',
