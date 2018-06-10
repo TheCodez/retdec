@@ -99,7 +99,7 @@ class Unpacker:
 
         cmd = CmdRunner()
 
-        output, unpacker_rc, _ = cmd.run_cmd([config.UNPACKER, ' '.join(unpacker_params)])
+        output, unpacker_rc, _ = cmd.run_cmd([config.UNPACKER] + unpacker_params)
 
         if unpacker_rc == self.UNPACKER_EXIT_CODE_OK:
             print('##### Unpacking by using generic unpacker: successfully unpacked')

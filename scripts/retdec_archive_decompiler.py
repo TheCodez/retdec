@@ -84,13 +84,16 @@ class ArchiveDecompiler:
         if self.args.plain_format:
             if self.use_json_format:
                 Utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
-
+                return False
+            else:
                 self.enable_list_mode = True
                 self.use_plain_format = True
 
         if self.args.json_format:
             if self.args.args.plain_format:
                 Utils.print_error_and_die('Arguments --plain and --json are mutually exclusive.')
+                return False
+            else:
                 self.enable_list_mode = True
                 self.use_json_format = True
 
@@ -100,16 +103,20 @@ class ArchiveDecompiler:
         if self.args.file:
             if not (os.path.isfile(self.args.file)):
                 Utils.print_error_and_die('Input %s is not a valid file.' % self.args.file)
+                return False
 
             self.library_path = self.args.file
 
-    def decompile_archive(self):
-
-        self._check_arguments()
-
-        # Check arguments
         if self.library_path == '':
             self._print_error_plain_or_json('No input file.')
+            return False
+
+        return True
+
+    def decompile_archive(self):
+
+        if not self._check_arguments():
+            return
 
         # Check for archives packed in Mach-O Universal Binaries.
         if Utils.is_macho_archive(self.library_path):
@@ -118,7 +125,7 @@ class ArchiveDecompiler:
                     subprocess.call([config.EXTRACT, '--objects', '--json', self.library_path], shell=True)
                 else:
                     subprocess.call([config.EXTRACT, '--objects', self.library_path], shell=True)
-                sys.exit(1)
+                # sys.exit(1)
 
             self.tmp_archive = self.library_path + '.a'
             subprocess.call([config.EXTRACT, '--best', '--out', self.tmp_archive, self.library_path], shell=True)
@@ -127,16 +134,19 @@ class ArchiveDecompiler:
         # Check for thin archives.
         if Utils.has_thin_archive_signature(self.library_path) == 0:
             self._print_error_plain_or_json('File is a thin archive and cannot be decompiled.')
+            return
 
         # Check if file is archive
         if not Utils.is_valid_archive(self.library_path):
             self._print_error_plain_or_json('File is not supported archive or is not readable.')
+            return
 
-            # Check number of files.
-            self.file_count = Utils.archive_object_count(self.library_path)
+        # Check number of files.
+        self.file_count = Utils.archive_object_count(self.library_path)
 
         if self.file_count <= 0:
             self._print_error_plain_or_json('No files found in archive.')
+            return
 
         # List only mode.
         if self.enable_list_mode:

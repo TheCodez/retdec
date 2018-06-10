@@ -12,6 +12,9 @@ import sys
 
 import retdec_config as config
 
+"""Taken from https://github.com/avast-tl/retdec-regression-tests-framework/blob/master/regression_tests/cmd_runner.py
+"""
+
 
 class CmdRunner:
     """A runner of external commands."""

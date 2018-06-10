@@ -129,7 +129,7 @@ class SigFromLib:
             # Extract patterns from library.
             pattern_file = self.tmp_dir_path + '/' + lib_name + '.pat'
             pattern_files = [pattern_file]
-            result = subprocess.call([config.BIN2PAT, '-o', pattern_file, ' '.join(objects)], shell=True)
+            result = subprocess.call([config.BIN2PAT, '-o', pattern_file] + objects, shell=True)
 
             if result != 0:
                 self.print_error_and_cleanup('utility bin2pat failed when processing %s' % lib_path)
@@ -149,8 +149,9 @@ class SigFromLib:
         # Create final .yara file from .pat files.
         if self.args.log_file:
             result = subprocess.call(
-                [config.PAT2YARA, ' '.join(pattern_files), '--min-pure', self.args.min_pure, '-o', self.file_path, '-l',
-                 self.file_path + '.log', self.ignore_nop, self.args.ignore_nops], shell=True)
+                [config.PAT2YARA] + pattern_files + ['--min-pure', self.args.min_pure, '-o', self.file_path, '-l',
+                                                     self.file_path + '.log', self.ignore_nop, self.args.ignore_nops],
+                shell=True)
 
             if result != 0:
                 self.print_error_and_cleanup('utility pat2yara failed')

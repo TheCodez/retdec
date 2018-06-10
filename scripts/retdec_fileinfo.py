@@ -66,7 +66,7 @@ def main(_args):
         for par in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
             fileinfo_params.extend(['--crypto', par])
 
-    subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
+    subprocess.call([config.FILEINFO] + fileinfo_params, shell=True)
 
 
 if __name__ == '__main__':
