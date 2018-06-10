@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+
 """Compilation and decompilation utility functions.
 """
 import os
@@ -39,7 +40,7 @@ class Utils:
         # if error is None:
         #    sys.exit(1)
 
-        sys.stderr.write("Error: %s" % error)
+        sys.stderr.write('Error: %s' % error)
         # sys.exit(1)
 
     @staticmethod
@@ -49,7 +50,7 @@ class Utils:
         if warning is None:
             return
 
-        sys.stderr.write("Warning: %s" % warning)
+        sys.stderr.write('Warning: %s' % warning)
 
     @staticmethod
     def has_archive_signature(path):
@@ -59,7 +60,7 @@ class Utils:
                   1 if number of arguments is incorrect
                   2 no signature
         """
-        if subprocess.call([config.AR, path, "--arch-magic"], shell=True):
+        if subprocess.call([config.AR, path, '--arch-magic'], shell=True):
             return 0
         return 2
 
@@ -71,7 +72,7 @@ class Utils:
                   1 if number of arguments is incorrect
                   2 no signature
         """
-        if subprocess.call([config.AR, path, "--thin-magic"], shell=True):
+        if subprocess.call([config.AR, path, '--thin-magic'], shell=True):
             return 0
         return 2
 
@@ -83,7 +84,7 @@ class Utils:
                   1 if file is invalid archive
         """
         # We use our own messages so throw original output away.
-        return subprocess.call(config.AR + " " + path + " " + "--valid", shell=True, stderr=subprocess.STDOUT,
+        return subprocess.call([config.AR, path, '--valid'], shell=True, stderr=subprocess.STDOUT,
                                stdout=None)
 
     @staticmethod
@@ -92,7 +93,7 @@ class Utils:
         1 argument is needed - file path
         Returns - 1 if error occurred
         """
-        return subprocess.call([config.AR, path, "--object-count"], shell=True)
+        return subprocess.call([config.AR, path, '--object-count'], shell=True)
 
     @staticmethod
     def archive_list_content(path):
@@ -100,7 +101,7 @@ class Utils:
         1 argument is needed - file path
         Returns - 1 if number of arguments is incorrect
         """
-        return subprocess.call([config.AR, path, "--list", "--no-numbers"], shell=True)
+        return subprocess.call([config.AR, path, '--list', '--no-numbers'], shell=True)
 
     @staticmethod
     def archive_list_numbered_content(path):
@@ -108,8 +109,8 @@ class Utils:
         1 argument is needed - file path
         Returns - 1 if number of arguments is incorrect
         """
-        print("Index\tName")
-        return subprocess.call([config.AR, path, "--list"], shell=True)
+        print('Index\tName')
+        return subprocess.call([config.AR, path, '--list'], shell=True)
 
     @staticmethod
     def archive_list_numbered_content_json(path):
@@ -117,7 +118,7 @@ class Utils:
         1 argument is needed - file path
         Returns - 1 if number of arguments is incorrect
         """
-        return subprocess.call([config.AR, path, "--list", "--json"], shell=True)
+        return subprocess.call([config.AR, path, '--list', '--json'], shell=True)
 
     @staticmethod
     def archive_get_by_name(path, name, output):
@@ -128,7 +129,7 @@ class Utils:
         Returns - 1 if number of arguments is incorrect
                 - 2 if error occurred
         """
-        if not subprocess.call(config.AR + " " + path + " " + "--name" + " " + name + " " + "--output" + " " + output,
+        if not subprocess.call([config.AR, path, '--name', name, '--output', output],
                                shell=True, stderr=subprocess.STDOUT, stdout=None):
             return 2
 
@@ -143,9 +144,8 @@ class Utils:
         Returns - 1 if number of arguments is incorrect
                 - 2 if error occurred
         """
-        if not subprocess.call(
-                config.AR + " " + archive + " " + "--index" + " " + index + " " + "--output" + " " + output,
-                shell=True, stderr=subprocess.STDOUT, stdout=None):
+        if not subprocess.call([config.AR, archive, '--index', index, '--output', output],
+                               shell=True, stderr=subprocess.STDOUT, stdout=None):
             return 2
 
     @staticmethod
@@ -155,7 +155,7 @@ class Utils:
         Returns - 0 if file is archive
                   1 if file is not archive
         """
-        return subprocess.call(config.EXTRACT + " " + "--check-archive" + " " + path, shell=True,
+        return subprocess.call([config.EXTRACT, '--check-archive', path], shell=True,
                                stderr=subprocess.STDOUT, stdout=None)
 
     @staticmethod
@@ -165,7 +165,7 @@ class Utils:
             Returns - 0 if string is a valid decimal number.
                       1 otherwise
         """
-        regex = "^[0-9]+$"
+        regex = '^[0-9]+$'
         if re.search(regex, num):
             return True
         else:
@@ -178,7 +178,7 @@ class Utils:
             Returns - 0 if string is a valid hexadecimal number.
                       1 otherwise
         """
-        regex = "^0x[0-9a-fA-F]+$"
+        regex = '^0x[0-9a-fA-F]+$'
         if re.search(regex, num):
             return True
         else:
@@ -206,7 +206,7 @@ class Utils:
             Returns - 0 if string is a valid decimal range.
                       1 otherwise
         """
-        regex = "^[0-9]+-[0-9]+$"
+        regex = '^[0-9]+-[0-9]+$'
         if re.search(regex, num):
             return True
         else:
@@ -219,7 +219,7 @@ class Utils:
             Returns - 0 if string is a valid hexadecimal range
                       1 otherwise
         """
-        regex = "^0x[0-9a-fA-F]+-0x[0-9a-fA-F]+$"
+        regex = '^0x[0-9a-fA-F]+-0x[0-9a-fA-F]+$'
         if re.search(regex, num):
             return True
         else:

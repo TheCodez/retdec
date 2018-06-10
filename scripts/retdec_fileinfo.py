@@ -60,11 +60,11 @@ def main(_args):
     fileinfo_params = []
 
     for par in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
-        fileinfo_params.append('--crypto ' + par)
+        fileinfo_params.extend(['--crypto', par])
 
     if _args.external_patterns:
         for par in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
-            fileinfo_params.append('--crypto ' + par)
+            fileinfo_params.extend(['--crypto', par])
 
     subprocess.call([config.FILEINFO, ' '.join(fileinfo_params)], shell=True)
 

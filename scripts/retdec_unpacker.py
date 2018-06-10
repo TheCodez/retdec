@@ -88,7 +88,7 @@ class Unpacker:
         unpacker_params = [self.args.input, ' -o ', output]
 
         if self.args.max_memory:
-            unpacker_params.append('--max-memory ' + self.args.max_memory)
+            unpacker_params.extend(['--max-memory', self.args.max_memory])
         elif self.args.max_memory_half_ram:
             unpacker_params.append('--max-memory-half-ram')
 
@@ -115,7 +115,7 @@ class Unpacker:
         print('##### Trying to unpack ' + self.args.input + ' into ' + output + ' by using UPX...')
         print('RUN: upx -d ' + self.args.input + ' -o ' + output)
 
-        upx_rc = subprocess.call(['upx', '-d ', self.args.input, '-o ', output], shell=True,
+        upx_rc = subprocess.call(['upx', '-d', self.args.input, '-o', output], shell=True,
                                  stdout=subprocess.DEVNULL)
 
         if upx_rc == 0:

@@ -103,7 +103,7 @@ class SigFromLib:
         for lib_path in self.args.input:
             # Check for invalid archives.
             if not Utils.is_valid_archive(lib_path):
-                print('ignoring file '' + str(LIB_PATH) + '' - not valid archive')
+                print('ignoring file %s - not valid archive' % lib_path)
                 continue
 
             # Get library name for .pat file.
