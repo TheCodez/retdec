@@ -698,13 +698,13 @@ class Decompiler:
         while t > 0:
             time.sleep(1)
 
-            if not subprocess.call('kill' + ' ' + '-0' + ' ' + PID, shell=True, stdout=subprocess.DEVNULL,
+            if not subprocess.call(['kill', '-0', PID], shell=True, stdout=subprocess.DEVNULL,
                                    stderr=subprocess.DEVNULL):
                 exit(0)
 
             t = t - 1
 
-        subprocess.call('kill_tree' + ' ' + PID + ' ' + 'SIGKILL', shell=True, stdout=subprocess.DEVNULL,
+        subprocess.call(['kill_tree', PID, 'SIGKILL'], shell=True, stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL)
 
         return 0
@@ -1316,7 +1316,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
     FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', IN, '--no-hashes=all']
 
     if self.args.fileinfo_verbose:
-        FILEINFO_PARAMS.append('-c ' + CONFIG + ' --similarity --verbose ' + IN)
+        FILEINFO_PARAMS.extend(['-c', CONFIG, '--similarity', '--verbose', IN])
 
     for par in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
         FILEINFO_PARAMS.append('--crypto ' + ' '.join(config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES))
@@ -1364,10 +1364,10 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
     ##
     ## Unpacking.
     ##
-    UNPACK_PARAMS = ['--extended-exit-codes', '--output ', OUT_UNPACKED, IN]
+    UNPACK_PARAMS = ['--extended-exit-codes', '--output', OUT_UNPACKED, IN]
 
     if self.args.max_memory:
-        UNPACK_PARAMS.append('--max-memory ' + self.args.max_memory)
+        UNPACK_PARAMS.extend(['--max-memory', self.args.max_memory])
     elif not self.args.no_memory_limit:
         # By default, we want to limit the memory of retdec-unpacker into half
         # of system RAM to prevent potential black screens on Windows (#270).
@@ -1400,11 +1400,11 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
             FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', '--verbose', IN]
 
         for pd in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
-            FILEINFO_PARAMS.append('--crypto ' + pd)
+            FILEINFO_PARAMS.extend(['--crypto ', pd])
 
         if self.args.fileinfo_use_all_external_patterns:
             for ed in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
-                FILEINFO_PARAMS.append('--crypto ' + ed)
+                FILEINFO_PARAMS.extend(['--crypto ', ed])
 
         if self.args.max_memory:
             FILEINFO_PARAMS.append('--max-memory ' + self.args.max_memory)
@@ -1492,10 +1492,10 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
 
     # Check file class (e.g. 'ELF32', 'ELF64'). At present, we can only decompile 32-bit files.
     # Note: we prefer to report the 'unsupported architecture' error (above) than this 'generic' error.
-    FILECLASS = os.popen('\'' + config.CONFIGTOOL + '\' \'' + CONFIG + '\' --read --file-class').read().rstrip('\n')
+    FILECLASS = os.popen([config.CONFIGTOOL, CONFIG, '--read', '--file-class']).read().rstrip('\n')
 
     if FILECLASS != '16' or FILECLASS != '32':
-        if self.args.generate_log != '':
+        if self.args.generate_log:
             generate_log()
 
         cleanup()
@@ -1509,7 +1509,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
     if SIG_FORMAT == 'ihex' or SIG_FORMAT == 'raw':
         SIG_FORMAT = 'elf'
 
-    ENDIAN = os.popen('\'' + config.CONFIGTOOL + '\' \'' + CONFIG + '\' --read --endian').read().rstrip('\n')
+    ENDIAN = os.popen([config.CONFIGTOOL, CONFIG, '--read', '--endian']).read().rstrip('\n')
 
     if self.args.endian == 'little':
         SIG_ENDIAN = 'le'
@@ -1640,9 +1640,8 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
         BIN2LLVMIR_RC = 0
 
         def thread1():
-            subprocess.call(
-                TIME + ' ' + config.BIN2LLVMIR + ' ' + ''.join(BIN2LLVMIR_PARAMS) + ' ' + '-o' + ' ' + (
-                OUT_BACKEND_BC), shell = True, stdout = open(TOOL_LOG_FILE, 'wb'), stderr = subprocess.STDOUT)
+            subprocess.call([TIME, config.BIN2LLVMIR, ' '.join(BIN2LLVMIR_PARAMS), '-o',  ' '.join(
+                OUT_BACKEND_BC)], shell = True, stdout = open(TOOL_LOG_FILE, 'wb'), stderr = subprocess.STDOUT)
 
             threading.Thread(target=thread1).start()
 
@@ -1653,7 +1652,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
 
         threading.Thread(target=thread2).start()
 
-        subprocess.call('wait' + ' ' + PID, shell=True, stderr=subprocess.STDOUT, stdout=subprocess.DEVNULL)
+        subprocess.call(['wait', PID], shell=True, stderr=subprocess.STDOUT, stdout=subprocess.DEVNULL)
 
         BIN2LLVMIR_RC = 0# TODO use rc _rc2
         BIN2LLVMIR_AND_TIME_OUTPUT = os.popen('cat \'' + TOOL_LOG_FILE + '\'').read().rstrip('\n')
@@ -1663,7 +1662,7 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
         LOG_BIN2LLVMIR_OUTPUT = get_tool_output(BIN2LLVMIR_AND_TIME_OUTPUT)
         print(LOG_BIN2LLVMIR_OUTPUT, end='')
     else:
-        BIN2LLVMIR_RC = subprocess.call([config.BIN2LLVMIR, ' '.join(BIN2LLVMIR_PARAMS)]), '-o', OUT_BACKEND_BC], shell = True)
+        BIN2LLVMIR_RC = subprocess.call([config.BIN2LLVMIR, ' '.join(BIN2LLVMIR_PARAMS), '-o', OUT_BACKEND_BC], shell = True)
 
     if BIN2LLVMIR_RC != 0:
         if self.args.generate_log:
@@ -1771,8 +1770,7 @@ if self.args.generate_log:
     PID = 0
 
     def thread3():
-        subprocess.call(
-            TIME + ' ' + config.LLVMIR2HLL + ' ' + ' '.join(LLVMIR2HLL_PARAMS), shell = True, stdout = open(
+        subprocess.call([TIME, config.LLVMIR2HLL, ' '.join(LLVMIR2HLL_PARAMS)], shell = True, stdout = open(
                 TOOL_LOG_FILE, 'wb'), stderr = subprocess.STDOUT)
 
         threading.Thread(target=thread3).start()
@@ -1785,7 +1783,7 @@ if self.args.generate_log:
 
     threading.Thread(target=thread4).start()
 
-    subprocess.call('wait' + ' ' + PID, shell=True, stderr=subprocess.STDOUT, stdout=subprocess.DEVNULL)
+    subprocess.call(['wait', PID], shell=True, stderr=subprocess.STDOUT, stdout=subprocess.DEVNULL)
 
     LLVMIR2HLL_RC =  0 # use rc _rc4
     LLVMIR2HLL_AND_TIME_OUTPUT = os.popen('cat \'' + TOOL_LOG_FILE + '\'').read().rstrip('\n')
@@ -1818,14 +1816,14 @@ if ((self.args.backend_emit_cg and self.args.backend_cg_conversion == 'auto') or
 
 if self.args.backend_emit_cg and self.args.backend_cg_conversion == 'auto':
     print('RUN: dot -T' + self.args.graph_format + ' ' + OUT + '.cg.dot > ' + OUT + '.cg.' + self.args.graph_format)
-    subprocess.call('dot' + ' ' + '-T' + self.args.graph_format + ' ' + OUT + '.cg.dot', shell=True,
+    subprocess.call(['dot', '-T' + self.args.graph_format, OUT + '.cg.dot'], shell=True,
                     stdout = open(OUT + '.cg.' + self.args.graph_format, 'wb'))
 
 
 if self.args.backend_emit_cfg and self.args.backend_cfg_conversion == 'auto':
     for cfg in glob.glob(OUT + '.cfg.*.dot'):
         print('RUN: dot -T' + self.args.graph_format + ' ' + cfg + ' > ' + (os.path.splitext(cfg)[0] + '.' + self.args.graph_format)
-        subprocess.call('dot' + ' ' + '-T' + self.args.graph_format + ' ' + cfg, shell=True,
+        subprocess.call(['dot', '-T' + self.args.graph_format, cfg], shell=True,
                         stdout = open((os.path.splitext(cfg)[0]) + '.' + self.args.graph_format, 'wb'))
 
 
