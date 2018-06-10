@@ -15,7 +15,7 @@ import sys
 
 import retdec_config as config
 from retdec_utils import Utils
-
+from retdec_archive_decompiler import ArchiveDecompiler
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -35,7 +35,7 @@ def parse_args():
 
     parser.add_argument('file',
                         metavar='FILE',
-                        help='The input file')
+                        help='File to analyze.')
 
     return parser.parse_args()
 
@@ -46,10 +46,13 @@ def main(_args):
 
         # The input file is an archive, so use the archive decompilation script
         # instead of fileinfo.
-        archive_decompiler_args = _args.file + " --list"
+        archive_decompiler_args = [_args.file, '--list']
 
-        res = subprocess.call([config.ARCHIVE_DECOMPILER_PY, archive_decompiler_args], shell=True)
+        if _args.json:
+            archive_decompiler_args.append('--json')
 
+        # res = subprocess.call([config.ARCHIVE_DECOMPILER_PY, archive_decompiler_args], shell=True)
+        res = ArchiveDecompiler(archive_decompiler_args).decompile_archive()
         sys.exit(res)
 
     # We are not analyzing an archive, so proceed to fileinfo.

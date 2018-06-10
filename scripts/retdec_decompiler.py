@@ -17,6 +17,7 @@ from pathlib import Path
 import retdec_config as config
 from retdec_utils import Utils
 from retdec_signature_from_library_creator import SigFromLib
+from retdec_unpacker import Unpacker
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__,
@@ -1372,13 +1373,16 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
         # of system RAM to prevent potential black screens on Windows (#270).
         UNPACK_PARAMS.append('--max-memory-half-ram')
 
-    if self.args.generate_log != '':
+
+    unpacker = Unpacker(UNPACK_PARAMS)
+    if self.args.generate_log:
+        # we should get the output from the unpacker tool
         LOG_UNPACKER_OUTPUT = os.popen(config.UNPACK_PY + ' \'' + ' '.join(UNPACK_PARAMS) + '\' 2>&1').read().rstrip('\n')
 
-        UNPACKER_RC = _rc0
+        UNPACKER_RC = _rc0 # here should be the return code by unpacker.unpack_all()
         LOG_UNPACKER_RC = UNPACKER_RC
     else:
-        UNPACKER_RC = subprocess.call([config.UNPACK_PY, ' '.join(UNPACK_PARAMS)], shell = True)
+        UNPACKER_RC = unpacker.unpack_all() # subprocess.call([config.UNPACK_PY, ' '.join(UNPACK_PARAMS)], shell = True)
 
     check_whether_decompilation_should_be_forcefully_stopped('unpacker')
 
@@ -1392,26 +1396,28 @@ if self.args.mode == 'bin' or self.args.mode == 'raw':
         IN = OUT_UNPACKED
         FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', IN, '--no-hashes=all']
 
-        if self.args.fileinfo_verbose != '':
+        if self.args.fileinfo_verbose:
             FILEINFO_PARAMS = ['-c', CONFIG, '--similarity', '--verbose', IN]
 
-        FILEINFO_PARAMS.append('--crypto ' + ' '.join(config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES))
+        for pd in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
+            FILEINFO_PARAMS.append('--crypto ' + pd)
 
         if self.args.fileinfo_use_all_external_patterns:
-            FILEINFO_PARAMS.append('--crypto ' + ' '.join(config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES))
+            for ed in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
+                FILEINFO_PARAMS.append('--crypto ' + ed)
 
-        if not self.args.max_memory == '':
+        if self.args.max_memory:
             FILEINFO_PARAMS.append('--max-memory ' + self.args.max_memory)
-        elif self.args.no_memory_limit == '':
-        # By default, we want to limit the memory of fileinfo into half of
-        # system RAM to prevent potential black screens on Windows (#270).
+        elif not self.args.no_memory_limit:
+            # By default, we want to limit the memory of fileinfo into half of
+            # system RAM to prevent potential black screens on Windows (#270).
             FILEINFO_PARAMS.append('--max-memory-half-ram')
 
         print()
         print('##### Gathering file information after unpacking...')
         print('RUN: ' + config.FILEINFO + ' ' + ' '.join(FILEINFO_PARAMS))
 
-        if self.args.generate_log != '':
+        if self.args.generate_log:
             FILEINFO_AND_TIME_OUTPUT = os.popen(
                 TIME + ' \'' + config.FILEINFO + '\' \'' + ' '.join(FILEINFO_PARAMS) + '\' 2>&1').read().rstrip(
             '\n')
