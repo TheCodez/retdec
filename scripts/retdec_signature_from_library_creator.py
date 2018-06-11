@@ -18,6 +18,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument('input',
+                        nargs='+',
+                        metavar='FILE',
+                        help='Input file(s)')
+
     parser.add_argument('-n', '--no-cleanup',
                         dest='no_cleanup',
                         action='store_true',
@@ -26,6 +31,7 @@ def parse_args():
     parser.add_argument('-o', '--output',
                         dest='output',
                         metavar='FILE',
+                        required=True,
                         help='Where result(s) will be stored.')
 
     parser.add_argument('-m', '--min-pure',
@@ -46,11 +52,6 @@ def parse_args():
                         dest='bin_to_pat_only',
                         action='store_true',
                         help='Stop after bin2pat.')
-
-    parser.add_argument('input',
-                        nargs='+',
-                        metavar='FILE',
-                        help='Input file(s)')
 
     return parser.parse_args()
 
@@ -75,23 +76,14 @@ class SigFromLib:
 
     def _check_arguments(self):
 
-        if self.args.input is None:
-            self.print_error_and_cleanup('no input files')
-            return False
-
         for f in self.args.input:
             if not os.path.isfile(f):
                 self.print_error_and_cleanup('input %s is not a valid file nor argument' % f)
                 return False
 
-        # Output directory - compulsory argument.
-        if self.args.output is None:
-            self.print_error_and_cleanup('option -o|--output is compulsory')
-            return False
-        else:
-            self.file_path = self.args.output
-            dir_name = os.path.dirname(Utils.get_realpath(self.file_path))
-            self.tmp_dir_path = os.path.join(dir_name, 'XXXXXXXXX')
+        self.file_path = self.args.output
+        dir_name = os.path.dirname(Utils.get_realpath(self.file_path))
+        self.tmp_dir_path = os.path.join(dir_name, 'XXXXXXXXX')
 
         if self.args.ignore_nops:
             self.ignore_nop = '--ignore-nops'
