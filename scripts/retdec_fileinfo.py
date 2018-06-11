@@ -41,34 +41,30 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(_args):
-    if Utils.has_archive_signature(_args.file):
+if __name__ == '__main__':
+    args = parse_args()
+
+    if Utils.has_archive_signature(args.file):
         # The input file is not an archive.
 
         # The input file is an archive, so use the archive decompilation script
         # instead of fileinfo.
-        archive_decompiler_args = [_args.file, '--list']
+        archive_decompiler_args = [args.file, '--list']
 
-        if _args.json:
+        if args.json:
             archive_decompiler_args.append('--json')
 
-        # res = subprocess.call([config.ARCHIVE_DECOMPILER_PY, archive_decompiler_args], shell=True)
         res = ArchiveDecompiler(archive_decompiler_args).decompile_archive()
         sys.exit(res)
 
     # We are not analyzing an archive, so proceed to fileinfo.
-    fileinfo_params = []
+    fileinfo_params = [args.file]
 
     for par in config.FILEINFO_EXTERNAL_YARA_PRIMARY_CRYPTO_DATABASES:
         fileinfo_params.extend(['--crypto', par])
 
-    if _args.external_patterns:
+    if args.external_patterns:
         for par in config.FILEINFO_EXTERNAL_YARA_EXTRA_CRYPTO_DATABASES:
             fileinfo_params.extend(['--crypto', par])
 
     subprocess.call([config.FILEINFO] + fileinfo_params, shell=True)
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    main(args)

@@ -56,6 +56,7 @@ class CmdRunner:
         If the timeout expires before the command finishes, the value of `output`
         is the command's output generated up to the timeout.
         """
+
         def decode(output):
             if output_encoding is not None:
                 output = output.decode(output_encoding, errors='replace')
@@ -100,7 +101,7 @@ class CmdRunner:
             stdout=subprocess.DEVNULL if discard_output else subprocess.PIPE,
             stderr=subprocess.DEVNULL if discard_output else subprocess.STDOUT
         )
-        if sys.platform in ('win32', 'msys'):
+        if Utils.is_windows():
             return _WindowsProcess(**kwargs)
         else:
             return _LinuxProcess(**kwargs)
@@ -171,12 +172,16 @@ class Utils:
                 os.unlink(p)
 
     @staticmethod
+    def is_windows():
+        return sys.platform in ('win32', 'msys')
+
+    @staticmethod
     def get_realpath(path):
         """Prints the real, physical location of a directory or file, relative or
         absolute.
         1 argument is needed
         """
-        return pathlib.Path(path).resolve()
+        return str(pathlib.Path(path).resolve())
 
     @staticmethod
     def print_error_and_die(error):

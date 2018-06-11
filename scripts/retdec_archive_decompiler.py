@@ -59,7 +59,7 @@ class ArchiveDecompiler:
         """Prints error in either plain text or JSON format.
         One argument required: error message.
         """
-        if self.args.use_json_format:
+        if self.use_json_format:
             message = re.escape(error)
             print('{')
             print('    \'error\' : \'' + message + '\'')
@@ -73,8 +73,8 @@ class ArchiveDecompiler:
         """Cleans up all temporary files.
         No arguments accepted.
         """
-
-        Utils.remove_forced(self.tmp_archive)
+        if os.path.exists(self.tmp_archive):
+            Utils.remove_forced(self.tmp_archive)
 
     def _check_arguments(self):
 
@@ -115,6 +115,7 @@ class ArchiveDecompiler:
 
     def decompile_archive(self):
 
+        # Check arguments
         if not self._check_arguments():
             return
 

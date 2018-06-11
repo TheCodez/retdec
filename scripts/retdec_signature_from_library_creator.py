@@ -26,7 +26,6 @@ def parse_args():
     parser.add_argument('-o', '--output',
                         dest='output',
                         metavar='FILE',
-                        default='file-unpacked',
                         help='Where result(s) will be stored.')
 
     parser.add_argument('-m', '--min-pure',
@@ -69,32 +68,39 @@ class SigFromLib:
 
         # Cleanup.
         if not self.args.no_cleanup:
-            Utils.remove_forced(self.tmp_dir_path)
+            if os.path.exists(self.tmp_dir_path):
+                Utils.remove_forced(self.tmp_dir_path)
 
         Utils.print_error_and_die(message + '.')
 
-    def check_arguments(self):
+    def _check_arguments(self):
 
-        if not self.args.input:
+        if self.args.input is None:
             self.print_error_and_cleanup('no input files')
+            return False
 
         for f in self.args.input:
             if not os.path.isfile(f):
                 self.print_error_and_cleanup('input %s is not a valid file nor argument' % f)
+                return False
 
         # Output directory - compulsory argument.
-        if not self.args.output:
+        if self.args.output is None:
             self.print_error_and_cleanup('option -o|--output is compulsory')
+            return False
         else:
             self.file_path = self.args.output
             dir_name = os.path.dirname(Utils.get_realpath(self.file_path))
-            self.tmp_dir_path = tempfile.mktemp(dir_name + '/XXXXXXXXX\'')
+            self.tmp_dir_path = os.path.join(dir_name, 'XXXXXXXXX')
 
         if self.args.ignore_nops:
             self.ignore_nop = '--ignore-nops'
 
+        return True
+
     def run(self):
-        self.check_arguments()
+        if not self._check_arguments():
+            return 1
 
         pattern_files = []
         object_dirs = []
@@ -110,9 +116,9 @@ class SigFromLib:
             lib_name = Path(lib_path).resolve().stem
 
             # Create sub-directory for object files.
-            object_dir = self.tmp_dir_path + '/' + lib_name + '-objects'
+            object_dir = os.path.join(self.tmp_dir_path, lib_name) + '-objects'
             object_dirs = [object_dir]
-            os.mkdir(object_dir)
+            os.makedirs(object_dir)
 
             # Extract all files to temporary folder.
             subprocess.call([config.AR, lib_path, '--extract', '--output', object_dir], shell=True)
@@ -127,7 +133,7 @@ class SigFromLib:
                         objects.append(fname)
 
             # Extract patterns from library.
-            pattern_file = self.tmp_dir_path + '/' + lib_name + '.pat'
+            pattern_file = os.path.join(self.tmp_dir_path, lib_name) + '.pat'
             pattern_files = [pattern_file]
             result = subprocess.call([config.BIN2PAT, '-o', pattern_file] + objects, shell=True)
 
@@ -136,29 +142,32 @@ class SigFromLib:
 
             # Remove extracted objects continuously.
             if not self.args.no_cleanup:
-                shutil.rmtree(object_dir)
+                if os.path.exists(object_dir):
+                    shutil.rmtree(object_dir)
 
         # Skip second step - only .pat files will be created.
         if self.args.bin_to_pat_only:
             if not self.args.no_cleanup:
                 for d in object_dirs:
-                    shutil.rmtree(d)
+                    if os.path.exists(d):
+                        shutil.rmtree(d)
             # sys.exit(0)
-            return 0
+            return 1
 
         # Create final .yara file from .pat files.
-        if self.args.log_file:
+        if self.args.logfile:
             result = subprocess.call(
-                [config.PAT2YARA] + pattern_files + ['--min-pure', self.args.min_pure, '-o', self.file_path, '-l',
-                                                     self.file_path + '.log', self.ignore_nop, self.args.ignore_nops],
+                [config.PAT2YARA] + pattern_files + ['--min-pure', str(self.args.min_pure), '-o', self.file_path, '-l',
+                                                     self.file_path + '.log', self.ignore_nop,
+                                                     str(self.args.ignore_nops)],
                 shell=True)
 
             if result != 0:
                 self.print_error_and_cleanup('utility pat2yara failed')
         else:
             result = subprocess.call(
-                [config.PAT2YARA, ' '.join(pattern_files), '--min-pure', self.args.min_pure, '-o', self.file_path,
-                 self.ignore_nop, self.args.ignore_nops], shell=True)
+                [config.PAT2YARA] + pattern_files + ['--min-pure', str(self.args.min_pure), '-o', self.file_path,
+                                                     self.ignore_nop, str(self.args.ignore_nops)], shell=True)
 
             if result != 0:
                 self.print_error_and_cleanup('utility pat2yara failed')
@@ -175,5 +184,4 @@ if __name__ == '__main__':
 
     sig = SigFromLib(args)
 
-    if sig.run() != 0:
-        sys.exit(1)
+    sys.exit(sig.run())
